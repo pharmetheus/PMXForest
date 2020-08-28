@@ -1,0 +1,222 @@
+#' getForestDFSCM
+#'
+#' @description Get a data frame with Forest border for each univariate or multivariate covariate (and value(s)) in the input data frame. If a list a data frame will be created from the list, see function dfCreateInputForestData
+#'
+#' @param dfCovs A data frame with covariates to include, if a covariate value is set -99 or NA,
+#' they are assumed missing and will not be included in any FFEM transformations. If a dfCovs is
+#' a list an attempt will be made to create the appropriate data frame with the createInputForestData function.
+#' @param cdfCovsNames A string vector with names of the rows in dfCovs, if not used, names will be
+#' automatically assigned based on the covariate values and column names in dfCovs.
+#' @param functionList A list of functions with input (basethetas, covthetas,dfrow and ...) from which the change
+#' from the reference value will be calculated. If the function returns a vector of values, each value will be used
+#' but functionListName must contain the names with a length of all return for all functions in the functionList
+#' @param functionListName A vector of strings (names) of the parameters for each function in the functionList
+#' @param noBaseThetas the number of structural thetas in the model
+#' @param dfParameters A data frame with parameter samples from the uncertainty distribution.
+#' The vector of final parameter estimates is assumed to be in the first row.
+#' The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.
+#' @param quiet If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)
+#' @param probs A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
+#' as the uncertainties in the Forest plots. Make sure to include the median, i.e. 0.5.
+#' @param dfRefRow A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
+#' @param cGrouping A vector of numbers definig how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
+#' If NULL (default) an educated guess of the grouping will be set
+#' @param fixedSpacing A boolean (TRUE/FALSE) if fixed spacing between covariate groups should be used in the Forest plot. Default is TRUE.
+#' If FALSE, the y coordinates are calculated relative to the number of groups and numbers of covariates within a group.
+#' If fixed spacing is used, groupdist and withingroupdist will be used as well.
+#' @param groupeddist A number defining the y distance between groups of covariates.
+#' @param withingroupeddist A number defining the y distance within groups of covariates.
+#' @param ncores the number of cores to use for the calculations, default = 1 which means no parallellization
+#' @param cstrPackages a character vector with package names needed to run the calculations in parallel, default = NULL
+#' @param cstrExports a character vector with variables needed to run the calculations in parallel, default = NULL
+#' @param ... additional variables to be forwarded to the the functionList functions
+#'
+#'
+#' @return A data frame with summary statistics for each parameters and covariate combinations:
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' dfresCOV <- getForestDFSCM(
+#'             dfCovs = dfCovs1,
+#'             cdfCovsNames = covnames,
+#'             functionList = list(paramFunction),
+#'             functionListName = functionListName,
+#'             noBaseThetas = 16,
+#'             dfParameters = dfSamplesCOV,
+#'             probs = c(0.05, 0.5, 0.95),
+#'             dfRefRow = dfRefRow,
+#'             quiet = TRUE,
+#'             groupdist = 0.3,
+#'             withingroupdist = 0.2)
+#' }
+getForestDFSCM <- function(dfCovs,
+                           cdfCovsNames = NULL,
+                           functionList = list(
+                             function(basethetas, dfrow, ...) {
+                               return(basethetas[1])
+                             }
+                           ),
+                           functionListName = "PAR1",
+                           noBaseThetas,
+                           dfParameters,
+                           quiet = TRUE,
+                           probs = c(0.025, 0.5, 0.975),
+                           dfRefRow = NULL,
+                           cGrouping = NULL,
+                           fixedSpacing = TRUE,
+                           groupdist = 0.3,
+                           withingroupdist = 0.35,
+                           ncores = 1,
+                           cstrPackages = NULL,
+                           cstrExports = NULL, ...) {
+
+  ## Remove samples with problems. Will use THETA1 == NA as an indicator for a problematic sample
+  dfParameters <- dfParameters %>% filter(!is.na(THETA1))
+
+  ## Try to make dfCovs into a data.frame if it isn't that already
+  if (!is.data.frame(dfCovs)) {
+    dfCovs <- dfCreateInputForestData(dfCovs)
+  }
+  dfCovs[is.na(dfCovs)] <- -99
+
+  ## Define the grouping
+  getGroups <- function(df) {
+    cGroups <- c()
+    cUnique <- c()
+    iGroup <- 0
+    for (i in 1:nrow(df)) {
+      tmp <- paste0(names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != -99], collapse = ",")
+      if (tmp %in% cUnique) {
+        tmpl <- which(tmp == cUnique)
+        cGroups <- c(cGroups, tmpl)
+      } else {
+        iGroup <- iGroup + 1
+        cGroups <- c(cGroups, iGroup)
+        cUnique <- c(cUnique, tmp)
+      }
+    }
+    return(cGroups)
+  }
+  if (is.null(cGrouping)) cGrouping <- getGroups(dfCovs)
+
+  ## Register the parallell computing if cores > 1
+  if (ncores > 1) {
+    registerDoParallel(cores = ncores)
+  }
+
+  ## Calculate the parameters
+  dfres <- foreach(
+    k = 1:nrow(dfParameters), .packages = cstrPackages,
+    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
+  ) %dopar% {
+    thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
+    dfrest <- data.frame()
+
+    for (i in 1:nrow(dfCovs)) {
+      n <- 1
+      for (j in 1:length(functionList)) {
+        val <- functionList[[j]](thetas = thetas, df = dfCovs[i, ], ...)
+        if (!is.null(dfRefRow)) {
+          valbase <- functionList[[j]](thetas = thetas, df = dfRefRow, ...)
+        }
+        else {
+          valbase <- functionList[[j]](thetas = thetas, df = dfCovs[i, ], ...)
+        }
+        listcount <- length(val)
+        for (l in 1:listcount) {
+          dfrest <- bind_rows(dfrest, data.frame(
+            ITER = k,
+            COVS = i, NAME = functionListName[n], VALUE = val[[l]],
+            VALUEBASE = valbase[[l]], stringsAsFactors = FALSE
+          ))
+          n <- n + 1
+        }
+      }
+    }
+    dfrest
+  }
+
+  getCovNameString <- function(dfrow) {
+    strName <- ""
+    colnames <- names(dfrow)
+    for (i in 1:ncol(dfrow)) {
+      if (dfrow[1, i] != -99) {
+        if (strName == "") {
+          strName <- paste0(colnames[i], "=", dfrow[1, i])
+        } else {
+          strName <- paste0(strName, ", ", colnames[i], "=", dfrow[1, i])
+        }
+      }
+    }
+    if (strName == "") {
+      strName <- "Ref cov"
+    }
+    return(strName)
+  }
+
+  dfret <- data.frame()
+  for (i in 1:nrow(dfCovs)) {
+    if (is.null(cdfCovsNames)) {
+      covname <- getCovNameString(dfCovs[i, ])
+    }
+    else {
+      covname <- cdfCovsNames[i]
+    }
+    group <- cGrouping[i]
+    for (j in 1:length(functionListName)) {
+      dft <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j], ]
+      quant <- quantile(dft$VALUE,
+        probs = probs, names = FALSE,
+        na.rm = T
+      )
+      mean_base <- mean(dft$VALUEBASE)
+      median_base <- median(dft$VALUEBASE)
+      true_base <- dft$VALUEBASE[dft$ITER == 1]
+      dfrow <- cbind(dfCovs[i, ], data.frame(
+        GROUP = group,
+        COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
+        REFMEAN = mean_base, REFTRUE = true_base, REFMEDIAN = median_base
+      ))
+      for (k in 1:length(probs)) {
+        dfp <- data.frame(X1 = 1)
+        dfp[[paste0("q", k)]] <- quant[k]
+        dfrow <- cbind(dfrow, dfp[, 2])
+        names(dfrow)[ncol(dfrow)] <- paste0("q", k)
+      }
+      dfret <- rbind(dfret, dfrow)
+    }
+  }
+  if (!fixedSpacing) {
+    dfret$Y <- NA
+    for (i in 1:length(sort(unique(dfret$GROUP)))) {
+      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
+      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
+      for (n in 1:length(unique(dft$COVNUM))) {
+        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] &
+          dfret$COVNUM == unique(dft$COVNUM)[n]] <- (i -
+          1) + n / (num_in_group + 1)
+      }
+    }
+  }
+  else {
+    dfret$Y <- NA
+    a <- 0
+    for (i in 1:length(sort(unique(dfret$GROUP)))) {
+      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
+      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
+      for (n in 1:length(unique(dft$COVNUM))) {
+        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] &
+          dfret$COVNUM == unique(dft$COVNUM)[n]] <- a
+        a <- a + withingroupdist
+      }
+      a <- a + groupdist
+    }
+  }
+  stopImplicitCluster()
+  return(dfret)
+}
+
+
+

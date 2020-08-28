@@ -9,3 +9,15 @@ Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
+Depends:
+    tidyverse,
+    foreach, 
+    doParallel
+Imports:
+    MASS
+VignetteBuilder: knitr
+RoxygenNote: 6.1.1
