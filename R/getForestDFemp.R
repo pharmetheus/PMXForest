@@ -137,7 +137,7 @@ getForestDFemp <- function(dfData,
       }
     }
 
-    if (is.null(dfRefRow)) { # Calculate a reference based on observed data
+    if (is.null(dfRefRow)) { # Calculate a reference based on observed data. Set the reference to the `metricFunction` of the typical individual predictions
       for (j in 1:length(functionListName)) {
         valbase[j] <- metricFunction(subset(dftmp, ITER == k & NAME == functionListName[j])$VALUE)
       }
