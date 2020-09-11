@@ -29,6 +29,7 @@
 #' @param ncores the number of cores to use for the calculations, default = 1 which means no parallellization
 #' @param cstrPackages a character vector with package names needed to run the calculations in parallel, default = NULL
 #' @param cstrExports a character vector with variables needed to run the calculations in parallel, default = NULL
+#' @param iMiss The missing value number. -99 by default.
 #' @param ... additional variables to be forwarded to the the functionList functions
 #'
 #'
@@ -70,7 +71,9 @@ getForestDFSCM <- function(dfCovs,
                            withingroupdist = 0.35,
                            ncores = 1,
                            cstrPackages = NULL,
-                           cstrExports = NULL, ...) {
+                           cstrExports = NULL,
+                           iMiss = -99,
+                           ...) {
 
   ## Remove samples with problems. Will use THETA1 == NA as an indicator for a problematic sample
   dfParameters <- dfParameters %>% filter(!is.na(THETA1))
@@ -79,7 +82,7 @@ getForestDFSCM <- function(dfCovs,
   if (!is.data.frame(dfCovs)) {
     dfCovs <- dfCreateInputForestData(dfCovs)
   }
-  dfCovs[is.na(dfCovs)] <- -99
+  dfCovs[is.na(dfCovs)] <- iMiss
 
   ## Define the grouping
   getGroups <- function(df) {
@@ -87,7 +90,7 @@ getForestDFSCM <- function(dfCovs,
     cUnique <- c()
     iGroup <- 0
     for (i in 1:nrow(df)) {
-      tmp <- paste0(names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != -99], collapse = ",")
+      tmp <- paste0(names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != iMiss], collapse = ",")
       if (tmp %in% cUnique) {
         tmpl <- which(tmp == cUnique)
         cGroups <- c(cGroups, tmpl)
@@ -123,7 +126,7 @@ getForestDFSCM <- function(dfCovs,
         }
         else {
           dfMissing = dfCovs[1,]
-          dfMissing[,] = -99
+          dfMissing[,] = iMiss
           valbase <- functionList[[j]](thetas = thetas, df = dfMissing, ...)
         }
         listcount <- length(val)
@@ -144,7 +147,7 @@ getForestDFSCM <- function(dfCovs,
     strName <- ""
     colnames <- names(dfrow)
     for (i in 1:ncol(dfrow)) {
-      if (dfrow[1, i] != -99) {
+      if (dfrow[1, i] != iMiss) {
         if (strName == "") {
           strName <- paste0(colnames[i], "=", dfrow[1, i])
         } else {
