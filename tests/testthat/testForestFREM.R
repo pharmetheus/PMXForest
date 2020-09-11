@@ -114,7 +114,7 @@ test_that("getForestDFFREM works properly with $COV", {
                              dfRefRow = NULL,
                              quiet = TRUE,
                              groupdist = 0.3,
-                             #  ncores=6,
+                             ncores=1,
                              withingroupdist = 0.2)
 
 
@@ -204,7 +204,7 @@ test_that("getForestDFFREM works properly with bootstrap", {
   functionListName <- c("CL")
   functionList<-list(paramFunction)
 
-  dfCovs <- dfCreateInputForestData(
+  dfCovs <- createInputForestData(
     list("FORM" = c(0,1),
          "FOOD" = c(0,1),
          "GENO" = c(1,2,3,4),

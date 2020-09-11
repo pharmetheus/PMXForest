@@ -36,6 +36,7 @@ getForestDFFREM <- function(dfCovs,
                             functionList = list(function(basethetas,covthetas, dfrow, ...) {
                               return(basethetas[1] * exp(covthetas[1]))
                             }),
+                            covNames,
                             functionListName = "PAR1",
                             noBaseThetas,
                             dfParameters,
@@ -44,7 +45,6 @@ getForestDFFREM <- function(dfCovs,
                             noParCov = noBaseThetas,
                             noSkipOm = 0,
                             parNames = paste("Par",1:noParCov,sep = ""),
-                            covNames = paste("Cov", 1:noCovThetas,sep = ""),
                             availCov = covNames,
                             quiet = FALSE,
                             probs = c(0.025,0.5, 0.975),
@@ -60,7 +60,12 @@ getForestDFFREM <- function(dfCovs,
                             ...) {
 
 
-  resList <- list()
+  if(!is.list(covNames)) stop("covNames must be a list")
+
+  if(!all(covNames$covNames %in% names(dfCovs))) stop("All covariates in the frem model need to be present in dfCovs.")
+
+  #resList <- list()
+
 
   ## Try to make dfCovs into a data.frame if it isn't that already
   if (!is.data.frame(dfCovs)) {
