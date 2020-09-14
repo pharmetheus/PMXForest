@@ -1,11 +1,14 @@
 Package: PMXForest
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Create Forest plots based on NONMEM output
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Authors@R: c(
+    person("Niclas", "Jonsson", email = "niclas.jonsson@pharmetheus.com", role = c("aut", "cre")),
+    person("Joakim", "Nyberg", email = "joakim.nyberg@pharmetheus.com", role = c("aut"))
+  )
+Author: Niclas Jonsson and Joakim Nyberg
+Maintainer: Niclas Jonsson <niclas.jonsson@pharmetheus.com>
+Description: Functions to support the creation of Forest plots.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
@@ -16,7 +19,8 @@ Suggests:
 Depends:
     tidyverse,
     foreach, 
-    doParallel
+    doParallel,
+    pmxutilities
 Imports:
     MASS
 VignetteBuilder: knitr
