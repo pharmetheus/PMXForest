@@ -20,7 +20,7 @@ Depends:
     tidyverse,
     foreach, 
     doParallel,
-    pmxutilities
+    FREMfunctions
 Imports:
     MASS
 VignetteBuilder: knitr
