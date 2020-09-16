@@ -6,15 +6,14 @@
 \usage{
 getForestDFFREM(dfCovs, cdfCovsNames = NULL,
   functionList = list(function(basethetas, covthetas, dfrow, ...) {    
-  return(basethetas[1] * exp(covthetas[1])) }),
+  return(basethetas[1] * exp(covthetas[1])) }), covNames,
   functionListName = "PAR1", noBaseThetas, dfParameters, noCovThetas,
   noSigmas, noParCov = noBaseThetas, noSkipOm = 0,
-  parNames = paste("Par", 1:noParCov, sep = ""),
-  covNames = paste("Cov", 1:noCovThetas, sep = ""),
-  availCov = covNames, quiet = FALSE, probs = c(0.025, 0.5, 0.975),
-  dfRefRow = NULL, cGrouping = NULL, fixedSpacing = TRUE,
-  groupdist = 0.3, withingroupdist = 0.35, ncores = 1,
-  cstrPackages = NULL, cstrExports = NULL, ...)
+  parNames = paste("Par", 1:noParCov, sep = ""), availCov = covNames,
+  quiet = FALSE, probs = c(0.025, 0.5, 0.975), dfRefRow = NULL,
+  cGrouping = NULL, fixedSpacing = TRUE, groupdist = 0.3,
+  withingroupdist = 0.35, ncores = 1, cstrPackages = NULL,
+  cstrExports = NULL, iMiss = -99, ...)
 }
 \arguments{
 \item{dfCovs}{A data frame with covariates to include, if a covariate value is set -99 or NA,
@@ -27,6 +26,8 @@ automatically assigned based on the covariate values and column names in dfCovs.
 \item{functionList}{A list of functions with input (basethetas, covthetas,dfrow and ...) from which the change
 from the reference value will be calculated. If the function returns a vector of values, each value will be used
 but functionListName must contain the names with a length of all return for all functions in the functionList}
+
+\item{covNames}{Names of the covariates}
 
 \item{functionListName}{A vector of strings (names) of the parameters for each function in the functionList}
 
@@ -43,8 +44,6 @@ The column order is assumed the same as in the NONMEM ext file except the ITERAT
 \item{noSkipOm}{Nof diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.}
 
 \item{parNames}{Names of the parameters}
-
-\item{covNames}{Names of the covariates}
 
 \item{availCov}{Names of the covariates to use in teh calculation of the FFEM model.}
 
@@ -67,6 +66,8 @@ If fixed spacing is used, groupdist and withingroupdist will be used as well.}
 \item{cstrPackages}{a character vector with package names needed to run the calculations in parallel, default = NULL}
 
 \item{cstrExports}{a character vector with variables needed to run the calculations in parallel, default = NULL}
+
+\item{iMiss}{The missing value number. -99 by default.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
 }

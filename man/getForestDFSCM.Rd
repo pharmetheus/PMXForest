@@ -10,7 +10,7 @@ getForestDFSCM(dfCovs, cdfCovsNames = NULL,
   dfParameters, quiet = TRUE, probs = c(0.025, 0.5, 0.975),
   dfRefRow = NULL, cGrouping = NULL, fixedSpacing = TRUE,
   groupdist = 0.3, withingroupdist = 0.35, ncores = 1,
-  cstrPackages = NULL, cstrExports = NULL, ...)
+  cstrPackages = NULL, cstrExports = NULL, iMiss = -99, ...)
 }
 \arguments{
 \item{dfCovs}{A data frame with covariates to include, if a covariate value is set -99 or NA,
@@ -51,6 +51,8 @@ If fixed spacing is used, groupdist and withingroupdist will be used as well.}
 \item{cstrPackages}{a character vector with package names needed to run the calculations in parallel, default = NULL}
 
 \item{cstrExports}{a character vector with variables needed to run the calculations in parallel, default = NULL}
+
+\item{iMiss}{The missing value number. -99 by default.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
 

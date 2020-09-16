@@ -10,7 +10,8 @@ getForestDFemp(dfData, covExpressionsList, noBaseThetas, dfParameters,
   strID = "ID", quiet = TRUE, metricFunction = median,
   probs = c(0.05, 0.5, 0.95), dfRefRow = NULL, cGrouping = NULL,
   fixedSpacing = TRUE, groupdist = 0.3, withingroupdist = 0.2,
-  ncores = 1, cstrPackages = NULL, cstrExports = NULL, ...)
+  ncores = 1, cstrPackages = NULL, cstrExports = NULL, iMiss = -99,
+  ...)
 }
 \arguments{
 \item{noBaseThetas}{the number of structural thetas in the model}
@@ -44,6 +45,8 @@ as the uncertainties in the Forest plots. Make sure to include the median, i.e. 
 \item{cstrPackages}{a character vector with package names needed to run the calculations in parallel, default = NULL}
 
 \item{cstrExports}{a character vector with variables needed to run the calculations in parallel, default = NULL}
+
+\item{iMiss}{The missing value number. -99 by default.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
 

@@ -1,7 +1,7 @@
 context("Forest plot functions from FREM models")
 library(testthat)
 library(PMXForest)
-library(pmxutilities)
+library(PMXFrem)
 
 
 test_that("getForestDFFREM works properly with $COV", {
