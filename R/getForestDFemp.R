@@ -71,6 +71,7 @@ getForestDFemp <- function(dfData,
                           ncores = 1,
                           cstrPackages = NULL,
                           cstrExports = NULL,
+                          iMiss=-99,
                           ...) {
 
   ## Check input
@@ -80,7 +81,7 @@ getForestDFemp <- function(dfData,
   dfParameters <- dfParameters %>% filter(!is.na(THETA1))
 
   ## Create a fake dfCovs
-  dfCovs <- data.frame(COV=rep(-99,length(covExpressionsList)))
+  dfCovs <- data.frame(COV=rep(iMiss,length(covExpressionsList)))
 
 
   resList <- list()
@@ -137,7 +138,7 @@ getForestDFemp <- function(dfData,
       }
     }
 
-    if (is.null(dfRefRow)) { # Calculate a reference based on observed data
+    if (is.null(dfRefRow)) { # Calculate a reference based on observed data. Set the reference to the `metricFunction` of the typical individual predictions
       for (j in 1:length(functionListName)) {
         valbase[j] <- metricFunction(subset(dftmp, ITER == k & NAME == functionListName[j])$VALUE)
       }

@@ -139,6 +139,46 @@ test_that("getForestDFSCM works properly", {
 
   expect_equal_to_reference(p1,"test_output/plotForestDFoutput")
 
+
+  ## Test that dfRefRow works
+  dfRefRowTest <- data.frame("FORM"=1,"FOOD"=1,RACEL=0,"GENO"=1,"WT"=75,"AGE"=70,"CRCL"=118,"SEX"=1)
+
+  dfresCOVdfRefRowTest1 <- getForestDFSCM(
+    dfCovs = dfCovs1,
+    cdfCovsNames = covnames,
+    functionList = list(paramFunction),
+    functionListName = functionListName,
+    noBaseThetas = 16,
+    noSigmas = 1,
+    noSkipOm = 0,
+    dfParameters = dfSamplesCOV,
+    probs = c(0.05, 0.5, 0.95),
+    dfRefRow = dfRefRowTest,
+    quiet = TRUE,
+    groupdist = 0.3,
+    withingroupdist = 0.2,
+    cores=2)
+
+  expect_equal_to_reference(dfresCOVdfRefRowTest1,"test_output/dfresCovdfRefRowTest1")
+
+  dfresCOVdfRefRowTestNULL <- getForestDFSCM(
+    dfCovs = dfCovs1,
+    cdfCovsNames = covnames,
+    functionList = list(paramFunction),
+    functionListName = functionListName,
+    noBaseThetas = 16,
+    noSigmas = 1,
+    noSkipOm = 0,
+    dfParameters = dfSamplesCOV,
+    probs = c(0.05, 0.5, 0.95),
+    dfRefRow = NULL,
+    quiet = TRUE,
+    groupdist = 0.3,
+    withingroupdist = 0.2,
+    cores=2)
+
+  expect_equal_to_reference(dfresCOVdfRefRowTestNULL,"test_output/dfresCovdfRefRowTestNULL")
+
   ## Test the empirical forest plots
 
   dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package="PMXForest")
