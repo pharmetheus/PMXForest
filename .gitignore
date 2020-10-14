@@ -21,6 +21,12 @@
 .Rproj.user/
 /*.Rproj/
 
+## R related files
+*.Rproj
+.Rhistory
+.Rapp.history
+*.RData
+
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
