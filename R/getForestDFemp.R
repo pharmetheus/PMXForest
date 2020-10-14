@@ -89,9 +89,10 @@ getForestDFemp <- function(dfData,
 
   if (is.null(cGrouping)) cGrouping <- 1:length(covExpressionsList)
 
-  if (ncores > 1) {
-    registerDoParallel(cores = ncores)
-  }
+  ## Register to allow for parallell computing
+  registerDoParallel(cores = ncores)
+
+
   dfres <- foreach(
     k = 1:nrow(dfParameters), .packages = cstrPackages,
     .export = cstrExports, .verbose = !quiet, .combine = bind_rows

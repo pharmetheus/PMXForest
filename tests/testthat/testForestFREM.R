@@ -4,7 +4,7 @@ library(PMXForest)
 library(PMXFrem)
 
 
-test_that("getForestDFFREM works properly with $COV", {
+test_that("getForestDFFREM works properly with $COV and one core", {
 
   set.seed(123)
   runno   <- 62
@@ -99,7 +99,7 @@ test_that("getForestDFFREM works properly with $COV", {
   noBaseThetas <- 16
   noCovThetas  <-  5
 
-  dfresCOVfrem <-getForestDFFREM(dfCovs = dfCovs,
+  dfresCOVfrem <-PMXForest::getForestDFFREM(dfCovs = dfCovs,
                              #cdfCovsNames = covnames,
                              covNames=getCovNames(modFile),
                              functionList = list(paramFunction),
@@ -114,8 +114,9 @@ test_that("getForestDFFREM works properly with $COV", {
                              dfRefRow = NULL,
                              quiet = TRUE,
                              groupdist = 0.3,
-                             ncores=1,
-                             withingroupdist = 0.2)
+                             withingroupdist = 0.2,
+                             ncores = 1,
+                             cstrPackages = "PMXFrem")
 
 
   expect_equal_to_reference(dfresCOVfrem,"test_output/dfresCovFREM")
@@ -221,7 +222,7 @@ test_that("getForestDFFREM works properly with bootstrap", {
   noBaseThetas <- 16
   noCovThetas  <-  6
 
-  dfresCOVfremBS <-getForestDFFREM(dfCovs = dfCovs,
+  dfresCOVfremBS <-PMXForest::getForestDFFREM(dfCovs = dfCovs,
                                  #cdfCovsNames = covnames,
                                  covNames=getCovNames(modFile),
                                  functionList = list(paramFunction),
@@ -237,7 +238,8 @@ test_that("getForestDFFREM works properly with bootstrap", {
                                  quiet = TRUE,
                                  groupdist = 0.3,
                                  ncores=6,
-                                 withingroupdist = 0.2)
+                                 withingroupdist = 0.2,
+                                 cstrPackages = "PMXFrem")
 
 
   expect_equal_to_reference(dfresCOVfremBS,"test_output/dfresCovFREMBS")

@@ -97,10 +97,8 @@ getForestDFFREM <- function(dfCovs,
     cGrouping <- getGroups(dfCovs)
   }
 
-  ## Register the parallell computing if cores > 1
-  if (ncores > 1) {
-    registerDoParallel(cores = ncores)
-  }
+  ## Register to allow for parallell computing
+  registerDoParallel(cores = ncores)
 
   ## Calculate the parameters
   dfres <- foreach( k = 1:nrow(dfParameters), .packages = cstrPackages,
@@ -120,7 +118,7 @@ getForestDFFREM <- function(dfCovs,
 
       ## Calculate the ffemObj in case reference covariates have been specified
       if (!is.null(dfRefRow)) {
-        ffemObjRef <- calcFFEM(
+        ffemObjRef <- PMXFrem::calcFFEM(
           noBaseThetas = noBaseThetas,
           noCovThetas  = noCovThetas,
           noSigmas     = noSigmas,
@@ -134,7 +132,7 @@ getForestDFFREM <- function(dfCovs,
       }
 
       ## Calculate the ffemObj for each set of parameters
-      ffemObj <- calcFFEM(
+      ffemObj <- PMXFrem::calcFFEM(
         noBaseThetas = noBaseThetas,
         noCovThetas  = noCovThetas,
         noSigmas     = noSigmas,

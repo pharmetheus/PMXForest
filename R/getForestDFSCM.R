@@ -104,10 +104,8 @@ getForestDFSCM <- function(dfCovs,
   }
   if (is.null(cGrouping)) cGrouping <- getGroups(dfCovs)
 
-  ## Register the parallell computing if cores > 1
-  if (ncores > 1) {
-    registerDoParallel(cores = ncores)
-  }
+  ## Register to allow for parallell computing
+  registerDoParallel(cores = ncores)
 
   ## Calculate the parameters
   dfres <- foreach(
