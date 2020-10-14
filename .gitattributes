@@ -1,0 +1,32 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.txt text
+*.TXT text
+*.r text
+*.R text
+*.Rnw text
+*.tex text
+*.csv text
+*.CSV text
+
+# Denote all files that are truly binary and should not be modified.
+*.jpg binary
+*.png binary
+*.gif binary
+*.zip binary
+*.ZIP binary
+*.doc binary
+*.DOC binary
+*.docx binary
+*.DOCX binary
+*.dot binary
+*.DOT binary
+*.xls binary
+*.XLS binary
+*.xlsx binary
+*.XLSX binary
+*.pptx binary
+*.PPTX binary
