@@ -24,7 +24,7 @@
 #'             functionListName = functionListName,
 #'             noBaseThetas = 16,
 #'             dfParameters = dfSamplesCOV,
-#'             probs = c(0.05, 0.5, 0.95),
+#'             probs = c(0.05, 0.95),
 #'             dfRefRow = dfRefRow,
 #'             quiet = TRUE)
 #' }
@@ -45,7 +45,8 @@ getForestDFFREM <- function(dfCovs,
                             parNames = paste("Par",1:noParCov,sep = ""),
                             availCov = covNames,
                             quiet = FALSE,
-                            probs = c(0.025,0.5, 0.975),
+                            probs = c(0.025, 0.975),
+                            pointFunction = median,
                             dfRefRow = NULL,
                             cGrouping = NULL,
                             ncores = 1,
@@ -221,12 +222,14 @@ getForestDFFREM <- function(dfCovs,
     for (j in 1:length(functionListName)) {
       dft         <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j], ]
       quant       <- quantile(dft$VALUE,probs = probs, names = FALSE, na.rm = T)
-      mean_base   <- mean(dft$VALUEBASE)
-      median_base <- median(dft$VALUEBASE)
+      #Calculate the point value of the forest plot
+      POINTVALUE=pointFunction(dft$VALUE)
+      #Calculate reference value based one the pointFunction
+      func_base<-pointFunction(dft$VALUEBASE)
       true_base   <- dft$VALUEBASE[dft$ITER == 1]
       dfrow       <- cbind(dfCovs[i, ], data.frame(GROUP = group,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFMEAN = mean_base, REFTRUE = true_base, REFMEDIAN = median_base
+        REFFUNC = func_base, REFTRUE = true_base, POINTVALUE=POINTVALUE
       ))
 
       for (k in 1:length(probs)) {

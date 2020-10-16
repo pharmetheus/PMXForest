@@ -21,7 +21,9 @@
 #' If fixed spacing is used, groupdist and withingroupdist will be used as well.
 #' @param groupeddist A number defining the y distance between groups of covariates.
 #' @param withingroupeddist A number defining the y distance within groups of covariates.
-
+#' @param useTrueRef A flag representing which value to use as the reference. Per default set to FALSE,
+#' indicating that the Ref function used is the same as function used to calculate the "point" for each covariate line. If set to TRUE,
+#' the True reference, i.e. the first sample in the dfSamples, which is often set to the final model estimates, will be used.
 #'
 
 #'
@@ -52,7 +54,8 @@ plotForestDF <-function(df,
                         log10x=FALSE,
                         fixedSpacing = TRUE,
                         groupdist = 0.3,
-                        withingroupdist = 0.2)
+                        withingroupdist = 0.2,
+                        useTrueRef=FALSE)
 {
 
   #Handle the spacing in Y based on the GROUP of covariates
@@ -79,23 +82,27 @@ plotForestDF <-function(df,
     }
   }
 
+  #Inform on what to use as a reference, TRUE (=final model estimates) or the function used in getForestDF....
+  strRefVar<-"REFFUNC"
+  if (useTrueRef) strRefVar<-"REFTRUE"
+
 
   if (addTable) { #Insert CI table
     df$XMAX<-NA
-    df<-plyr::ddply(df,  .variables=c("PARAMETER"), .fun = function(x,pr=plotRelative){
+    df<-plyr::ddply(df,  .variables=c("PARAMETER"), .fun = function(x,pr=plotRelative,strRV=strRefVar){
       if (pr) {
-        x$XMAX<-max(x$q3/x$REFMEDIAN)
+        x$XMAX<-max(x$q2/x[[strRV]])
       } else {
-        x$XMAX<-max(x$q3)
+        x$XMAX<-max(x$q2)
       }
       return(x)
     })
     if (plotRelative) {
-      df$Q1TEXT<-ifelse(df$q1/df$REFMEDIAN<df$q3/df$REFMEDIAN,df$q1/df$REFMEDIAN,df$q3/df$REFMEDIAN)
-      df$Q3TEXT<-ifelse(df$q3/df$REFMEDIAN>df$q1/df$REFMEDIAN,df$q3/df$REFMEDIAN,df$q1/df$REFMEDIAN)
+      df$Q1TEXT<-ifelse(df$q1/df[[strRefVar]]<df$q2/df[[strRefVar]],df$q1/df[[strRefVar]],df$q2/df[[strRefVar]])
+      df$Q2TEXT<-ifelse(df$q2/df[[strRefVar]]>df$q1/df[[strRefVar]],df$q2/df[[strRefVar]],df$q1/df[[strRefVar]])
     } else {
-      df$Q1TEXT<-ifelse(df$q1<df$q3,df$q1,df$q3)
-      df$Q3TEXT<-ifelse(df$q3>df$q1,df$q3,df$q1)
+      df$Q1TEXT<-ifelse(df$q1<df$q2,df$q1,df$q2)
+      df$Q2TEXT<-ifelse(df$q2>df$q1,df$q2,df$q1)
     }
   }
 
@@ -103,13 +110,14 @@ plotForestDF <-function(df,
 
   if (plotRelative) {
     #Based on relative  values
+    refcol<-sym(strRefVar)
     p<-p+geom_vline(aes(xintercept=1),size=vlinesize,color=vlinecol)
-    p<-p+geom_errorbarh(aes(y=Y,xmin=q1/REFMEDIAN,xmax=q3/REFMEDIAN,color=as.factor(GROUP)),size=errorbarsize)
-    p<-p+geom_point(aes(y=Y,x=q2/REFMEDIAN,color=as.factor(GROUP)),size=pointsize)
+    p<-p+geom_errorbarh(aes(y=Y,xmin=q1/!!refcol,xmax=q2/!!refcol,color=as.factor(GROUP)),size=errorbarsize)
+    p<-p+geom_point(aes(y=Y,x=POINTVALUE/!!refcol,color=as.factor(GROUP)),size=pointsize)
   } else {
     #Based on actual values
-    p<-p+geom_errorbarh(aes(y=Y,xmin=q1,xmax=q3,color=as.factor(GROUP)),size=errorbarsize)
-    p<-p+geom_point(aes(y=Y,x=q2,color=as.factor(GROUP)),size=pointsize)
+    p<-p+geom_errorbarh(aes(y=Y,xmin=q1,xmax=q2,color=as.factor(GROUP)),size=errorbarsize)
+    p<-p+geom_point(aes(y=Y,x=POINTVALUE,color=as.factor(GROUP)),size=pointsize)
   }
 
   p<-p + scale_y_continuous(breaks=unique(df$Y),labels = unique(df$COVNAME))
@@ -119,13 +127,13 @@ plotForestDF <-function(df,
   if (log10x) p<-p+scale_x_log10()
 
   if (addTable) { #Insert CI table
-
     if (plotRelative) {
-      p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(q2/REFMEDIAN,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q3TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
-      p<-p+geom_segment(aes(y=Y,x=q1/REFMEDIAN,yend=Y,xend=q3/REFMEDIAN*percentscalexmax),color="NA")
+        refcol<-sym(strRefVar)
+        p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(POINTVALUE/!!refcol,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+        p<-p+geom_segment(aes(y=Y,x=q1/!!refcol,yend=Y,xend=q2/!!refcol*percentscalexmax),color="NA")
     } else {
-      p<-p+geom_text(aes(y=Y,x=XMAX*xtextoffsetpercent,label=paste0(formatC(q2,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q3TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
-      p<-p+geom_segment(aes(y=Y,x=q1,yend=Y,xend=q3*percentscalexmax),color="NA")
+      p<-p+geom_text(aes(y=Y,x=XMAX*xtextoffsetpercent,label=paste0(formatC(POINTVALUE,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+      p<-p+geom_segment(aes(y=Y,x=q1,yend=Y,xend=q2*percentscalexmax),color="NA")
     }
   }
 

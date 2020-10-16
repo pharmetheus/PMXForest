@@ -110,11 +110,11 @@ test_that("getForestDFFREM works properly with $COV and one core", {
                              noSkipOm = 2,
                              noCovThetas = noCovThetas,
                              dfParameters = dfSamplesCOVfrem,
-                             probs = c(0.05, 0.5, 0.95),
+                             probs = c(0.05, 0.95),
                              dfRefRow = NULL,
                              quiet = TRUE,
                              ncores = 1,
-                             cstrPackages = "PMXFrem")
+                             cstrPackages = c("PMXFrem","dplyr"))
 
 
   expect_equal_to_reference(dfresCOVfrem,"test_output/dfresCovFREM")
@@ -231,17 +231,17 @@ test_that("getForestDFFREM works properly with bootstrap", {
                                  noSkipOm = 2,
                                  noCovThetas = noCovThetas,
                                  dfParameters = dfSamplesBSfrem ,
-                                 probs = c(0.05, 0.5, 0.95),
+                                 probs = c(0.05, 0.95),
                                  dfRefRow = NULL,
                                  quiet = TRUE,
                                  ncores=6,
-                                 cstrPackages = "PMXFrem")
+                                 cstrPackages = c("PMXFrem","dplyr"))
 
 
   expect_equal_to_reference(dfresCOVfremBS,"test_output/dfresCovFREMBS")
 
   p1 <- plotForestDF(dfresCOVfremBS,textsize = 5)+
-    geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
+    geom_vline(xintercept=c(0.8,1.25),linetvvvbnype="dashed")
 
   expect_equal_to_reference(p1,"test_output/plotForestDFoutputFREMBS")
 })
