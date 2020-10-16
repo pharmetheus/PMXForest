@@ -2,7 +2,7 @@
 #'
 #' @description Samples vectors of values from a vector of means and a varcov matrix
 #' @param mu Vector of means
-#' @param sigma Covariace matrix
+#' @param sigma Covariance matrix
 #' @param fixed_mu To be described
 #' @param dSeed The seed number
 #' @param iSampleIndex Number of samples to draw

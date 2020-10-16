@@ -56,8 +56,13 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
     strNames  <- names(dfExt[, -(c(1, ncol(dfExt)))])
     mu        <- as.numeric(dfExt[, -(c(1, ncol(dfExt)))]) # The mean is the final estimates
 
+    #Get the parameters which are fixed based on the covariance
+    fixedmu = rep(FALSE,1,ncol(sigma))
+    for (j in 1:ncol(sigma)) {
+      fixedmu[j]<-all(sigma[,j]==0)
+    }
     # Draw n samples from cov matrix
-    dfParameters        <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n))
+    dfParameters        <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu = fixedmu))
     names(dfParameters) <- strNames
     dfParameters        <- cbind(dfParameters, OBJ = 0) # Add a dummy column with the OBJ to make it look more like a ext file
     return(dfParameters)
@@ -92,7 +97,6 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
     dfParameters <- read.csv(file = input, header = TRUE)
     dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 
-
     ## If its a SIR results file
     if ("resamples" %in% names(dfParameters) & "samples_order" %in% names(dfParameters)) {
       dfParameters <- subset(dfParameters, resamples == 1)[, indexvec]
@@ -110,7 +114,14 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
       # Now construct sigma and mu
       sigma <- cov(dfParameters)
       mu    <- colMeans(dfParameters)
-      dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n))
+
+      #Get the parameters which are fixed based on the covariance
+      fixedmu = rep(FALSE,1,ncol(sigma))
+      for (j in 1:ncol(sigma)) {
+        fixedmu[j]<-all(sigma[,j]==0)
+      }
+
+      dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
 
       dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
       dfParameters <- cbind(dfParameters, OBJ = 0)

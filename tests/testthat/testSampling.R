@@ -18,11 +18,17 @@ test_that("mvrnorm_vector samples correctly", {
   finPar  <- subset(extFile, ITERATION == "-1000000000")
   mu      <- as.numeric(finPar[, -(c(1, ncol(finPar)))])
 
+  #Get the parameters which are fixed based on the covariance
+  fixedmu = rep(FALSE,1,ncol(sigma))
+  for (j in 1:ncol(sigma)) {
+    fixedmu[j]<-all(sigma[,j]==0)
+  }
+
   ## Test iSampleIndex
-  dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 10))
+  dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 10,fixed_mu=fixedmu))
   expect_equal(nrow(dfParameters),10)
 
-  dfParameters <- mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 1)
+  dfParameters <- mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 1,fixed_mu = fixedmu)
   expect_is(dfParameters,"numeric")
 
 })
