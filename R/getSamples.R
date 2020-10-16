@@ -10,7 +10,7 @@
 #' is a .cov file.
 #' @param n The number of samples to generate. NULL is permissable if the input is a SIR raw_results file.
 #' @param indexvec A vector that can be used to subset the columns in the raw results file so that the columns comes in the order THETA, SIGMA, OMEGA.
-#' not required if a PsN raw_results_structure is present in the sam edirectory as the csv file.
+#' not required if a PsN raw_results_structure is present in the same directory as the csv file.
 #' @param zerosindex A vector with indicies that indicates which parameters that are fixed to zero.
 #'
 #' @return A data frame with parameter vectors.

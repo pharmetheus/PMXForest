@@ -108,9 +108,7 @@ test_that("getForestDFSCM works properly", {
     dfParameters = dfSamplesCOV,
     probs = c(0.05, 0.5, 0.95),
     dfRefRow = dfRefRow,
-    quiet = TRUE,
-    groupdist = 0.3,
-    withingroupdist = 0.2)
+    quiet = TRUE)
 
   expect_equal_to_reference(dfresCOV,"test_output/dfresCovOutput")
 
@@ -127,8 +125,6 @@ test_that("getForestDFSCM works properly", {
     probs = c(0.05, 0.5, 0.95),
     dfRefRow = dfRefRow,
     quiet = TRUE,
-    groupdist = 0.3,
-    withingroupdist = 0.2,
     cores=2)
 
   expect_equal_to_reference(dfresCOVcores,"test_output/dfresCovOutput")
@@ -155,8 +151,6 @@ test_that("getForestDFSCM works properly", {
     probs = c(0.05, 0.5, 0.95),
     dfRefRow = dfRefRowTest,
     quiet = TRUE,
-    groupdist = 0.3,
-    withingroupdist = 0.2,
     cores=2)
 
   expect_equal_to_reference(dfresCOVdfRefRowTest1,"test_output/dfresCovdfRefRowTest1")

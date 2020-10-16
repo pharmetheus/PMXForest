@@ -26,9 +26,7 @@
 #'             dfParameters = dfSamplesCOV,
 #'             probs = c(0.05, 0.5, 0.95),
 #'             dfRefRow = dfRefRow,
-#'             quiet = TRUE,
-#'             groupdist = 0.3,
-#'             withingroupdist = 0.2)
+#'             quiet = TRUE)
 #' }
 
 getForestDFFREM <- function(dfCovs,
@@ -50,9 +48,6 @@ getForestDFFREM <- function(dfCovs,
                             probs = c(0.025,0.5, 0.975),
                             dfRefRow = NULL,
                             cGrouping = NULL,
-                            fixedSpacing = TRUE,
-                            groupdist = 0.3,
-                            withingroupdist = 0.35,
                             ncores = 1,
                             cstrPackages = NULL,
                             cstrExports = NULL,
@@ -244,28 +239,6 @@ getForestDFFREM <- function(dfCovs,
     }
   }
 
-  if (!fixedSpacing) {
-    dfret$Y <- NA
-    for (i in 1:length(sort(unique(dfret$GROUP)))) {
-      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
-      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
-      for (n in 1:length(unique(dft$COVNUM))) {
-        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] & dfret$COVNUM == unique(dft$COVNUM)[n]] <- (i -1) + n / (num_in_group + 1)
-      }
-    }
-  }  else {
-    dfret$Y <- NA
-    a <- 0
-    for (i in 1:length(sort(unique(dfret$GROUP)))) {
-      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
-      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
-      for (n in 1:length(unique(dft$COVNUM))) {
-        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] & dfret$COVNUM == unique(dft$COVNUM)[n]] <- a
-        a <- a + withingroupdist
-      }
-      a <- a + groupdist
-    }
-  }
   stopImplicitCluster()
   return(dfret)
 }

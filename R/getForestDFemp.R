@@ -3,7 +3,6 @@
 #' @param covExpressionList A list of expressions that define the covariate values to visualize in the Forest plot.
 #' @param metricfunction The function to use to summarise the parameter values in each covariate category. Default is median.
 #' @param cGrouping A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.
-#' @param fixedSpacing ??
 #' @inheritParams getForestDFSCM
 #'
 #' @return A data frame
@@ -65,9 +64,6 @@ getForestDFemp <- function(dfData,
                           probs = c(0.05, 0.5, 0.95),
                           dfRefRow = NULL,
                           cGrouping = NULL,
-                          fixedSpacing = TRUE,
-                          groupdist = 0.3,
-                          withingroupdist = 0.2,
                           ncores = 1,
                           cstrPackages = NULL,
                           cstrExports = NULL,
@@ -204,32 +200,7 @@ getForestDFemp <- function(dfData,
       dfret <- rbind(dfret, dfrow)
     }
   }
-  if (!fixedSpacing) {
-    dfret$Y <- NA
-    for (i in 1:length(sort(unique(dfret$GROUP)))) {
-      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
-      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
-      for (n in 1:length(unique(dft$COVNUM))) {
-        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] &
-          dfret$COVNUM == unique(dft$COVNUM)[n]] <- (i -
-          1) + n / (num_in_group + 1)
-      }
-    }
-  }
-  else {
-    dfret$Y <- NA
-    a <- 0
-    for (i in 1:length(sort(unique(dfret$GROUP)))) {
-      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
-      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
-      for (n in 1:length(unique(dft$COVNUM))) {
-        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] &
-          dfret$COVNUM == unique(dft$COVNUM)[n]] <- a
-        a <- a + withingroupdist
-      }
-      a <- a + groupdist
-    }
-  }
+
   stopImplicitCluster()
   return(dfret)
 }

@@ -15,6 +15,15 @@
 #' @param pointsize size of geom point (e.g. median value), default 3
 #' @param errorbarsize size of errorbars, default 1
 #' @param freescalex_wrap if wrap as free_x or not, default based on plotRelative and addTable
+#' @param log10x if the x-axis should be set to a log10 axis, default=FALSE
+#' @param fixedSpacing A boolean (TRUE/FALSE) if fixed spacing between covariate groups should be used in the Forest plot. Default is TRUE.
+#' If FALSE, the y coordinates are calculated relative to the number of groups and numbers of covariates within a group.
+#' If fixed spacing is used, groupdist and withingroupdist will be used as well.
+#' @param groupeddist A number defining the y distance between groups of covariates.
+#' @param withingroupeddist A number defining the y distance within groups of covariates.
+
+#'
+
 #'
 #' @return a ggplot2 object with a Forest plot
 #' @export
@@ -39,8 +48,37 @@ plotForestDF <-function(df,
                         vlinesize=1.5,
                         pointsize=3,
                         errorbarsize=1,
-                        freescalex_wrap=(!plotRelative || addTable))
+                        freescalex_wrap=(!plotRelative || addTable),
+                        log10x=FALSE,
+                        fixedSpacing = TRUE,
+                        groupdist = 0.3,
+                        withingroupdist = 0.2)
 {
+
+  #Handle the spacing in Y based on the GROUP of covariates
+  if (!fixedSpacing) {
+    df$Y <- NA
+    for (i in 1:length(sort(unique(df$GROUP)))) {
+      dft <- df[df$GROUP == sort(unique(df$GROUP))[i], ]
+      num_in_group <- nrow(dft) / length(unique(df$PARAMETER))
+      for (n in 1:length(unique(df$COVNUM))) {
+        df$Y[df$GROUP == sort(unique(df$GROUP))[i] & df$COVNUM == unique(dft$COVNUM)[n]] <- (i -1) + n / (num_in_group + 1)
+      }
+    }
+  }  else {
+    df$Y <- NA
+    a <- 0
+    for (i in 1:length(sort(unique(df$GROUP)))) {
+      dft <- df[df$GROUP == sort(unique(df$GROUP))[i], ]
+      num_in_group <- nrow(dft) / length(unique(df$PARAMETER))
+      for (n in 1:length(unique(dft$COVNUM))) {
+        df$Y[df$GROUP == sort(unique(df$GROUP))[i] & df$COVNUM == unique(dft$COVNUM)[n]] <- a
+        a <- a + withingroupdist
+      }
+      a <- a + groupdist
+    }
+  }
+
 
   if (addTable) { #Insert CI table
     df$XMAX<-NA
@@ -67,11 +105,9 @@ plotForestDF <-function(df,
     #Based on relative  values
     p<-p+geom_vline(aes(xintercept=1),size=vlinesize,color=vlinecol)
     p<-p+geom_errorbarh(aes(y=Y,xmin=q1/REFMEDIAN,xmax=q3/REFMEDIAN,color=as.factor(GROUP)),size=errorbarsize)
-    #p<-p+geom_errorbarh(aes(y=Y,xmin=q1/REFMEDIAN,xmax=q3/REFMEDIAN,x=q2/REFMEDIAN,color=as.factor(GROUP)),size=errorbarsize)
     p<-p+geom_point(aes(y=Y,x=q2/REFMEDIAN,color=as.factor(GROUP)),size=pointsize)
   } else {
     #Based on actual values
-    #p<-p+geom_vline(aes(xintercept=REFMEDIAN),size=vlinesize,color=vlinecol)
     p<-p+geom_errorbarh(aes(y=Y,xmin=q1,xmax=q3,color=as.factor(GROUP)),size=errorbarsize)
     p<-p+geom_point(aes(y=Y,x=q2,color=as.factor(GROUP)),size=pointsize)
   }
@@ -80,6 +116,7 @@ plotForestDF <-function(df,
   p<-p+guides(color=FALSE)
   p<-p+theme(panel.grid.minor.y = element_blank(),panel.grid.major.y = element_blank(), axis.ticks.y = element_blank())
   p<-p+ylab(strylab)+xlab(strxlab)
+  if (log10x) p<-p+scale_x_log10()
 
   if (addTable) { #Insert CI table
 

@@ -113,8 +113,6 @@ test_that("getForestDFFREM works properly with $COV and one core", {
                              probs = c(0.05, 0.5, 0.95),
                              dfRefRow = NULL,
                              quiet = TRUE,
-                             groupdist = 0.3,
-                             withingroupdist = 0.2,
                              ncores = 1,
                              cstrPackages = "PMXFrem")
 
@@ -236,9 +234,7 @@ test_that("getForestDFFREM works properly with bootstrap", {
                                  probs = c(0.05, 0.5, 0.95),
                                  dfRefRow = NULL,
                                  quiet = TRUE,
-                                 groupdist = 0.3,
                                  ncores=6,
-                                 withingroupdist = 0.2,
                                  cstrPackages = "PMXFrem")
 
 

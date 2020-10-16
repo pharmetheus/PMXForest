@@ -21,11 +21,6 @@
 #' @param dfRefRow A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
 #' @param cGrouping A vector of numbers definig how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 #' If NULL (default) an educated guess of the grouping will be set
-#' @param fixedSpacing A boolean (TRUE/FALSE) if fixed spacing between covariate groups should be used in the Forest plot. Default is TRUE.
-#' If FALSE, the y coordinates are calculated relative to the number of groups and numbers of covariates within a group.
-#' If fixed spacing is used, groupdist and withingroupdist will be used as well.
-#' @param groupeddist A number defining the y distance between groups of covariates.
-#' @param withingroupeddist A number defining the y distance within groups of covariates.
 #' @param ncores the number of cores to use for the calculations, default = 1 which means no parallellization
 #' @param cstrPackages a character vector with package names needed to run the calculations in parallel, default = NULL
 #' @param cstrExports a character vector with variables needed to run the calculations in parallel, default = NULL
@@ -48,9 +43,7 @@
 #'             dfParameters = dfSamplesCOV,
 #'             probs = c(0.05, 0.5, 0.95),
 #'             dfRefRow = dfRefRow,
-#'             quiet = TRUE,
-#'             groupdist = 0.3,
-#'             withingroupdist = 0.2)
+#'             quiet = TRUE)
 #' }
 getForestDFSCM <- function(dfCovs,
                            cdfCovsNames = NULL,
@@ -66,9 +59,6 @@ getForestDFSCM <- function(dfCovs,
                            probs = c(0.025, 0.5, 0.975),
                            dfRefRow = NULL,
                            cGrouping = NULL,
-                           fixedSpacing = TRUE,
-                           groupdist = 0.3,
-                           withingroupdist = 0.35,
                            ncores = 1,
                            cstrPackages = NULL,
                            cstrExports = NULL,
@@ -191,32 +181,8 @@ getForestDFSCM <- function(dfCovs,
       dfret <- rbind(dfret, dfrow)
     }
   }
-  if (!fixedSpacing) {
-    dfret$Y <- NA
-    for (i in 1:length(sort(unique(dfret$GROUP)))) {
-      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
-      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
-      for (n in 1:length(unique(dft$COVNUM))) {
-        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] &
-          dfret$COVNUM == unique(dft$COVNUM)[n]] <- (i -
-          1) + n / (num_in_group + 1)
-      }
-    }
-  }
-  else {
-    dfret$Y <- NA
-    a <- 0
-    for (i in 1:length(sort(unique(dfret$GROUP)))) {
-      dft <- dfret[dfret$GROUP == sort(unique(dfret$GROUP))[i], ]
-      num_in_group <- nrow(dft) / length(unique(dfret$PARAMETER))
-      for (n in 1:length(unique(dft$COVNUM))) {
-        dfret$Y[dfret$GROUP == sort(unique(dfret$GROUP))[i] &
-          dfret$COVNUM == unique(dft$COVNUM)[n]] <- a
-        a <- a + withingroupdist
-      }
-      a <- a + groupdist
-    }
-  }
+
+
   stopImplicitCluster()
   return(dfret)
 }
