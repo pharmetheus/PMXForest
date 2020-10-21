@@ -144,6 +144,13 @@ test_that("getForestDFSCM works properly", {
 
   expect_equal_to_reference(p2,"test_output/plotForestDFoutputTRUETest")
 
+  #Test Ref without uncertainty
+  p3 <- plotForestDF(dfresCOV,textsize = 5,useRefUncertainty = FALSE)+
+    xlim(0,3.3) +
+    geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
+
+  expect_equal_to_reference(p3,"test_output/plotForestDFoutputNoRefUncTest")
+
 
 
   ## Test that dfRefRow works

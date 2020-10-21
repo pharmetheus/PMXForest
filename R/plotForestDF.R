@@ -24,7 +24,10 @@
 #' @param useTrueRef A flag representing which value to use as the reference. Per default set to FALSE,
 #' indicating that the Ref function used is the same as function used to calculate the "point" for each covariate line. If set to TRUE,
 #' the True reference, i.e. the first sample in the dfSamples, which is often set to the final model estimates, will be used.
-#'
+#' @param useRefUncertainty A flag representing if the rleative reference (no covariate effect) should take the parameter uncertainty into account. Per default set to TRUE,
+#' indicating that the relative forest plot uncertainty is also accounting for the structural parameter uncertainty. If set to FALSE,
+#' the relative reference value as well as the uncertainty for a covariate without an effect will be 1.
+
 
 #'
 #' @return a ggplot2 object with a Forest plot
@@ -55,8 +58,14 @@ plotForestDF <-function(df,
                         fixedSpacing = TRUE,
                         groupdist = 0.3,
                         withingroupdist = 0.2,
-                        useTrueRef=FALSE)
+                        useTrueRef=FALSE,
+                        useRefUncertainty=TRUE)
 {
+
+  if (plotRelative && useTrueRef && useRefUncertainty==FALSE) {
+    warning("True ref cannot be mixed with RefUncertainty=FALSE, \nRefUncertainty is automatically set to TRUE")
+    useRefUncertainty<-TRUE
+  }
 
   #Handle the spacing in Y based on the GROUP of covariates
   if (!fixedSpacing) {
@@ -89,17 +98,29 @@ plotForestDF <-function(df,
 
   if (addTable) { #Insert CI table
     df$XMAX<-NA
-    df<-plyr::ddply(df,  .variables=c("PARAMETER"), .fun = function(x,pr=plotRelative,strRV=strRefVar){
+    df<-plyr::ddply(df,  .variables=c("PARAMETER"), .fun = function(x,pr=plotRelative,
+                                                                    ru=useRefUncertainty,
+                                                                    strRV=strRefVar){
       if (pr) {
-        x$XMAX<-max(x$q2/x[[strRV]])
+        if (ru) {
+          x$XMAX<-max(x$q2/x[[strRV]])
+        } else {
+          x$XMAX<-max(x$q2_NOVAR)
+        }
+
       } else {
         x$XMAX<-max(x$q2)
       }
       return(x)
     })
     if (plotRelative) {
-      df$Q1TEXT<-ifelse(df$q1/df[[strRefVar]]<df$q2/df[[strRefVar]],df$q1/df[[strRefVar]],df$q2/df[[strRefVar]])
-      df$Q2TEXT<-ifelse(df$q2/df[[strRefVar]]>df$q1/df[[strRefVar]],df$q2/df[[strRefVar]],df$q1/df[[strRefVar]])
+      if (useRefUncertainty) {
+        df$Q1TEXT<-ifelse(df$q1/df[[strRefVar]]<df$q2/df[[strRefVar]],df$q1/df[[strRefVar]],df$q2/df[[strRefVar]])
+        df$Q2TEXT<-ifelse(df$q2/df[[strRefVar]]>df$q1/df[[strRefVar]],df$q2/df[[strRefVar]],df$q1/df[[strRefVar]])
+      } else {
+        df$Q1TEXT<-ifelse(df$q1_NOVAR<df$q2_NOVAR,df$q1_NOVAR,df$q2_NOVAR)
+        df$Q2TEXT<-ifelse(df$q2_NOVAR>df$q1_NOVAR,df$q2_NOVAR,df$q1_NOVAR)
+      }
     } else {
       df$Q1TEXT<-ifelse(df$q1<df$q2,df$q1,df$q2)
       df$Q2TEXT<-ifelse(df$q2>df$q1,df$q2,df$q1)
@@ -112,12 +133,17 @@ plotForestDF <-function(df,
     #Based on relative  values
     refcol<-sym(strRefVar)
     p<-p+geom_vline(aes(xintercept=1),size=vlinesize,color=vlinecol)
-    p<-p+geom_errorbarh(aes(y=Y,xmin=q1/!!refcol,xmax=q2/!!refcol,color=as.factor(GROUP)),size=errorbarsize)
-    p<-p+geom_point(aes(y=Y,x=POINTVALUE/!!refcol,color=as.factor(GROUP)),size=pointsize)
+    if (useRefUncertainty) { #If uncertainty for the reference
+      p<-p+geom_errorbarh(aes(y=Y,xmin=q1/!!refcol,xmax=q2/!!refcol,color=as.factor(GROUP)),size=errorbarsize)
+      p<-p+geom_point(aes(y=Y,x=FUNC/!!refcol,color=as.factor(GROUP)),size=pointsize)
+    } else { #Without uncertainty for the reference
+      p<-p+geom_errorbarh(aes(y=Y,xmin=q1_NOVAR,xmax=q2_NOVAR,color=as.factor(GROUP)),size=errorbarsize)
+      p<-p+geom_point(aes(y=Y,x=FUNC_NOVAR,color=as.factor(GROUP)),size=pointsize)
+    }
   } else {
     #Based on actual values
     p<-p+geom_errorbarh(aes(y=Y,xmin=q1,xmax=q2,color=as.factor(GROUP)),size=errorbarsize)
-    p<-p+geom_point(aes(y=Y,x=POINTVALUE,color=as.factor(GROUP)),size=pointsize)
+    p<-p+geom_point(aes(y=Y,x=FUNC,color=as.factor(GROUP)),size=pointsize)
   }
 
   p<-p + scale_y_continuous(breaks=unique(df$Y),labels = unique(df$COVNAME))
@@ -129,10 +155,15 @@ plotForestDF <-function(df,
   if (addTable) { #Insert CI table
     if (plotRelative) {
         refcol<-sym(strRefVar)
-        p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(POINTVALUE/!!refcol,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
-        p<-p+geom_segment(aes(y=Y,x=q1/!!refcol,yend=Y,xend=q2/!!refcol*percentscalexmax),color="NA")
+        if (useRefUncertainty) {
+          p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(FUNC/!!refcol,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+          p<-p+geom_segment(aes(y=Y,x=q1/!!refcol,yend=Y,xend=q2/!!refcol*percentscalexmax),color="NA")
+        } else {
+          p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(FUNC_NOVAR,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+          p<-p+geom_segment(aes(y=Y,x=q1_NOVAR,yend=Y,xend=q2_NOVAR*percentscalexmax),color="NA")
+        }
     } else {
-      p<-p+geom_text(aes(y=Y,x=XMAX*xtextoffsetpercent,label=paste0(formatC(POINTVALUE,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+      p<-p+geom_text(aes(y=Y,x=XMAX*xtextoffsetpercent,label=paste0(formatC(FUNC,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
       p<-p+geom_segment(aes(y=Y,x=q1,yend=Y,xend=q2*percentscalexmax),color="NA")
     }
   }

@@ -99,7 +99,7 @@ test_that("getForestDFFREM works properly with $COV and one core", {
   noBaseThetas <- 16
   noCovThetas  <-  5
 
-  dfresCOVfrem <-PMXForest::getForestDFFREM(dfCovs = dfCovs,
+  dfresCOVfrem <-getForestDFFREM(dfCovs = dfCovs,
                              #cdfCovsNames = covnames,
                              covNames=getCovNames(modFile),
                              functionList = list(paramFunction),

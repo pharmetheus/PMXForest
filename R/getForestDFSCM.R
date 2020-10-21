@@ -125,7 +125,8 @@ getForestDFSCM <- function(dfCovs,
           dfrest <- bind_rows(dfrest, data.frame(
             ITER = k,
             COVS = i, NAME = functionListName[n], VALUE = val[[l]],
-            VALUEBASE = valbase[[l]], stringsAsFactors = FALSE
+            VALUEBASE = valbase[[l]],
+            stringsAsFactors = FALSE
           ))
           n <- n + 1
         }
@@ -163,25 +164,37 @@ getForestDFSCM <- function(dfCovs,
     group <- cGrouping[i]
     for (j in 1:length(functionListName)) {
       dft <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j], ]
-      quant <- quantile(dft$VALUE,
-        probs = probs, names = FALSE,
-        na.rm = T
-      )
+
+      quant <- quantile(dft$VALUE,probs = probs, names = FALSE,na.rm = T)
       #Calculate the point value of the forest plot
-      POINTVALUE=pointFunction(dft$VALUE)
+      FUNCVAL=pointFunction(dft$VALUE)
+
+      #Define the relative without parameter uncertainty
+      dft$RELINTERNAL <- dft$VALUE/dft$VALUEBASE
+      #Get quantile and pointvalue when uncertainty is not taken into account
+      quantrel <- quantile(dft$RELINTERNAL,probs = probs, names = FALSE,na.rm = T)
+      FUNCNOVAR=pointFunction(dft$RELINTERNAL)
+
       #Calculate reference value based one the pointFunction
       func_base<-pointFunction(dft$VALUEBASE)
       true_base <- dft$VALUEBASE[dft$ITER == 1]
+
       dfrow <- cbind(dfCovs[i, ], data.frame(
         GROUP = group,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-       REFFUNC = func_base, REFTRUE = true_base, POINTVALUE=POINTVALUE
-      ))
+        REFFUNC = func_base, REFTRUE = true_base, FUNC=FUNCVAL, FUNC_NOVAR=FUNCNOVAR,
+        COVEFF = !all(dft$RELINTERNAL==1)))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("q", k)]] <- quant[k]
         dfrow <- cbind(dfrow, dfp[, 2])
         names(dfrow)[ncol(dfrow)] <- paste0("q", k)
+      }
+      for (k in 1:length(probs)) {
+        dfp <- data.frame(X1 = 1)
+        dfp[[paste0("q", k,"_NOVAR")]] <- quantrel[k]
+        dfrow <- cbind(dfrow, dfp[, 2])
+        names(dfrow)[ncol(dfrow)] <- paste0("q", k,"_NOVAR")
       }
       dfret <- rbind(dfret, dfrow)
     }
