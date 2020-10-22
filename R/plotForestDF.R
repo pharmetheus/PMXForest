@@ -3,7 +3,8 @@
 #' @param df the forest plot data frame, should be based on a call to getForestDF or manually created accfording to the getForestDF structure
 #' @param plotRelative if the plot should be based on the relative scale to the reference (or parameter scale), default = TRUE
 #' @param addTable if a CI table should be added to the plot, default = TRUE
-#' @param strxlab x-label, default = "Covariate-Parameter effect"
+#' @param strxlab x-label, default = NULL. If nothing is added, this will default to "Relative covariate-Parmeter effect" when
+#' plotRelative=TRUE and default to "Parameter value" when plotRelative=FALSE. If no x-axis label should be used, set to empty string ("")
 #' @param strylab y-label, default = ""
 #' @param decdig number of digits after the comma in the CI table, only used with addTable = TRUE, default=2
 #' @param percentscalexmax increase of xmax, default 1.5 (fraction of x-axis), only used with addTable = TRUE
@@ -42,7 +43,7 @@
 plotForestDF <-function(df,
                         plotRelative=TRUE,
                         addTable=TRUE,
-                        strxlab="Covariate-Parameter effect",
+                        strxlab=NULL,
                         strylab="",
                         decdig=2,
                         percentscalexmax=1.5,
@@ -66,6 +67,9 @@ plotForestDF <-function(df,
     warning("True ref cannot be mixed with RefUncertainty=FALSE, \nRefUncertainty is automatically set to TRUE")
     useRefUncertainty<-TRUE
   }
+
+  if (is.null(strxlab) &&  plotRelative) strxlab<-"Relative covariate-parameter effect"
+  if (is.null(strxlab) && !plotRelative) strxlab<-"Parameter value"
 
   #Handle the spacing in Y based on the GROUP of covariates
   if (!fixedSpacing) {
