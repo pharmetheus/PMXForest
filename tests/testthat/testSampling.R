@@ -99,3 +99,28 @@ test_that("getSamples works correctly for SIR .csv input", {
   expect_equal_to_reference(tmp0,"test_output/getSamplesSIROutput")
 })
 
+
+test_that("getSamples works correctly for data frame with bootstrap headings", {
+
+  ## .csv file input
+  bootFile <- system.file("extdata","bs1_n100.dir/raw_results_run1.csv",package="PMXForest")
+  extFile  <- system.file("extdata","run1.ext",package="PMXForest")
+
+  dft<-read.csv(bootFile)
+
+  set.seed("123")
+  tmp0 <- getSamples(dft)
+  tmp1 <- getSamples(dft,indexvec = c(21:36,42,37:41))
+  tmp2 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),n=150)
+  tmp3 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile)
+
+  tmp4 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile,n=170)
+
+  ## Test that the output is the same as a saved reference
+  expect_equal_to_reference(tmp0,"test_output/dfSample0")
+  expect_equal_to_reference(tmp1,"test_output/dfSample1")
+  expect_equal_to_reference(tmp2,"test_output/dfSample2")
+  expect_equal_to_reference(tmp3,"test_output/dfSample3")
+  expect_equal_to_reference(tmp4,"test_output/dfSample4")
+})
+
