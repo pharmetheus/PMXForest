@@ -7,7 +7,7 @@
 #' @param noSkipOm Nof diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.
 #' @param parNames Names of the parameters
 #' @param covNames Names of the covariates
-#' @param availCov Names of the covariates to use in teh calculation of the FFEM model.
+#' @param availCov Names of the covariates to use in the calculation of the FFEM model.
 #' @inheritParams getForestDFSCM
 #'
 #'
@@ -58,9 +58,11 @@ getForestDFFREM <- function(dfCovs,
 
   if(!is.list(covNames)) stop("covNames must be a list")
 
-  if(!all(covNames$covNames %in% names(dfCovs))) stop("All covariates in the frem model need to be present in dfCovs.")
-
-  #resList <- list()
+  #If a needed covariate is not present in dfCovs, set it to missing
+  if(!all(covNames$covNames %in% names(dfCovs))) {
+    if (!quiet) warning("Not all covariates in frem model are present in dfCovs, setting them to missing")
+    dfCovs[,covNames$covNames[!(covNames$covNames %in% names(dfCovs))]] <-iMiss
+  }
 
 
   ## Try to make dfCovs into a data.frame if it isn't that already
