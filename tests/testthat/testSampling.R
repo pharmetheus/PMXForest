@@ -109,9 +109,12 @@ test_that("getSamples works correctly for data frame with bootstrap headings", {
   dft<-read.csv(bootFile)
 
   set.seed("123")
-  tmp0 <- getSamples(dft)
-  tmp1 <- getSamples(dft,indexvec = c(21:36,42,37:41))
+  tmp0 <- getSamples(subset(dft,ofv!=0))
+
+  tmp1 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41))
+
   tmp2 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),n=150)
+
   tmp3 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile)
 
   tmp4 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile,n=170)
