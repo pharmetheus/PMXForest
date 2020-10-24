@@ -11,8 +11,7 @@ getForestDFFREM(dfCovs, cdfCovsNames = NULL,
   noSigmas, noParCov = noBaseThetas, noSkipOm = 0,
   parNames = paste("Par", 1:noParCov, sep = ""), availCov = covNames,
   quiet = FALSE, probs = c(0.025, 0.5, 0.975), dfRefRow = NULL,
-  cGrouping = NULL, fixedSpacing = TRUE, groupdist = 0.3,
-  withingroupdist = 0.35, ncores = 1, cstrPackages = NULL,
+  cGrouping = NULL, ncores = 1, cstrPackages = NULL,
   cstrExports = NULL, iMiss = -99, ...)
 }
 \arguments{
@@ -57,10 +56,6 @@ as the uncertainties in the Forest plots. Make sure to include the median, i.e. 
 \item{cGrouping}{A vector of numbers definig how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 If NULL (default) an educated guess of the grouping will be set}
 
-\item{fixedSpacing}{A boolean (TRUE/FALSE) if fixed spacing between covariate groups should be used in the Forest plot. Default is TRUE.
-If FALSE, the y coordinates are calculated relative to the number of groups and numbers of covariates within a group.
-If fixed spacing is used, groupdist and withingroupdist will be used as well.}
-
 \item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization}
 
 \item{cstrPackages}{a character vector with package names needed to run the calculations in parallel, default = NULL}
@@ -88,8 +83,6 @@ dfresCOV <- getForestDFSCM(
             dfParameters = dfSamplesCOV,
             probs = c(0.05, 0.5, 0.95),
             dfRefRow = dfRefRow,
-            quiet = TRUE,
-            groupdist = 0.3,
-            withingroupdist = 0.2)
+            quiet = TRUE)
 }
 }

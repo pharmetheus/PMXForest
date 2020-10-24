@@ -9,7 +9,6 @@ getForestDFemp(dfData, covExpressionsList, noBaseThetas, dfParameters,
   ...) {     return(basethetas[1]) }), functionListName = "PAR1",
   strID = "ID", quiet = TRUE, metricFunction = median,
   probs = c(0.05, 0.5, 0.95), dfRefRow = NULL, cGrouping = NULL,
-  fixedSpacing = TRUE, groupdist = 0.3, withingroupdist = 0.2,
   ncores = 1, cstrPackages = NULL, cstrExports = NULL, iMiss = -99,
   ...)
 }
@@ -37,8 +36,6 @@ as the uncertainties in the Forest plots. Make sure to include the median, i.e. 
 \item{dfRefRow}{A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
 
 \item{cGrouping}{A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.}
-
-\item{fixedSpacing}{??}
 
 \item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization}
 

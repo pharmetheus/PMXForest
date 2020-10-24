@@ -9,7 +9,8 @@ plotForestDF(df, plotRelative = TRUE, addTable = TRUE,
   percentscalexmax = 1.5, xtextoffset = 0.25,
   xtextoffsetpercent = 1.1, textsize = 5, vlinecol = "lightgrey",
   vlinesize = 1.5, pointsize = 3, errorbarsize = 1,
-  freescalex_wrap = (!plotRelative || addTable))
+  freescalex_wrap = (!plotRelative || addTable), log10x = FALSE,
+  fixedSpacing = TRUE, groupdist = 0.3, withingroupdist = 0.2)
 }
 \arguments{
 \item{df}{the forest plot data frame, should be based on a call to getForestDF or manually created accfording to the getForestDF structure}
@@ -41,6 +42,16 @@ plotForestDF(df, plotRelative = TRUE, addTable = TRUE,
 \item{errorbarsize}{size of errorbars, default 1}
 
 \item{freescalex_wrap}{if wrap as free_x or not, default based on plotRelative and addTable}
+
+\item{log10x}{if the x-axis should be set to a log10 axis, default=FALSE}
+
+\item{fixedSpacing}{A boolean (TRUE/FALSE) if fixed spacing between covariate groups should be used in the Forest plot. Default is TRUE.
+If FALSE, the y coordinates are calculated relative to the number of groups and numbers of covariates within a group.
+If fixed spacing is used, groupdist and withingroupdist will be used as well.}
+
+\item{groupeddist}{A number defining the y distance between groups of covariates.}
+
+\item{withingroupeddist}{A number defining the y distance within groups of covariates.}
 }
 \value{
 a ggplot2 object with a Forest plot

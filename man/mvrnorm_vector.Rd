@@ -10,7 +10,7 @@ mvrnorm_vector(mu, sigma, fixed_mu = NULL, dSeed = NULL,
 \arguments{
 \item{mu}{Vector of means}
 
-\item{sigma}{Covariace matrix}
+\item{sigma}{Covariance matrix}
 
 \item{fixed_mu}{To be described}
 
