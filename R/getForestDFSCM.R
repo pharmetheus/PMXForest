@@ -17,7 +17,9 @@
 #' The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.
 #' @param quiet If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)
 #' @param probs A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-#' as the uncertainties in the Forest plots. Make sure to include the median, i.e. 0.5.
+#' as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.025, 0.975)
+#' @param pointFunction The function used to calculate the point for each covariate in the forest plot. default=median
+#' This function is also used for the reference covariate combination
 #' @param dfRefRow A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
 #' @param cGrouping A vector of numbers definig how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 #' If NULL (default) an educated guess of the grouping will be set
@@ -41,7 +43,7 @@
 #'             functionListName = functionListName,
 #'             noBaseThetas = 16,
 #'             dfParameters = dfSamplesCOV,
-#'             probs = c(0.05, 0.5, 0.95),
+#'             probs = c(0.05, 0.95),
 #'             dfRefRow = dfRefRow,
 #'             quiet = TRUE)
 #' }
@@ -56,7 +58,8 @@ getForestDFSCM <- function(dfCovs,
                            noBaseThetas,
                            dfParameters,
                            quiet = TRUE,
-                           probs = c(0.025, 0.5, 0.975),
+                           probs = c(0.025, 0.975),
+                           pointFunction = median,
                            dfRefRow = NULL,
                            cGrouping = NULL,
                            ncores = 1,
@@ -122,7 +125,8 @@ getForestDFSCM <- function(dfCovs,
           dfrest <- bind_rows(dfrest, data.frame(
             ITER = k,
             COVS = i, NAME = functionListName[n], VALUE = val[[l]],
-            VALUEBASE = valbase[[l]], stringsAsFactors = FALSE
+            VALUEBASE = valbase[[l]],
+            stringsAsFactors = FALSE
           ))
           n <- n + 1
         }
@@ -160,23 +164,37 @@ getForestDFSCM <- function(dfCovs,
     group <- cGrouping[i]
     for (j in 1:length(functionListName)) {
       dft <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j], ]
-      quant <- quantile(dft$VALUE,
-        probs = probs, names = FALSE,
-        na.rm = T
-      )
-      mean_base <- mean(dft$VALUEBASE)
-      median_base <- median(dft$VALUEBASE)
+
+      quant <- quantile(dft$VALUE,probs = probs, names = FALSE,na.rm = T)
+      #Calculate the point value of the forest plot
+      FUNCVAL=pointFunction(dft$VALUE)
+
+      #Define the relative without parameter uncertainty
+      dft$RELINTERNAL <- dft$VALUE/dft$VALUEBASE
+      #Get quantile and pointvalue when uncertainty is not taken into account
+      quantrel <- quantile(dft$RELINTERNAL,probs = probs, names = FALSE,na.rm = T)
+      FUNCNOVAR=pointFunction(dft$RELINTERNAL)
+
+      #Calculate reference value based one the pointFunction
+      func_base<-pointFunction(dft$VALUEBASE)
       true_base <- dft$VALUEBASE[dft$ITER == 1]
+
       dfrow <- cbind(dfCovs[i, ], data.frame(
         GROUP = group,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFMEAN = mean_base, REFTRUE = true_base, REFMEDIAN = median_base
-      ))
+        REFFUNC = func_base, REFTRUE = true_base, FUNC=FUNCVAL, FUNC_NOVAR=FUNCNOVAR,
+        COVEFF = !all(dft$RELINTERNAL==1)))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("q", k)]] <- quant[k]
         dfrow <- cbind(dfrow, dfp[, 2])
         names(dfrow)[ncol(dfrow)] <- paste0("q", k)
+      }
+      for (k in 1:length(probs)) {
+        dfp <- data.frame(X1 = 1)
+        dfp[[paste0("q", k,"_NOVAR")]] <- quantrel[k]
+        dfrow <- cbind(dfrow, dfp[, 2])
+        names(dfrow)[ncol(dfrow)] <- paste0("q", k,"_NOVAR")
       }
       dfret <- rbind(dfret, dfrow)
     }

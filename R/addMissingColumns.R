@@ -31,7 +31,7 @@ addMissingColumns <- function(dfParams, dfExt, zerosindex) {
     }
   }
 
-  if (!is.null(zerosindex)) {
+  if (!is.null(zerosindex) && length(zerosindex)>0) {
     # Get the parameters which are zero
     dft <- dfExt[rep(1, nrow(dfParams)), zerosindex] # Repeat to the same size as dfParams
     names(dfParams) <- names(dfExt)[-c(1, zerosindex, ncol(dfExt))]
@@ -41,6 +41,8 @@ addMissingColumns <- function(dfParams, dfExt, zerosindex) {
 
     # Sort dfParams correctly
     dfParams <- dfParams[, names(dfExt)[-c(1, ncol(dfExt))]]
+  } else {
+    names(dfParams)<-names(dfExt)[-c(1,ncol(dfExt))]
   }
   return(dfParams)
 }

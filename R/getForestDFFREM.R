@@ -7,7 +7,7 @@
 #' @param noSkipOm Nof diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.
 #' @param parNames Names of the parameters
 #' @param covNames Names of the covariates
-#' @param availCov Names of the covariates to use in teh calculation of the FFEM model.
+#' @param availCov Names of the covariates to use in the calculation of the FFEM model.
 #' @inheritParams getForestDFSCM
 #'
 #'
@@ -24,7 +24,7 @@
 #'             functionListName = functionListName,
 #'             noBaseThetas = 16,
 #'             dfParameters = dfSamplesCOV,
-#'             probs = c(0.05, 0.5, 0.95),
+#'             probs = c(0.05, 0.95),
 #'             dfRefRow = dfRefRow,
 #'             quiet = TRUE)
 #' }
@@ -45,7 +45,8 @@ getForestDFFREM <- function(dfCovs,
                             parNames = paste("Par",1:noParCov,sep = ""),
                             availCov = covNames,
                             quiet = FALSE,
-                            probs = c(0.025,0.5, 0.975),
+                            probs = c(0.025, 0.975),
+                            pointFunction = median,
                             dfRefRow = NULL,
                             cGrouping = NULL,
                             ncores = 1,
@@ -57,9 +58,11 @@ getForestDFFREM <- function(dfCovs,
 
   if(!is.list(covNames)) stop("covNames must be a list")
 
-  if(!all(covNames$covNames %in% names(dfCovs))) stop("All covariates in the frem model need to be present in dfCovs.")
-
-  #resList <- list()
+  #If a needed covariate is not present in dfCovs, set it to missing
+  if(!all(covNames$covNames %in% names(dfCovs))) {
+    if (!quiet) warning("Not all covariates in frem model are present in dfCovs, setting them to missing")
+    dfCovs[,covNames$covNames[!(covNames$covNames %in% names(dfCovs))]] <-iMiss
+  }
 
 
   ## Try to make dfCovs into a data.frame if it isn't that already
@@ -221,19 +224,34 @@ getForestDFFREM <- function(dfCovs,
     for (j in 1:length(functionListName)) {
       dft         <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j], ]
       quant       <- quantile(dft$VALUE,probs = probs, names = FALSE, na.rm = T)
-      mean_base   <- mean(dft$VALUEBASE)
-      median_base <- median(dft$VALUEBASE)
+      #Calculate the point value of the forest plot
+      FUNCVAL=pointFunction(dft$VALUE)
+
+      #Define the relative without parameter uncertainty
+      dft$RELINTERNAL <- dft$VALUE/dft$VALUEBASE
+      #Get quantile and pointvalue when uncertainty is not taken into account
+      quantrel <- quantile(dft$RELINTERNAL,probs = probs, names = FALSE,na.rm = T)
+      FUNCNOVAR=pointFunction(dft$RELINTERNAL)
+
+      #Calculate reference value based one the pointFunction
+      func_base<-pointFunction(dft$VALUEBASE)
       true_base   <- dft$VALUEBASE[dft$ITER == 1]
       dfrow       <- cbind(dfCovs[i, ], data.frame(GROUP = group,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFMEAN = mean_base, REFTRUE = true_base, REFMEDIAN = median_base
-      ))
+        REFFUNC = func_base, REFTRUE = true_base, FUNC=FUNCVAL, FUNC_NOVAR=FUNCNOVAR,
+        COVEFF = !all(dft$RELINTERNAL==1)))
 
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("q", k)]] <- quant[k]
         dfrow <- cbind(dfrow, dfp[, 2])
         names(dfrow)[ncol(dfrow)] <- paste0("q", k)
+      }
+      for (k in 1:length(probs)) {
+        dfp <- data.frame(X1 = 1)
+        dfp[[paste0("q", k,"_NOVAR")]] <- quantrel[k]
+        dfrow <- cbind(dfrow, dfp[, 2])
+        names(dfrow)[ncol(dfrow)] <- paste0("q", k,"_NOVAR")
       }
       dfret <- rbind(dfret, dfrow)
     }

@@ -6,8 +6,7 @@
 #' @param input The input file name (character string).
 #' bootstrap or SIR. If the file name extension is ".cov" it is assumed that the file
 #' is a a NONMEM .cov file and if the extension is '.csv' is is assumed that it is a PsN raw results file from either a bootstrap or a SIR.
-#' @param extFile The name of the NONMEM ext file needed for sampling from the variance-covariance matrix. Should not be NULL when input
-#' is a .cov file.
+#' @param extFile The name of the NONMEM ext file. Needed to transform output to the ext-format.  Should not be NULL.
 #' @param n The number of samples to generate. NULL is permissable if the input is a SIR raw_results file.
 #' @param indexvec A vector that can be used to subset the columns in the raw results file so that the columns comes in the order THETA, SIGMA, OMEGA.
 #' not required if a PsN raw_results_structure is present in the same directory as the csv file.
@@ -33,17 +32,62 @@
 getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) {
 
   ## Check the input argument.
-  if(!is.character(input)) stop("input needs to be a character string")
-  if(tools::file_ext(input) == "") stop("The input file name needs to have an extension")
-  if(tools::file_ext(input) != "cov" &
-     tools::file_ext(input) != "csv") stop("The input file name needs to have either a .cov or .csv extension")
-  if(!file.exists(input)) stop(paste("Can not find",input))
+  if(!is.character(input) && !is.data.frame(input)) stop("input needs to be a character string or a data frame")
+  if (is.character(input)) {
+    if(tools::file_ext(input) == "") stop("The input file name needs to have an extension")
+    if(tools::file_ext(input) != "cov" &
+      tools::file_ext(input) != "csv") stop("The input file name needs to have either a .cov or .csv extension")
+    if(!file.exists(input)) stop(paste("Can not find",input))
+}
+    ## Check the extFile argument
+    if(!is.null(extFile) && tools::file_ext(extFile) != "ext") stop(paste(extFile, "does not have a .ext extension"))
+    if(!is.null(extFile) && !file.exists(extFile)) stop(paste("Can not find",extFile))
 
-  ## Check the extFile argument
-  if(tools::file_ext(extFile) != "ext") stop(paste(extFile, "does not have a .ext extension"))
-  if(!file.exists(extFile)) stop(paste("Can not find",extFile))
+  # A data frame was provided
+  if (is.data.frame(input)) {
+    dfParameters<-input
+    if (!is.null(indexvec)) dfParameters <- subset(dfParameters)[, indexvec]
+    # if ext file is provided
+    if (!is.null(extFile)) { #If a ext file is provided, use that to transform input
+      dfExt     <- subset(getExt(extFile = extFile), ITERATION == "-1000000000") # Get the final parameter estimates
+      if (is.null(n)) {
+        dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+        dfParameters <- cbind(dfParameters, OBJ = 0)
+        return(dfParameters)
+      } else {
+       # Now construct sigma and mu
+       sigma <- cov(dfParameters)
+       mu    <- colMeans(dfParameters)
 
+       #Get the parameters which are fixed based on the covariance
+       fixedmu = rep(FALSE,1,ncol(sigma))
+       for (j in 1:ncol(sigma)) {
+         fixedmu[j]<-all(sigma[,j]==0)
+       }
 
+      dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
+      dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+      dfParameters <- cbind(dfParameters, OBJ = 0)
+      return(dfParameters)
+    }
+    } else {
+      if (is.null(n)) return(dfParameters)
+      # Now construct sigma and mu
+      sigma <- cov(dfParameters)
+      mu    <- colMeans(dfParameters)
+
+      #Get the parameters which are fixed based on the covariance
+      fixedmu = rep(FALSE,1,ncol(sigma))
+      for (j in 1:ncol(sigma)) {
+        fixedmu[j]<-all(sigma[,j]==0)
+      }
+      tmpnames<-names(dfParameters)
+      dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
+      names(dfParameters)<-tmpnames
+      dfParameters <- cbind(dfParameters, OBJ = 0)
+      return(dfParameters)
+  }
+ }
   ## Sample from the varcov matrix if a .cov was provided
   if(tools::file_ext(input) == "cov") {
 
@@ -69,11 +113,13 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
   }
 
 
+
+
+
   ## Sample from a PsN raw results file if a .csv was provided
  # args <- list(...)
 
   if (tools::file_ext(input) == "csv") { # Submitted a bootstrap file, SSE or a SIR file
-
     ## Figure out the parameter positions in the input file
     if(!is.null(indexvec)) {
       indexvec <- as.numeric(indexvec)
@@ -86,15 +132,29 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
       res <- getParamPositions(rr_struct)
       if (!is.null(res)) {
         s1 <- s2 <- s3 <- NULL
-        if (length(res$THETA) > 0) s1 <- seq(res$THETA[1], res$THETA[1] + res$THETA[2] - 1)
-        if (length(res$SIGMA) > 0) s2 <- seq(res$SIGMA[1], res$SIGMA[1] + res$SIGMA[2] - 1)
-        if (length(res$OMEGA) > 0) s3 <- seq(res$OMEGA[1], res$OMEGA[1] + res$OMEGA[2] - 1)
+        if (length(res$THETA) > 0 && res$THETA[2]>0) s1 <- seq(res$THETA[1], res$THETA[1] + res$THETA[2] - 1)
+        if (length(res$SIGMA) > 0 && res$SIGMA[2]>0) s2 <- seq(res$SIGMA[1], res$SIGMA[1] + res$SIGMA[2] - 1)
+        if (length(res$OMEGA) > 0 && res$OMEGA[2]>0) s3 <- seq(res$OMEGA[1], res$OMEGA[1] + res$OMEGA[2] - 1)
         indexvec <- c(s1, s2, s3) + 1
       }
     }
 
     ## Read the csv and ext files
     dfParameters <- read.csv(file = input, header = TRUE)
+
+    ## Add SIGMA and OMEGA last in dfParameters if they are completely missing
+    if (is.null(s2) || is.null(s3)) {
+      if (is.null(s2)) {
+        dfParameters["SIGMA.1.1."]<-0
+        s2<-ncol(dfParameters)-1
+      }
+      if (is.null(s3)) {
+        dfParameters["OMEGA.1.1."]<-0
+        s3<-ncol(dfParameters)-1
+      }
+      indexvec <- c(s1,s2,s3) + 1
+    }
+
     dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 
     ## If its a SIR results file
@@ -122,7 +182,6 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
       }
 
       dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
-
       dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
       dfParameters <- cbind(dfParameters, OBJ = 0)
       return(dfParameters)

@@ -99,7 +99,7 @@ test_that("getForestDFFREM works properly with $COV and one core", {
   noBaseThetas <- 16
   noCovThetas  <-  5
 
-  dfresCOVfrem <-PMXForest::getForestDFFREM(dfCovs = dfCovs,
+  dfresCOVfrem <-getForestDFFREM(dfCovs = dfCovs,
                              #cdfCovsNames = covnames,
                              covNames=getCovNames(modFile),
                              functionList = list(paramFunction),
@@ -110,11 +110,11 @@ test_that("getForestDFFREM works properly with $COV and one core", {
                              noSkipOm = 2,
                              noCovThetas = noCovThetas,
                              dfParameters = dfSamplesCOVfrem,
-                             probs = c(0.05, 0.5, 0.95),
+                             probs = c(0.05, 0.95),
                              dfRefRow = NULL,
                              quiet = TRUE,
                              ncores = 1,
-                             cstrPackages = "PMXFrem")
+                             cstrPackages = c("PMXFrem","dplyr"))
 
 
   expect_equal_to_reference(dfresCOVfrem,"test_output/dfresCovFREM")
@@ -125,7 +125,7 @@ test_that("getForestDFFREM works properly with $COV and one core", {
   expect_equal_to_reference(p1,"test_output/plotForestDFoutputFREM")
 })
 
-test_that("getForestDFFREM works properly with bootstrap", {
+test_that("getForestDFFREM works properly with bootstrap and dfCovs without all covariates", {
 
   set.seed(123)
   runno   <- 61
@@ -231,11 +231,11 @@ test_that("getForestDFFREM works properly with bootstrap", {
                                  noSkipOm = 2,
                                  noCovThetas = noCovThetas,
                                  dfParameters = dfSamplesBSfrem ,
-                                 probs = c(0.05, 0.5, 0.95),
+                                 probs = c(0.05, 0.95),
                                  dfRefRow = NULL,
                                  quiet = TRUE,
                                  ncores=6,
-                                 cstrPackages = "PMXFrem")
+                                 cstrPackages = c("PMXFrem","dplyr"))
 
 
   expect_equal_to_reference(dfresCOVfremBS,"test_output/dfresCovFREMBS")
@@ -244,4 +244,44 @@ test_that("getForestDFFREM works properly with bootstrap", {
     geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
 
   expect_equal_to_reference(p1,"test_output/plotForestDFoutputFREMBS")
+
+
+  #Test that all covariates are not included
+  dfCovs2 <- createInputForestData(
+    list(
+        "FORM" = c(0,1),
+        "FOOD" = c(0,1),
+        "GENO" = c(1,2,3,4),
+         list("RACEL_3"=c(1,0,0),
+              "RACEL_2"=c(0,1,0)),
+        # "WT"   = c(50,75,100),
+         #"BMI"  = c(20,25,30),
+         "AGE"  = c(50,70,85),
+         "CRCL" = c(83,150),
+         "SEX"  = c(1,2)),
+    iMiss=-99)
+
+
+  dfresCOVfremNotAllIncluded <-getForestDFFREM(dfCovs = dfCovs2,
+                                              covNames=getCovNames(modFile),
+                                              functionList = list(paramFunction),
+                                              functionListName = functionListName,
+                                              noBaseThetas = noBaseThetas,
+                                              noParCov = 4,
+                                              noSigmas = 2,
+                                              noSkipOm = 2,
+                                              noCovThetas = noCovThetas,
+                                              dfParameters = dfSamplesBSfrem,
+                                              probs = c(0.05, 0.95),
+                                              dfRefRow = NULL,
+                                              quiet = TRUE,
+                                              ncores=6,
+                                              cstrPackages = c("PMXFrem","dplyr"))
+
+  p2 <- plotForestDF(dfresCOVfremNotAllIncluded,textsize = 5)+
+    geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
+
+  expect_equal_to_reference(p2,"test_output/plotForestDFoutputFREMBSWithoutBMIWT")
+
+
 })

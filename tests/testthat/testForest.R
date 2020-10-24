@@ -106,9 +106,10 @@ test_that("getForestDFSCM works properly", {
     noSigmas = 1,
     noSkipOm = 0,
     dfParameters = dfSamplesCOV,
-    probs = c(0.05, 0.5, 0.95),
+    probs = c(0.05, 0.95),
     dfRefRow = dfRefRow,
-    quiet = TRUE)
+    quiet = TRUE,
+    cstrPackages = "dplyr")
 
   expect_equal_to_reference(dfresCOV,"test_output/dfresCovOutput")
 
@@ -122,10 +123,11 @@ test_that("getForestDFSCM works properly", {
     noSigmas = 1,
     noSkipOm = 0,
     dfParameters = dfSamplesCOV,
-    probs = c(0.05, 0.5, 0.95),
+    probs = c(0.05, 0.95),
     dfRefRow = dfRefRow,
     quiet = TRUE,
-    cores=2)
+    cores=2,
+    cstrPackages = "dplyr")
 
   expect_equal_to_reference(dfresCOVcores,"test_output/dfresCovOutput")
 
@@ -134,6 +136,21 @@ test_that("getForestDFSCM works properly", {
     geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
 
   expect_equal_to_reference(p1,"test_output/plotForestDFoutput")
+
+  #Test a TRUE ref instead of median
+  p2 <- plotForestDF(dfresCOV,textsize = 5,useTrueRef = TRUE)+
+    xlim(0,3.3) +
+    geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
+
+  expect_equal_to_reference(p2,"test_output/plotForestDFoutputTRUETest")
+
+  #Test Ref without uncertainty
+  p3 <- plotForestDF(dfresCOV,textsize = 5,useRefUncertainty = FALSE)+
+    xlim(0,3.3) +
+    geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
+
+  expect_equal_to_reference(p3,"test_output/plotForestDFoutputNoRefUncTest")
+
 
 
   ## Test that dfRefRow works
@@ -148,10 +165,11 @@ test_that("getForestDFSCM works properly", {
     noSigmas = 1,
     noSkipOm = 0,
     dfParameters = dfSamplesCOV,
-    probs = c(0.05, 0.5, 0.95),
+    probs = c(0.05, 0.95),
     dfRefRow = dfRefRowTest,
     quiet = TRUE,
-    cores=2)
+    cores=2,
+    cstrPackages = "dplyr")
 
   expect_equal_to_reference(dfresCOVdfRefRowTest1,"test_output/dfresCovdfRefRowTest1")
 
@@ -164,12 +182,13 @@ test_that("getForestDFSCM works properly", {
     noSigmas = 1,
     noSkipOm = 0,
     dfParameters = dfSamplesCOV,
-    probs = c(0.05, 0.5, 0.95),
+    probs = c(0.05, 0.95),
     dfRefRow = NULL,
     quiet = TRUE,
     groupdist = 0.3,
     withingroupdist = 0.2,
-    cores=2)
+    cores=2,
+    cstrPackages = "dplyr")
 
   expect_equal_to_reference(dfresCOVdfRefRowTestNULL,"test_output/dfresCovdfRefRowTestNULL")
 
@@ -217,7 +236,8 @@ test_that("getForestDFSCM works properly", {
     functionListName   = functionListName,
     noBaseThetas       = 16,
     dfParameters       = dfSamplesCOV,
-    ncores             = 6)
+    ncores             = 6,
+    cstrPackages       = "dplyr")
 
   expect_equal_to_reference(p1,"test_output/dfresCOVempoutput")
 

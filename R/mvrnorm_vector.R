@@ -3,7 +3,9 @@
 #' @description Samples vectors of values from a vector of means and a varcov matrix
 #' @param mu Vector of means
 #' @param sigma Covariance matrix
-#' @param fixed_mu To be described
+#' @param fixed_mu Indicate that some parameters are fixed, i.e. guarantee that the exact
+#' mu_value is returned for fixed parameters, especially important for zero parameters
+#' which might otherwise return samples in the magnitude of <1E-16 instead of exactly 0
 #' @param dSeed The seed number
 #' @param iSampleIndex Number of samples to draw
 #' @return A vector if iSampleIndex==1 otherwise a matrix with iSampleIndex rows

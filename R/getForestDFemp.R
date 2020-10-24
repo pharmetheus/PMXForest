@@ -61,7 +61,8 @@ getForestDFemp <- function(dfData,
                           strID = "ID",
                           quiet = TRUE,
                           metricFunction = median,
-                          probs = c(0.05, 0.5, 0.95),
+                          probs = c(0.025, 0.975),
+                          pointFunction = median,
                           dfRefRow = NULL,
                           cGrouping = NULL,
                           ncores = 1,
@@ -183,19 +184,34 @@ getForestDFemp <- function(dfData,
         probs = probs, names = FALSE,
         na.rm = T
       )
-      mean_base <- mean(dft$VALUEBASE)
-      median_base <- median(dft$VALUEBASE)
+      #Calculate the point value of the forest plot
+      FUNCVAL=pointFunction(dft$VALUE)
+
+      #Define the relative without parameter uncertainty
+      dft$RELINTERNAL <- dft$VALUE/dft$VALUEBASE
+      #Get quantile and pointvalue when uncertainty is not taken into account
+      quantrel <- quantile(dft$RELINTERNAL,probs = probs, names = FALSE,na.rm = T)
+      FUNCNOVAR=pointFunction(dft$RELINTERNAL)
+
+      #Calculate reference value based one the pointFunction
+      func_base<-pointFunction(dft$VALUEBASE)
       true_base <- dft$VALUEBASE[dft$ITER == 1]
       dfrow <- cbind(dfCovs[i, ], data.frame(
         GROUP = group,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFMEAN = mean_base, REFTRUE = true_base, REFMEDIAN = median_base
-      ))
+        REFFUNC = func_base, REFTRUE = true_base, FUNC=FUNCVAL, FUNC_NOVAR=FUNCNOVAR,
+        COVEFF = !all(dft$RELINTERNAL==1)))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("q", k)]] <- quant[k]
         dfrow <- cbind(dfrow, dfp[, 2])
         names(dfrow)[ncol(dfrow)] <- paste0("q", k)
+      }
+      for (k in 1:length(probs)) {
+        dfp <- data.frame(X1 = 1)
+        dfp[[paste0("q", k,"_NOVAR")]] <- quantrel[k]
+        dfrow <- cbind(dfrow, dfp[, 2])
+        names(dfrow)[ncol(dfrow)] <- paste0("q", k,"_NOVAR")
       }
       dfret <- rbind(dfret, dfrow)
     }

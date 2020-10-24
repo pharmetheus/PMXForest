@@ -99,3 +99,46 @@ test_that("getSamples works correctly for SIR .csv input", {
   expect_equal_to_reference(tmp0,"test_output/getSamplesSIROutput")
 })
 
+
+test_that("getSamples works correctly for data frame with bootstrap headings", {
+
+  ## .csv file input
+  bootFile <- system.file("extdata","bs1_n100.dir/raw_results_run1.csv",package="PMXForest")
+  extFile  <- system.file("extdata","run1.ext",package="PMXForest")
+
+  dft<-read.csv(bootFile)
+
+  set.seed("123")
+  tmp0 <- getSamples(subset(dft,ofv!=0))
+
+  tmp1 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41))
+
+  tmp2 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),n=150)
+
+  tmp3 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile)
+
+  tmp4 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile,n=170)
+
+  ## Test that the output is the same as a saved reference
+  expect_equal_to_reference(tmp0,"test_output/dfSample0")
+  expect_equal_to_reference(tmp1,"test_output/dfSample1")
+  expect_equal_to_reference(tmp2,"test_output/dfSample2")
+  expect_equal_to_reference(tmp3,"test_output/dfSample3")
+  expect_equal_to_reference(tmp4,"test_output/dfSample4")
+})
+
+
+test_that("getSamples works correctly for a time-to-event model without SIGMA", {
+
+  ## .csv file input
+  runno<-"tte_weibull"
+  bootFile <- system.file("extdata","tte","bootstrap_tte_weibull_n100",paste0("raw_results_",runno,".csv"),package="PMXForest")
+  extFile <- system.file("extdata","tte",paste0(runno,".ext"),package="PMXForest")
+
+  tmp <- getSamples(bootFile,extFile)
+
+  ## Test that the output is the same as a saved reference
+  expect_equal_to_reference(tmp,"test_output/dfSampleTTE")
+})
+
+
