@@ -12,7 +12,9 @@ mvrnorm_vector(mu, sigma, fixed_mu = NULL, dSeed = NULL,
 
 \item{sigma}{Covariance matrix}
 
-\item{fixed_mu}{To be described}
+\item{fixed_mu}{Indicate that some parameters are fixed, i.e. guarantee that the exact
+mu_value is returned for fixed parameters, especially important for zero parameters
+which might otherwise return samples in the magnitude of <1E-16 instead of exactly 0}
 
 \item{dSeed}{The seed number}
 

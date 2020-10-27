@@ -12,8 +12,7 @@ getSamples(input, extFile = NULL, n = NULL, indexvec = NULL,
 bootstrap or SIR. If the file name extension is ".cov" it is assumed that the file
 is a a NONMEM .cov file and if the extension is '.csv' is is assumed that it is a PsN raw results file from either a bootstrap or a SIR.}
 
-\item{extFile}{The name of the NONMEM ext file needed for sampling from the variance-covariance matrix. Should not be NULL when input
-is a .cov file.}
+\item{extFile}{The name of the NONMEM ext file. Needed to transform output to the ext-format.  Should not be NULL.}
 
 \item{n}{The number of samples to generate. NULL is permissable if the input is a SIR raw_results file.}
 

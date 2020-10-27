@@ -5,12 +5,13 @@
 \title{plotForestDF()}
 \usage{
 plotForestDF(df, plotRelative = TRUE, addTable = TRUE,
-  strxlab = "Covariate-Parameter effect", strylab = "", decdig = 2,
-  percentscalexmax = 1.5, xtextoffset = 0.25,
-  xtextoffsetpercent = 1.1, textsize = 5, vlinecol = "lightgrey",
-  vlinesize = 1.5, pointsize = 3, errorbarsize = 1,
-  freescalex_wrap = (!plotRelative || addTable), log10x = FALSE,
-  fixedSpacing = TRUE, groupdist = 0.3, withingroupdist = 0.2)
+  strxlab = NULL, strylab = "", decdig = 2, percentscalexmax = 1.5,
+  xtextoffset = 0.25, xtextoffsetpercent = 1.1, textsize = 5,
+  vlinecol = "lightgrey", vlinesize = 1.5, pointsize = 3,
+  errorbarsize = 1, freescalex_wrap = (!plotRelative || addTable),
+  log10x = FALSE, fixedSpacing = TRUE, groupdist = 0.3,
+  withingroupdist = 0.2, useTrueRef = FALSE,
+  useRefUncertainty = TRUE)
 }
 \arguments{
 \item{df}{the forest plot data frame, should be based on a call to getForestDF or manually created accfording to the getForestDF structure}
@@ -19,7 +20,8 @@ plotForestDF(df, plotRelative = TRUE, addTable = TRUE,
 
 \item{addTable}{if a CI table should be added to the plot, default = TRUE}
 
-\item{strxlab}{x-label, default = "Covariate-Parameter effect"}
+\item{strxlab}{x-label, default = NULL. If nothing is added, this will default to "Relative covariate-Parmeter effect" when
+plotRelative=TRUE and default to "Parameter value" when plotRelative=FALSE. If no x-axis label should be used, set to empty string ("")}
 
 \item{strylab}{y-label, default = ""}
 
@@ -48,6 +50,14 @@ plotForestDF(df, plotRelative = TRUE, addTable = TRUE,
 \item{fixedSpacing}{A boolean (TRUE/FALSE) if fixed spacing between covariate groups should be used in the Forest plot. Default is TRUE.
 If FALSE, the y coordinates are calculated relative to the number of groups and numbers of covariates within a group.
 If fixed spacing is used, groupdist and withingroupdist will be used as well.}
+
+\item{useTrueRef}{A flag representing which value to use as the reference. Per default set to FALSE,
+indicating that the Ref function used is the same as function used to calculate the "point" for each covariate line. If set to TRUE,
+the True reference, i.e. the first sample in the dfSamples, which is often set to the final model estimates, will be used.}
+
+\item{useRefUncertainty}{A flag representing if the rleative reference (no covariate effect) should take the parameter uncertainty into account. Per default set to TRUE,
+indicating that the relative forest plot uncertainty is also accounting for the structural parameter uncertainty. If set to FALSE,
+the relative reference value as well as the uncertainty for a covariate without an effect will be 1.}
 
 \item{groupeddist}{A number defining the y distance between groups of covariates.}
 
