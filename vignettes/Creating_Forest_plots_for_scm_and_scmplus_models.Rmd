@@ -28,6 +28,12 @@ theme_update(plot.title = element_text(hjust = 0.5))
 set.seed(865765)
 ```
 
+# Preliminaries
+Some of the functions in this vignette take quite some time to run and the output from these functions are therefore precomputed. To detemine if the precomputed result should be used is governed by the flag `reCompute`
+```{r}
+reCompute <- FALSE
+```
+
 # Introduction
 
 Forest plots is an effective way of communicating the impact of covariates. The principal is that the predicted effect of a particular value of the covariate on a primary or secondary parameter is visualized together with a measure of the uncertainty around the predicted parameter value. By calculating and visualizing the impact of different covariates and covariate values, inference can be made about the relative importance of the covariates. An example Forest plot, with important features highlighted, is provided in Figure \@ref(fig:exampleForest).
@@ -315,7 +321,7 @@ dfSamplesBS <- getSamples(bootFile,extFile=extFile)
 This approach obtain the confidence interval limits non-parametrically from the SIR samples in a SIR analysis. 
 
 
-```{r,cache=TRUE}
+```{r}
 sirFile    <- system.file("extdata","sir_dir1",paste0("raw_results_run",runno,".csv"),package="PMXForest")
 dfSamplesSIR <- getSamples(sirFile,extFile=extFile)
 ```
@@ -346,25 +352,35 @@ getPlotData <- function(dfSamples,dfRefRow=NULL) {
 ```
 
 Compute the data to be plotted based on the \$COV step:
-```{r COVplotData, cache=FALSE}
+```{r COVplotData}
 dfresCOV     <- getPlotData(dfSamplesCOV,dfRefRow = dfRefRow)
 ```
 
 Compute the data to be plotted based on a small bootstrap:
-```{r BSsmallplotData, cache=TRUE}
+```{r BSsmallplotData}
 
 dfresBSsmall <- getPlotData(dfSamplesBSsmall,dfRefRow = dfRefRow)
 ```
 
 Compute the data to be plotted based on a large bootstrap:
-```{r BSplotData, cache=TRUE}
+```{r BSplotData}
 
-dfresBS <- getPlotData(dfSamplesBS,dfRefRow = dfRefRow)
+if(reCompute) {
+  dfresBS <- getPlotData(dfSamplesBS,dfRefRow = dfRefRow)
+  save(dfresBS,file="dfresBS.RData")
+} else {
+  load("dfresBS.RData")
+}
 ```
 
 Compute the data to be plotted based on a SIR analysis:
-```{r SIRplotData, cache=TRUE}
-dfresSIR <- getPlotData(dfSamplesSIR,dfRefRow = dfRefRow)
+```{r SIRplotData}
+if(reCompute) {
+  dfresSIR <- getPlotData(dfSamplesSIR,dfRefRow = dfRefRow)
+  save(dfresSIR,file="dfresSIR.RData")
+} else {
+  load("dfresSIR.RData")
+}
 ```
 
 ### Create the Forest plot {#sec:createForest}
@@ -421,7 +437,7 @@ With these specifications the data for the Forest plot can be setup (using the f
 
 ### Define the covariates to include in the Forest plot {#sec:dfCovsEmp}
 
-This is done differently for empirical Forest plots than for parametric Forest plots. In the parametric situation discrete covariate values are specified. For empirical Forest plots it is necessary to provide an expression that defines the covariate range for the subjects whose typical individual parameter estimates should be taken the median of. An example is provided below. It loosely corresponds to the parametric example above. 
+This is done differently for empirical Forest plots than for parametric Forest plots. In the parametric situation discrete covariate values are specified. For empirical Forest plots it is necessary to provide an expression that defines the covariate range for the subjects whose typical individual parameter estimates should be taken the median of. An example is provided below. It loosely corresponds to the parametric example above.
 
 ```{r}
 lsExpr<-rev(list(expression(SEX==2),
@@ -466,17 +482,17 @@ covnamesEmp <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM",
 
 ### Define the model function {#sec:paramFunctionEmp}
 
-The model function specification is the same for empirical as for parametric Forest plots (see Section \@ref(sec:paramFunction). 
+The model function specification is the same for empirical as for parametric Forest plots (see Section \@ref(sec:paramFunction).
 
 For empirical Forest plots, this function will be called once for each subject in the data set (vectorized) row in `dfCovs` and each parameter set in the `dfSamples` data frames (see below). It is also called once per subject for `dfRefRow` (but this makes less sense for empirical Forest plots. NEED TO EXPLAIN THIS BETTER.)
 
 ### Obtain the multivariate distribution of the primary parameters {#sec:multivariateDistEmp}
 
-This step occurs before the empirical and parametric Forest plots procedures diverge so the multivariate parameter distributions are derived in the same manner as for the parametric Forest plots (see Section \@ref(sec:multivariateDist)). 
+This step occurs before the empirical and parametric Forest plots procedures diverge so the multivariate parameter distributions are derived in the same manner as for the parametric Forest plots (see Section \@ref(sec:multivariateDist)).
 
 ### Set up the data for the Forest plot {#sec:setUpDataEmp}
 
-The actual data to be plotted is assembled by the `getForestDFemp` function. This is a different function than what is used for the parametric Forest plots (`getForestDFSCM`) although the arguments overlap. 
+The actual data to be plotted is assembled by the `getForestDFemp` function. This is a different function than what is used for the parametric Forest plots (`getForestDFSCM`) although the arguments overlap.
 
 One argument that is common to the two functions but that is more relevant to the empirical Forest plots is the `ncores` argument. A value of `ncores`great than 1 signals to the `getForestDF*`functions that the calls to the model function should be done in a parallel fashion. The reason that this is more relevant to empirical Forest plots is that they typically involves longer computations. However, it can also be useful also for parametric Forest plots when the uncertainty is derived using SIR. For parallel computations it may be necessary to provide the `cstrPackages` and `cstrExports` arguments.
 
@@ -484,7 +500,7 @@ First we create a convenience function to save space later on.
 
 ```{r}
 getPlotDataEmp <- function(dfSamples,dfRefRow=NULL) {
-  
+
   dfres <- getForestDFemp(
     dfData             = dfData,
     covExpressionsList = lsExpr,
@@ -492,11 +508,11 @@ getPlotDataEmp <- function(dfSamples,dfRefRow=NULL) {
     functionList       = list(paramFunction),
     functionListName   = functionListName,
     noBaseThetas       = 16,
-    dfParameters       = dfSamples, 
+    dfParameters       = dfSamples,
     dfRefRow           = dfRefRow,
     ncores             = 6
   )
-  
+
   return(dfres)
 }
 
@@ -511,57 +527,78 @@ dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE)
 ```
 
 Compute the data to be plotted based on the \$COV step:
-```{r COVplotDataEmp, cache=TRUE}
-dfresCOVemp     <- getPlotDataEmp(dfSamplesCOV,dfRefRow = dfRefRow)
+```{r COVplotDataEmp}
+if(reCompute) {
+  dfresCOVemp     <- getPlotDataEmp(dfSamplesCOV,dfRefRow = dfRefRow)
+  save(dfresCOVemp,file="dfresCOVemp.RData")
+} else {
+  load("dfresCOVemp.RData")
+}
+
 ```
 
 Compute the data to be plotted based on a small bootstrap:
-```{r BSsmallplotDataEmp, cache=TRUE}
+```{r BSsmallplotDataEmp}
+if(reCompute) {
+  dfresBSsmallemp <- getPlotDataEmp(dfSamplesBSsmall,dfRefRow = dfRefRow)
+  save(dfresBSsmallemp,file="dfresBSsmallemp.RData")
+} else {
+  load("dfresBSsmallemp.RData")
+}
 
-dfresBSsmallemp <- getPlotDataEmp(dfSamplesBSsmall,dfRefRow = dfRefRow)
 ```
 
 Compute the data to be plotted based on a large bootstrap:
-```{r BSplotDataEmp, cache=TRUE}
-
-dfresBSemp <- getPlotDataEmp(dfSamplesBS,dfRefRow = dfRefRow)
+```{r BSplotDataEmp}
+if(reCompute) {
+  dfresBSemp <- getPlotDataEmp(dfSamplesBS,dfRefRow = dfRefRow)
+  save(dfresBSemp,file="dfresBSemp.RData")
+} else {
+  load("dfresBSemp.RData")
+}
 ```
 
 Compute the data to be plotted based on a SIR analysis:
-```{r SIRplotDataEmp,cache=TRUE}
-dfresSIRemp <- getPlotDataEmp(dfSamplesSIR,dfRefRow = dfRefRow)
+```{r SIRplotDataEmp}
+if(reCompute) {
+  dfresSIRemp <- getPlotDataEmp(dfSamplesSIR,dfRefRow = dfRefRow)
+  save(dfresSIRemp,file="dfresSIRemp.RData")
+} else {
+  load("dfresSIRemp.RData")
+}
+
 ```
 
 ### Create the empirical Forest plot {#sec:createForestEmp}
 
 The reference line in these plots corresponds to the median typical individual prediction of CL.
 
-```{r,fig.width=12,fig.asp=0.6,out.width="100%", cache=TRUE}
+```{r,fig.width=12,fig.asp=0.6,out.width="100%"}
  plotForestDF(dfresCOVemp)+
    xlim(0,3.3) +
    geom_vline(xintercept=c(0.8,1.25),linetype="dashed") +
   ggtitle("Based on $COV")
 ```
 
-```{r,fig.width=12,fig.asp=0.6,out.width="100%", cache=TRUE}
+```{r,fig.width=12,fig.asp=0.6,out.width="100%"}
  plotForestDF(dfresBSsmallemp )+
    xlim(0,3.3) +
    geom_vline(xintercept=c(0.8,1.25),linetype="dashed") +
   ggtitle("Based on a varcov matrix from a small bootstrap")
 ```
 
-```{r,fig.width=12,fig.asp=0.6,out.width="100%", cache=TRUE}
+```{r,fig.width=12,fig.asp=0.6,out.width="100%"}
  plotForestDF(dfresBSemp )+
    xlim(0,3.3) +
    geom_vline(xintercept=c(0.8,1.25),linetype="dashed") +
   ggtitle("Based a large bootstrap")
 ```
 
-```{r,fig.width=12,fig.asp=0.6,out.width="100%", cache=TRUE}
+```{r,fig.width=12,fig.asp=0.6,out.width="100%"}
  plotForestDF(dfresSIRemp)+
    xlim(0,3.3) +
    geom_vline(xintercept=c(0.8,1.25),linetype="dashed") +
   ggtitle("Based on a SIR analysis")
 ```
 
-# The reference {#sec:referenceValues}
+
