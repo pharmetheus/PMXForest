@@ -77,24 +77,23 @@ plotForestDF <-function(df,
     for (i in 1:length(sort(unique(df$GROUP)))) {
       dft <- df[df$GROUP == sort(unique(df$GROUP))[i], ]
       num_in_group <- nrow(dft) / length(unique(df$PARAMETER))
-      for (n in 1:length(unique(df$COVNUM))) {
-        df$Y[df$GROUP == sort(unique(df$GROUP))[i] & df$COVNUM == unique(dft$COVNUM)[n]] <- (i -1) + n / (num_in_group + 1)
+      for (n in 1:length(unique(dft$COVNUM))) {
+        df$Y[df$GROUP == sort(unique(df$GROUP))[i] & df$COVNUM == unique(dft$COVNUM)[n]] <- - (i -1) - n / (num_in_group + 1)
       }
     }
   }  else {
     df$Y <- NA
     a <- 0
-    for (i in 1:length(sort(unique(df$GROUP)))) {
+    for (i in length(sort(unique(df$GROUP))):1) {
       dft <- df[df$GROUP == sort(unique(df$GROUP))[i], ]
       num_in_group <- nrow(dft) / length(unique(df$PARAMETER))
-      for (n in 1:length(unique(dft$COVNUM))) {
+      for (n in length(unique(dft$COVNUM)):1) {
         df$Y[df$GROUP == sort(unique(df$GROUP))[i] & df$COVNUM == unique(dft$COVNUM)[n]] <- a
         a <- a + withingroupdist
       }
       a <- a + groupdist
     }
   }
-
   #Inform on what to use as a reference, TRUE (=final model estimates) or the function used in getForestDF....
   strRefVar<-"REFFUNC"
   if (useTrueRef) strRefVar<-"REFTRUE"
