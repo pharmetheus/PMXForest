@@ -61,7 +61,7 @@ createInputForestData <- function(listCovs, iMiss = NA) {
         dfr[, ] <- iMiss
         for (j in 1:length(listCovs[[i]])) {
           strName <- names(listCovs[[i]][j])
-          dfr[[strName]] <- listCovs[[i]][[j]][k]
+          if (!is.na(listCovs[[i]][[j]][k])) dfr[[strName]] <- listCovs[[i]][[j]][k]
         }
         df <- rbind(df, dfr)
       }
@@ -76,5 +76,7 @@ createInputForestData <- function(listCovs, iMiss = NA) {
       }
     }
   }
-  return(df[-1, ])
+  df<-df[-1,]
+  rownames(df)<-1:nrow(df)
+  return(df)
 }
