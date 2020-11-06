@@ -132,7 +132,7 @@ test_that("getSamples works correctly for a time-to-event model without SIGMA", 
 
   ## .csv file input
   runno<-"tte_weibull"
-  bootFile <- system.file("extdata","tte","bootstrap_tte_weibull_n100",paste0("raw_results_",runno,".csv"),package="PMXForest")
+  bootFile <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("raw_results_",runno,".csv"),package="PMXForest")
   extFile <- system.file("extdata","tte",paste0(runno,".ext"),package="PMXForest")
 
   tmp <- getSamples(bootFile,extFile)
