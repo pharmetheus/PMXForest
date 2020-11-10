@@ -11,7 +11,7 @@ $PK
 
 ;--------------Covariate relationships---------------
 ;--------------SCM compatible code-------------------
-   TVRF =  (AGE/50)**THETA(3)
+   TVRF =  (AGE-50)*THETA(3)
    TVEFF = THETA(4)*EXPO
    RFCOV = 0
 
