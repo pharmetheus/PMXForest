@@ -1,5 +1,5 @@
 ---
-title: "Creating Forest plots for scm models defined using differential equations"
+title: "Creating Forest plots for secondary parameters defined using differential equations"
 output: 
   bookdown::html_document2:
     toc: true
@@ -37,18 +37,18 @@ set.seed(865765)
 
 # Introduction
 
-In this example the focus is not the different parts of constructing a forest plot but narrowing in on the parts relevant for producing a forest plot based on secondary parameters using a non-trivial design (e.g. multiple doses) or a single dose model defined as differential equations. 
+In this example the focus is not the different parts of constructing a Forest plot but narrowing in on the parts relevant for producing a Forest plot based on secondary parameters using a non-trivial design (e.g. multiple doses) or a single dose model defined with differential equations. 
 
-To illustrated this we will use two different packages, `deSolve` for the standard ordinary differential equations (ode) following a single dose, and `mrgsolve` which can be used if we have more advanced designs. Examples of secondary parameters derived using optimization (e.g. Cmax) is also provided.
+To illustrate this two different packages are used; `deSolve` for the standard ordinary differential equations (ode) following a single dose, and `mrgsolve` which can be used if more advanced designs ought to be implemented. Examples of secondary parameters derived using numerical optimization (e.g. maximum conncentration, Cmax) is also provided.
 
-All the examples in this vignette will use the parametric SCM type of forest plot based on bootstrap samples, for more information about the different steps in the creation of a forest plot or using different types of forest plots, see the vignette *Creating Forest plots for scm and scmplus models*.
+All the examples in this vignette will use the parametric SCM type of Forest plot based on bootstrap samples, for more information about the different steps in the creation of a Forest plot or using different types of Forest plots, see the vignette *Creating Forest plots for scm and scmplus models*.
 
 
-# Creating a parametric Forest plots with a deSolve model
+# Creating a parametric Forest plot with a deSolve model
 
-As in a regular model parameter Forest plot the covariates to include in the forest plot needs to be defined.
+As in a regular model parameter Forest plot the covariates to include in the Forest plot needs to be defined.
 
-### Define the covariates to include in the Forest plot {#sec:dfCovs}
+## Define the covariates to include in the Forest plot {#sec:dfCovs}
 
 The required specification is the list of covariate values to predict the parameter for. It is created using a helper function (`createInputForestData`)
 ```{r}
@@ -72,21 +72,21 @@ covnames <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D
               "Age 27 y","Age 62 y","CRCL 83 mL/min","CRCL 150 mL/min","Male","Female")
 ```
 
-The reference "subject", or set of covariates can be specified in the `dfRefRow` argument.
+The reference "subject", or set of covariates, can be specified in the `dfRefRow` argument.
 ```{r}
 dfRefRow <- data.frame("FORM"=1,"FOOD"=1,RACEL=0,"GENO"=2,"WT"=75,"AGE"=70,"CRCL"=118,"SEX"=1)
 ```
 
 
-### Define the model function {#sec:paramFunction}
+## Define the model function {#sec:paramFunction}
 
-The `functionList` argument to `getForestDFSCM` is a list of functions that computes the parameters to plot in the Forest plot from the NONMEM parameter estimates. More than one function can be provided as is exemplified below.
+The `functionList` argument to `getForestDFSCM` is a list of function(s) that computes the parameter(s) to plot in the Forest plot from the NONMEM parameter estimates. More than one function can be provided as is exemplified below.
 
 It is worth pointing out that this is a fragile part of the process of creating Forest plots with the `PMXForest` package. The user needs to specify the function to derive the parameter of interest, not seldom duplicating code already specified in NONMEM. Please be careful.
 
-The most general approach is to (re-)define the NONMEM model for the typical individual parameters. The function below defines the models for CL, FREL and V, but only CL is returned in this case. 
+The most general approach is to (re-)define the NONMEM model for the typical individual parameters. The functions below defines the models for concentration over time and the secondary parmeters Cmax and AUC within an interval.
 
-This function will be called once for each row in `dfCovs` and each parameter set in the `dfSamples*` data frames (see below), and for `dfRefRow`, and it will use the available covariate columns and the values in those columns. This means that we need to handle the case when a covariate is not be present in `dfCovs` as well as the -99s. Note that there will be -99s in `dfCovs` even if there are no missing covariate values in the NONMEM data set. If the NONMEM code doesn't handle -99s, the code in the function here needs to be adjusted.
+The secondary parameters function(s) will be called once for each row in `dfCovs` and each parameter set in the `dfSamples*` data frames (see below), and for `dfRefRow`, and it will use the available covariate columns and the values in those columns. This means that we need to handle the case when a covariate is not present in `dfCovs` as well as the -99s. Note that there will be -99s in `dfCovs` even if there are no missing covariate values in the NONMEM data set. If the NONMEM code doesn't handle -99s, the code in the function here needs to be adjusted.
 
 The parameter functions will have to accept a vector of fixed effects parameter estimates (`thetas`) and a one row data frame with covariate values. Other arguments provided by the user to `getForestDFSCM` will also be passed to the parameter functions.
 
@@ -99,13 +99,14 @@ Here is a general procedure for implementing the NONMEM code in the R function:
     c. Other modifications as needed, e.g `LOG` -> `log`
 3. Make sure that the code handles missing covariate values (-99). * Note! This is needed even if the original NONMEM code didn't do this.*
 4. Make sure that the code handles the case when the input data.frame (`df`) does not include columns for all covariates in the model. (See the `any(names(df))` below.)
+5. Make sure the design is correctly implemented, e.g. multiple or single doses.
   
-In this first example a single dose model function is defined using the ´deSolve` differential equations package.
+In this first example a single dose model function is defined using the `deSolve` differential equation package.
 
 ```{r}
 
-#This function calculates the concentration at any given times as well as the AUC
-# assuming a single dose at time 0. 
+#This function calculates the concentration at any given time as well as the AUC
+# assuming a single dose administered at time 0. 
 paramFunctionDeSolve <- function(thetas, df, times, ...) {
 
   FRELNCIL <- 1
@@ -199,11 +200,10 @@ Fun_ODE <- function (t, y, pars) {
 
 ```
 
-The next step is to define the function(s) that we will use to make the forest plot, i.e. the secondary parameters cmax and auc in this case. Note that any defined external functions which are not built in any packages needs to be sourced from within the secondary parameter function as one can see with the `globalEnv` function `paramFunctionDeSolve`. The reason is that the parallel mechanism in the forest plot calculations is working in a different environment than the global environment, hence any defined variables need to be passed in or sourced directly in the functions used.  
+The next step is to define the function(s) that will be used to make the Forest plot, i.e. the secondary parameters cmax and auc in this case. Note that any defined external function(s) which are not built in any packages needs to be sourced from within the secondary parameter function as one can see with the `globalEnv` function `paramFunctionDeSolve`. The reason is that the parallel mechanism in the Forest plot calculations is working in a different environment than the global environment, hence any defined variables need to be passed in or sourced directly in the functions used.  
 
 ```{r}
 #Function to get the cmax within an interval [t1,t2]
-
 Cmax<-function(thetas, df, interval) {
   source("./paramFunctionDeSolve.R")
   wrapper<-function(time,thetas,df) {
@@ -224,7 +224,7 @@ AUC<-function(thetas,df,interval) {
 
 ```
 
-### Plot the typical profile to check the implementation of the model
+## Plot the typical profile to check the implementation of the model
 
 First the ext file is read in with the final parameter estimates, these are used to plot the function and calculate the secondary parameters.
 
@@ -258,7 +258,7 @@ auc<-AUC(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=c(0,72))
 
 The output of this function, i.e. auc, is `r round(auc,2)` ng*h/mL.
 
-#### Use the output from a large bootstrap for parameter uncertainty
+## Use the output from a large bootstrap for parameter uncertainty
 
 This approach obtain the confidence interval limits non-parametrically from a bootstrap (n=100 in this case).
 
@@ -268,7 +268,7 @@ bootFile    <- system.file("extdata","bs1_n100.dir",paste0("raw_results_run",run
 dfSamplesBS <- PMXForest::getSamples(bootFile,extFile=extFile)
 ```
 
-### Set up the data for the Forest plot {#sec:setUpDataPar}
+## Set up the data for the Forest plot {#sec:setUpDataPar}
 
 The actual data to be plotted is assembled by the `getForestDFSCM` function. In addition to the information assembled above one additional argument is required - the number of fixed effects in the NONMEM model (`noBaseThetas`) as well as the extra parameters for the secondary parameter functions, the `interval` where the secondary parameters are calculated within.
 
@@ -287,7 +287,7 @@ The actual data to be plotted is assembled by the `getForestDFSCM` function. In 
 ```
 
 
-### Create the Forest plot {#sec:createForest}
+## Create the Forest plot {#sec:createForest}
 
 The Forest plots below displays the data on a relative scale, with the reference being defined in the `dfRefRow` data.frame. Included are also dashed vertical lines at 0.8 and 1.25 to visualize a(n imagined) region of clinical irrelevance. The plotForestDF function returns a ggplot object so additions like this can easily be made.
 ```{r ForestCOV,fig.width=12,fig.asp=0.6,out.width="100%"}
@@ -302,7 +302,7 @@ plotForestDF(dfres,
 
 
 
-# Creating a parametric Forest plots from a mrgsolve model
+# Creating a parametric Forest plots with a mrgsolve model
 
 In the previous example the `deSolve` package was used which is pretty straight forward to use for a single dose. If more advanced designs are used, packages like `mrgsolve` might instead be used. In the following example, the same model and the same secondary parameters will be calculated, but instead after three doses. The `mrgsolve` model in this example is a pre-compiled C++ model which is the preferred `mrgsolve` method suitable for speed which is a necessity for calculating secondary parameters like `Cmax`.
 
@@ -417,7 +417,7 @@ return(tmp[match(sampletimes,out$time),])
 
 ```
 
-The next step is to define the function(s) that we will use to make the Forest plot, i.e. the secondary parameters cmax and auc in this case. Note that any defined external functions which are not built in any packages needs to be sourced from within the secondary parameter function as one can see with the `globalEnv` function `paramFunctionmrgsolve`. The reason is that the parallel mechanism in the Forest plot calculations is working in a different environment than the global environment, hence any defined variables need to be passed in or sourced directly in the functions used.  
+The next step is to define the function(s) that will be used to make the Forest plot, i.e. the secondary parameters cmax and auc in this case. Note that any defined external functions which are not built in any packages needs to be sourced from within the secondary parameter function as one can see with the `globalEnv` function `paramFunctionmrgsolve`. The reason is that the parallel mechanism in the Forest plot calculations is working in a different environment than the global environment, hence any defined variables need to be passed in or sourced directly in the functions used.  
 
 ```{r}
 #Function to get the cmax within an interval [t1,t2]
@@ -442,15 +442,15 @@ AUC<-function(thetas,df,interval,tau,model) {
 
 ```
 
-Next step is to compile the mrgsolve function in order to pass it as a variable into the parameter function (`paramFunctionmrgsolve`).
+Next step is to compile the mrgsolve model in order to pass it as a variable into the parameter function (`paramFunctionmrgsolve`).
 
 ```{r}
 mymodel <- mcode("mymodel",code,atol=1e-8, rtol=1e-8,maxsteps=5000)
 ```
 
-## Check the model implementation
+## Check the model implementation in mrgsolve
 
-A good way to check the model is now to plot the parameter function output
+A good way to check the model is to plot the parameter function output
 
 ```{r TypicalPlotmrgsolve,fig.width=12,fig.asp=0.6,out.width="100%"}
 
@@ -487,9 +487,9 @@ auc3dose<-AUC(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=c(0,72),tau=
 The output of this function, i.e. auc, is `r round(auc1dose,2)` ng*h/mL and `r round(auc3dose,2)` ng*h/mL.
 
 
-### Set up the data for the Forest plot
+## Set up the data for the Forest plot
 
-The actual data to be plotted is assembled by the `getForestDFSCM` function. In addition to the information assembled above some additional argument is required - the number of fixed effects in the NONMEM model (`noBaseThetas`) as well as the extra parameters for the secondary parameter functions, the `interval` to calculate the secondary parameters within, the dosing interval (`tau`) and the compiled mrgsolve model (`model`). Note that in this particular example, `Cmax` is run first and then `AUC` due to high memory usage with mrgsolve in combination with optimize which is used in the `Cmax` function.
+The actual data to be plotted is assembled by the `getForestDFSCM` function. In addition to the information assembled above some additional argument is required - the number of fixed effects in the NONMEM model (`noBaseThetas`) as well as the extra parameters for the secondary parameter functions, the `interval` to calculate the secondary parameters within, the dosing interval (`tau`) and the compiled mrgsolve model (`model`). Note that in this particular example, `Cmax` is run first and then `AUC` due to high memory usage with `mrgsolve` in combination with `optimize` which is used in the `Cmax` function.
 
 ```{r Cmaxmrgsolve, cache=TRUE}
 #Cmax
@@ -538,4 +538,6 @@ plotForestDF(rbind(dfresmrgsolveCmax,dfresmrgsolveAuc),
 
 ```
 
+# References
 
+Please see the vignette and reference material for the `PMXForest`, `deSolve` and `mrgsolve` packages for more information.
