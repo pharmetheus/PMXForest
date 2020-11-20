@@ -23,13 +23,13 @@ suppressPackageStartupMessages(library(PMXForest))
 suppressPackageStartupMessages(library(tools))
 suppressPackageStartupMessages(library(ggplot2))
 
-#Used to enter diff eq models with "easy" designs
-suppressPackageStartupMessages(library(deSolve)) 
-#Used to enter diff eq with e.g. multiple dosing
+# Used to enter diff eq models with "easy" designs
+suppressPackageStartupMessages(library(deSolve))
+# Used to enter diff eq with e.g. multiple dosing
 suppressPackageStartupMessages(library(mrgsolve))
 
 
-theme_set(theme_bw(base_size=18))
+theme_set(theme_bw(base_size = 18))
 theme_update(plot.title = element_text(hjust = 0.5))
 
 set.seed(865765)
@@ -53,28 +53,33 @@ As in a regular model parameter Forest plot the covariates to include in the For
 The required specification is the list of covariate values to predict the parameter for. It is created using a helper function (`createInputForestData`)
 ```{r}
 dfCovs <- createInputForestData(
-  list( "FORM" = c(0,1),
-        "FOOD" = c(0,1),
-        "GENO" = c(1,2,3,4),
-        "RACEL"= c(1,2,3),
-        "WT"   = c(65,115),
-        "AGE"  = c(27,62),
-        "CRCL" = c(83,150),
-        "SEX"  = c(1,2)),
-  iMiss=-99) 
+  list(
+    "FORM" = c(0, 1),
+    "FOOD" = c(0, 1),
+    "GENO" = c(1, 2, 3, 4),
+    "RACEL" = c(1, 2, 3),
+    "WT" = c(65, 115),
+    "AGE" = c(27, 62),
+    "CRCL" = c(83, 150),
+    "SEX" = c(1, 2)
+  ),
+  iMiss = -99
+)
 ```
 
 
 The `cdfCovsNames` argument to `getForestDFSCM` is optional and specifies a name to be used for each row in `dfCovs`. If not provided, the original covariate names (e.g. `FORM`and `FOOD`) will be used on the y-axis in the Forest plot.
 ```{r}
-covnames <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
-              "African American","Asian and other","WT 65 kg","WT 115 kg",
-              "Age 27 y","Age 62 y","CRCL 83 mL/min","CRCL 150 mL/min","Male","Female")
+covnames <- c(
+  "Oral tablets", "FDC", "Fasted", "Fed", "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM", "Caucasian",
+  "African American", "Asian and other", "WT 65 kg", "WT 115 kg",
+  "Age 27 y", "Age 62 y", "CRCL 83 mL/min", "CRCL 150 mL/min", "Male", "Female"
+)
 ```
 
 The reference "subject", or set of covariates, can be specified in the `dfRefRow` argument.
 ```{r}
-dfRefRow <- data.frame("FORM"=1,"FOOD"=1,RACEL=0,"GENO"=2,"WT"=75,"AGE"=70,"CRCL"=118,"SEX"=1)
+dfRefRow <- data.frame("FORM" = 1, "FOOD" = 1, RACEL = 0, "GENO" = 2, "WT" = 75, "AGE" = 70, "CRCL" = 118, "SEX" = 1)
 ```
 
 
@@ -105,30 +110,29 @@ In this first example a single dose model function is defined using the `deSolve
 
 ```{r}
 
-#This function calculates the concentration at any given time as well as the AUC
-# assuming a single dose administered at time 0. 
+# This function calculates the concentration at any given time as well as the AUC
+# assuming a single dose administered at time 0.
 paramFunctionDeSolve <- function(thetas, df, times, ...) {
-
   FRELNCIL <- 1
   if (any(names(df) == "NCIL") && df$NCIL == 1) FRELNCIL <- 1 + thetas[16]
 
-  FRELFORM <- 1 
+  FRELFORM <- 1
   if (any(names(df) == "FORM") && df$FORM == 0) FRELFORM <- 1 + thetas[15]
 
   FRELCOV <- FRELFORM * FRELNCIL
 
-  CLFOOD <- 1 
+  CLFOOD <- 1
   if (df$FOOD == 0) CLFOOD <- 1 + thetas[14]
- 
+
   CLCOV <- CLFOOD
- 
+
   TVFREL <- thetas[1]
-  if(any(names(df) == "GENO")) {
-    if(df$GENO == 1) TVFREL <- TVFREL * (1 + thetas[11])
-    if(df$GENO == 3) TVFREL <- TVFREL * (1 + thetas[12])
-    if(df$GENO == 4) TVFREL <- TVFREL * (1 + thetas[13])
+  if (any(names(df) == "GENO")) {
+    if (df$GENO == 1) TVFREL <- TVFREL * (1 + thetas[11])
+    if (df$GENO == 3) TVFREL <- TVFREL * (1 + thetas[12])
+    if (df$GENO == 4) TVFREL <- TVFREL * (1 + thetas[13])
   }
-  
+
   TVFREL <- FRELCOV * TVFREL
 
   if (!any(names(df) == "WT") || df$WT == -99) {
@@ -137,12 +141,12 @@ paramFunctionDeSolve <- function(thetas, df, times, ...) {
     TVCL <- thetas[4] * (df$WT / 75)**thetas[2]
   }
 
-  if(any(names(df) == "GENO")) {
+  if (any(names(df) == "GENO")) {
     if (df$GENO == 1) TVCL <- TVCL * (1 + thetas[8])
     if (df$GENO == 3) TVCL <- TVCL * (1 + thetas[9])
     if (df$GENO == 4) TVCL <- TVCL * (1 + thetas[10])
   }
-  
+
   TVCL <- CLCOV * TVCL
 
   if (!any(names(df) == "WT") || df$WT == -99) {
@@ -151,77 +155,82 @@ paramFunctionDeSolve <- function(thetas, df, times, ...) {
     TVV <- thetas[5] * (df$WT / 75)**thetas[3]
   }
   TVMAT <- thetas[6]
-  TVD1  <- thetas[7]
+  TVD1 <- thetas[7]
 
   FREL <- TVFREL
   CL <- TVCL
   V <- TVV
-  
+
   D1FR <- TVD1
-  MAT  <- TVMAT
-  
-  D1    = MAT*(1-D1FR)
-  F1    = FREL
-  KA    = 1 / (MAT-D1)
-  
-## parameters for the ODE
-pars <- c(
-KA = KA,
-DOSE = 80*F1,
-D1 = D1,
-CL  = CL,
-V  = V)
+  MAT <- TVMAT
 
-#Inline function of the ODE, note that an extra
-#compartment for AUC is added
-Fun_ODE <- function (t, y, pars) {
-    with (as.list(c(y, pars)), {
-    r<-0 #Input rate into depot compartment
-    if (t<=D1) r<-DOSE/D1 
-    dA1<- -KA*A1 + r
-    dA2<-  KA*A1 - CL/V*A2
-    dA3<-  A2*1000/V
-    return(list(dy = c(dA1, dA2,dA3),
-        CONC = A2*1000/V,
-        AUC  = A3))
-  })}
+  D1 <- MAT * (1 - D1FR)
+  F1 <- FREL
+  KA <- 1 / (MAT - D1)
 
-  #Initial conditions
+  ## parameters for the ODE
+  pars <- c(
+    KA = KA,
+    DOSE = 80 * F1,
+    D1 = D1,
+    CL = CL,
+    V = V
+  )
+
+  # Inline function of the ODE, note that an extra
+  # compartment for AUC is added
+  Fun_ODE <- function(t, y, pars) {
+    with(as.list(c(y, pars)), {
+      r <- 0 # Input rate into depot compartment
+      if (t <= D1) r <- DOSE / D1
+      dA1 <- -KA * A1 + r
+      dA2 <- KA * A1 - CL / V * A2
+      dA3 <- A2 * 1000 / V
+      return(list(
+        dy = c(dA1, dA2, dA3),
+        CONC = A2 * 1000 / V,
+        AUC = A3
+      ))
+    })
+  }
+
+  # Initial conditions
   y <- c(A1 = 0, A2 = 0, A3 = 0)
-  #Sort times if they come in non-increasing order
-  s1<-sort(times,index.return=TRUE)
+  # Sort times if they come in non-increasing order
+  s1 <- sort(times, index.return = TRUE)
   ## ODE model solved with ode solver
-  ODE <- ode(y = y, times = s1$x, func = Fun_ODE,
-  parms = pars, atol = 1e-10, rtol = 1e-10)    
-  
-  #Return all compartments
-  return(ODE[s1$ix,])
-}
+  ODE <- ode(
+    y = y, times = s1$x, func = Fun_ODE,
+    parms = pars, atol = 1e-10, rtol = 1e-10
+  )
 
+  # Return all compartments
+  return(ODE[s1$ix, ])
+}
 ```
 
 The next step is to define the function(s) that will be used to make the Forest plot, i.e. the secondary parameters cmax and auc in this case. Note that any defined external function(s) which are not built in any packages needs to be sourced from within the secondary parameter function as one can see with the `globalEnv` function `paramFunctionDeSolve`. The reason is that the parallel mechanism in the Forest plot calculations is working in a different environment than the global environment, hence any defined variables need to be passed in or sourced directly in the functions used.  
 
 ```{r}
-#Function to get the cmax within an interval [t1,t2]
-Cmax<-function(thetas, df, interval) {
+# Function to get the cmax within an interval [t1,t2]
+Cmax <- function(thetas, df, interval) {
   source("./paramFunctionDeSolve.R")
-  wrapper<-function(time,thetas,df) {
-    return(paramFunctionDeSolve(thetas,df,times = c(0,time))[2,"CONC"])
+  wrapper <- function(time, thetas, df) {
+    return(paramFunctionDeSolve(thetas, df, times = c(0, time))[2, "CONC"])
   }
-  return(optimize(f = wrapper,interval = interval,
-                  maximum = TRUE,thetas=thetas,df=df)$objective)
+  return(optimize(
+    f = wrapper, interval = interval,
+    maximum = TRUE, thetas = thetas, df = df
+  )$objective)
 }
 
-#Function to get the auc within an interval [t1,t2]
-AUC<-function(thetas,df,interval) {
+# Function to get the auc within an interval [t1,t2]
+AUC <- function(thetas, df, interval) {
   source("./paramFunctionDeSolve.R")
-  #Add a zero to ensure dosing starts at time 0
-  sol<-paramFunctionDeSolve(thetas,df,times = c(0,interval))
-  return(sol[nrow(sol),"AUC"]-sol[nrow(sol)-1,"AUC"])
+  # Add a zero to ensure dosing starts at time 0
+  sol <- paramFunctionDeSolve(thetas, df, times = c(0, interval))
+  return(sol[nrow(sol), "AUC"] - sol[nrow(sol) - 1, "AUC"])
 }
-
-
 ```
 
 ## Plot the typical profile to check the implementation of the model
@@ -229,23 +238,23 @@ AUC<-function(thetas,df,interval) {
 First the ext file is read in with the final parameter estimates, these are used to plot the function and calculate the secondary parameters.
 
 ```{r TypicalPlotdeSolve,fig.width=12,fig.asp=0.6,out.width="100%"}
-runno   <- 1
-extFile <- system.file("extdata",paste0("run",runno,".ext"),package="PMXForest")
+runno <- 1
+extFile <- system.file("extdata", paste0("run", runno, ".ext"), package = "PMXForest")
 
 dfExt <- subset(PMXForest::getExt(extFile = extFile), ITERATION == "-1000000000")
 
-#Call the concentration time-profile function using a Ref covariate setting
-sol<-as.data.frame(paramFunctionDeSolve(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,times=seq(0,72,0.1)))
+# Call the concentration time-profile function using a Ref covariate setting
+sol <- as.data.frame(paramFunctionDeSolve(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, times = seq(0, 72, 0.1)))
 
 
-p<-ggplot()+geom_line(aes(x=sol$time,y=sol$CONC),size=1.8)+xlab("Time (h)")+ylab("Concentration ng/mL")
+p <- ggplot() + geom_line(aes(x = sol$time, y = sol$CONC), size = 1.8) + xlab("Time (h)") + ylab("Concentration ng/mL")
 p
 ```
 
 Another function that is good to test is the `Cmax` function:
 
 ```{r}
-cmax<-Cmax(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=seq(0,72))
+cmax <- Cmax(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, interval = seq(0, 72))
 ```
 
 The output of this function, i.e. Cmax, is `r round(cmax,2)` ng/mL.
@@ -253,7 +262,7 @@ The output of this function, i.e. Cmax, is `r round(cmax,2)` ng/mL.
 The final test is to check the function that calculates the area under the curve for a given time interval
 
 ```{r}
-auc<-AUC(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=c(0,72))
+auc <- AUC(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, interval = c(0, 72))
 ```
 
 The output of this function, i.e. auc, is `r round(auc,2)` ng*h/mL.
@@ -264,8 +273,8 @@ This approach obtain the confidence interval limits non-parametrically from a bo
 
 
 ```{r}
-bootFile    <- system.file("extdata","bs1_n100.dir",paste0("raw_results_run",runno,".csv"),package="PMXForest")
-dfSamplesBS <- PMXForest::getSamples(bootFile,extFile=extFile)
+bootFile <- system.file("extdata", "bs1_n100.dir", paste0("raw_results_run", runno, ".csv"), package = "PMXForest")
+dfSamplesBS <- PMXForest::getSamples(bootFile, extFile = extFile)
 ```
 
 ## Set up the data for the Forest plot {#sec:setUpDataPar}
@@ -273,17 +282,18 @@ dfSamplesBS <- PMXForest::getSamples(bootFile,extFile=extFile)
 The actual data to be plotted is assembled by the `getForestDFSCM` function. In addition to the information assembled above one additional argument is required - the number of fixed effects in the NONMEM model (`noBaseThetas`) as well as the extra parameters for the secondary parameter functions, the `interval` where the secondary parameters are calculated within.
 
 ```{r deSolveCmaxAuc, cache=TRUE}
-  dfres <- getForestDFSCM(dfCovs = dfCovs,
-                          cdfCovsNames = covnames,
-                          functionList = list(Cmax,AUC),
-                          functionListName = c("CMAX","AUC"),
-                          noBaseThetas = 16,
-                          dfParameters = dfSamplesBS,
-                          dfRefRow = dfRefRow,
-                          cstrPackages  = c("deSolve"),
-                          ncores = 4,
-                          interval=c(0,24))
-
+dfres <- getForestDFSCM(
+  dfCovs = dfCovs,
+  cdfCovsNames = covnames,
+  functionList = list(Cmax, AUC),
+  functionListName = c("CMAX", "AUC"),
+  noBaseThetas = 16,
+  dfParameters = dfSamplesBS,
+  dfRefRow = dfRefRow,
+  cstrPackages = c("deSolve"),
+  ncores = 4,
+  interval = c(0, 24)
+)
 ```
 
 
@@ -292,12 +302,12 @@ The actual data to be plotted is assembled by the `getForestDFSCM` function. In 
 The Forest plots below displays the data on a relative scale, with the reference being defined in the `dfRefRow` data.frame. Included are also dashed vertical lines at 0.8 and 1.25 to visualize a(n imagined) region of clinical irrelevance. The plotForestDF function returns a ggplot object so additions like this can easily be made.
 ```{r ForestCOV,fig.width=12,fig.asp=0.6,out.width="100%"}
 plotForestDF(dfres,
-             log10x = TRUE,
-             addTable=TRUE,
-             percentscalexmax = 7,
-             useRefUncertainty = FALSE)+
-  geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
-
+  log10x = TRUE,
+  addTable = TRUE,
+  percentscalexmax = 7,
+  useRefUncertainty = FALSE
+) +
+  geom_vline(xintercept = c(0.8, 1.25), linetype = "dashed")
 ```
 
 
@@ -308,8 +318,8 @@ In the previous example the `deSolve` package was used which is pretty straight 
 
 ```{r}
 
-#First we define the model with mrgsolve syntax
-code <- '
+# First we define the model with mrgsolve syntax
+code <- "
 $PARAM CL=0.0378645, V=4.59094, KA=0.45
 $CMT ABS CENT AUC
 $ODE
@@ -318,36 +328,36 @@ dxdt_CENT = KA*ABS-(CL/V)*CENT;
 dxdt_AUC  = CENT*1000/V;
 $TABLE double CP  = CENT*1000/V;
 $CAPTURE CP
-'
+"
 
 
-#This function calculates the concentration at any given times as well as the AUC
-# assuming multiple doses with a tau and starting at time 0. 
-paramFunctionmrgsolve <- function(thetas, df, times, tau,model, ...) {
+# This function calculates the concentration at any given times as well as the AUC
+# assuming multiple doses with a tau and starting at time 0.
+paramFunctionmrgsolve <- function(thetas, df, times, tau, model, ...) {
 
-  #Load the model again since a different R process is used using parallelization
+  # Load the model again since a different R process is used using parallelization
   loadso(model)
-  
+
   FRELNCIL <- 1
   if (any(names(df) == "NCIL") && df$NCIL == 1) FRELNCIL <- 1 + thetas[16]
 
-  FRELFORM <- 1 
+  FRELFORM <- 1
   if (any(names(df) == "FORM") && df$FORM == 0) FRELFORM <- 1 + thetas[15]
 
   FRELCOV <- FRELFORM * FRELNCIL
 
-  CLFOOD <- 1 
+  CLFOOD <- 1
   if (df$FOOD == 0) CLFOOD <- 1 + thetas[14]
- 
+
   CLCOV <- CLFOOD
- 
+
   TVFREL <- thetas[1]
-  if(any(names(df) == "GENO")) {
-    if(df$GENO == 1) TVFREL <- TVFREL * (1 + thetas[11])
-    if(df$GENO == 3) TVFREL <- TVFREL * (1 + thetas[12])
-    if(df$GENO == 4) TVFREL <- TVFREL * (1 + thetas[13])
+  if (any(names(df) == "GENO")) {
+    if (df$GENO == 1) TVFREL <- TVFREL * (1 + thetas[11])
+    if (df$GENO == 3) TVFREL <- TVFREL * (1 + thetas[12])
+    if (df$GENO == 4) TVFREL <- TVFREL * (1 + thetas[13])
   }
-  
+
   TVFREL <- FRELCOV * TVFREL
 
   if (!any(names(df) == "WT") || df$WT == -99) {
@@ -356,12 +366,12 @@ paramFunctionmrgsolve <- function(thetas, df, times, tau,model, ...) {
     TVCL <- thetas[4] * (df$WT / 75)**thetas[2]
   }
 
-  if(any(names(df) == "GENO")) {
+  if (any(names(df) == "GENO")) {
     if (df$GENO == 1) TVCL <- TVCL * (1 + thetas[8])
     if (df$GENO == 3) TVCL <- TVCL * (1 + thetas[9])
     if (df$GENO == 4) TVCL <- TVCL * (1 + thetas[10])
   }
-  
+
   TVCL <- CLCOV * TVCL
 
   if (!any(names(df) == "WT") || df$WT == -99) {
@@ -370,82 +380,81 @@ paramFunctionmrgsolve <- function(thetas, df, times, tau,model, ...) {
     TVV <- thetas[5] * (df$WT / 75)**thetas[3]
   }
   TVMAT <- thetas[6]
-  TVD1  <- thetas[7]
+  TVD1 <- thetas[7]
 
   FREL <- TVFREL
   CL <- TVCL
   V <- TVV
-  
+
   D1FR <- TVD1
-  MAT  <- TVMAT
-  
-  D1    = MAT*(1-D1FR)
-  F1    = FREL
-  KA    = 1 / (MAT-D1)
-  
-  dose = 80*F1 #Calculate the actual input
-  rate = dose/D1 #Calculate the actual rate
+  MAT <- TVMAT
 
-  sampletimes=times
-  
-  dosetimes<-seq(0,max(sampletimes),by=tau)
-  amt<-rep(dose,length(dosetimes))
-  rate=rep(rate,length(dosetimes))
+  D1 <- MAT * (1 - D1FR)
+  F1 <- FREL
+  KA <- 1 / (MAT - D1)
 
-  #Create the design dataset
-  data <- 
-    tibble::tibble(ID = 1,
-                  cmt=1,
-                  time=c(sampletimes,dosetimes),
-                  evid=c(rep(0,length(sampletimes)),rep(1,length(dosetimes))),
-                  amt=c(rep(0,length(sampletimes)),amt),
-                  rate=c(rep(0,length(sampletimes)),rate),
-                  CL=CL,
-                  KA=KA,
-                  V=V)
+  dose <- 80 * F1 # Calculate the actual input
+  rate <- dose / D1 # Calculate the actual rate
 
-  data<-data[order(data$time),]
+  sampletimes <- times
 
-#Simulate data using the model and dataset
-out<-mrgsim_q(x=model,data=data)
-tmp <-  data.frame(CONC=out$CP,AUC=out$AUC)
-#Only return the sampletimes, not the dosetimes
-return(tmp[match(sampletimes,out$time),])
+  dosetimes <- seq(0, max(sampletimes), by = tau)
+  amt <- rep(dose, length(dosetimes))
+  rate <- rep(rate, length(dosetimes))
 
-  
+  # Create the design dataset
+  data <-
+    tibble::tibble(
+      ID = 1,
+      cmt = 1,
+      time = c(sampletimes, dosetimes),
+      evid = c(rep(0, length(sampletimes)), rep(1, length(dosetimes))),
+      amt = c(rep(0, length(sampletimes)), amt),
+      rate = c(rep(0, length(sampletimes)), rate),
+      CL = CL,
+      KA = KA,
+      V = V
+    )
+
+  data <- data[order(data$time), ]
+
+  # Simulate data using the model and dataset
+  out <- mrgsim_q(x = model, data = data)
+  tmp <- data.frame(CONC = out$CP, AUC = out$AUC)
+  # Only return the sampletimes, not the dosetimes
+  return(tmp[match(sampletimes, out$time), ])
 }
-
 ```
 
 The next step is to define the function(s) that will be used to make the Forest plot, i.e. the secondary parameters cmax and auc in this case. Note that any defined external functions which are not built in any packages needs to be sourced from within the secondary parameter function as one can see with the `globalEnv` function `paramFunctionmrgsolve`. The reason is that the parallel mechanism in the Forest plot calculations is working in a different environment than the global environment, hence any defined variables need to be passed in or sourced directly in the functions used.  
 
 ```{r}
-#Function to get the cmax within an interval [t1,t2]
+# Function to get the cmax within an interval [t1,t2]
 
-Cmax<-function(thetas, df, interval,tau,model) {
+Cmax <- function(thetas, df, interval, tau, model) {
   source("./paramFunctionmrgsolve.R")
-  wrapper<-function(time,thetas,df,tau,model) {
-    return(paramFunctionmrgsolve(thetas,df,times = c(0,time),tau=tau,model=model)[2,"CONC"])
+  wrapper <- function(time, thetas, df, tau, model) {
+    return(paramFunctionmrgsolve(thetas, df, times = c(0, time), tau = tau, model = model)[2, "CONC"])
   }
-  return(optimize(f = wrapper,interval = interval,
-                  maximum = TRUE,tol = 1E-03,thetas=thetas,df=df,tau,model)$objective)
+  return(optimize(
+    f = wrapper, interval = interval,
+    maximum = TRUE, tol = 1E-03, thetas = thetas, df = df, tau, model
+  )$objective)
 }
 
-#Function to get the auc within an interval [t1,t2]
-AUC<-function(thetas,df,interval,tau,model) {
+# Function to get the auc within an interval [t1,t2]
+AUC <- function(thetas, df, interval, tau, model) {
   source("./paramFunctionmrgsolve.R")
-  #Add a zero to ensure dosing starts at time 0
-  sol<-paramFunctionmrgsolve(thetas,df,times = c(0,interval),tau=tau,model=model)
-  return(sol[nrow(sol),"AUC"]-sol[nrow(sol)-1,"AUC"])
+  # Add a zero to ensure dosing starts at time 0
+  sol <- paramFunctionmrgsolve(thetas, df, times = c(0, interval), tau = tau, model = model)
+  return(sol[nrow(sol), "AUC"] - sol[nrow(sol) - 1, "AUC"])
 }
-
-
 ```
 
 Next step is to compile the mrgsolve model in order to pass it as a variable into the parameter function (`paramFunctionmrgsolve`).
 
 ```{r}
-mymodel <- mcode("mymodel",code,atol=1e-8, rtol=1e-8,maxsteps=5000)
+mymodel <- mcode("mymodel", code, atol = 1e-8, rtol = 1e-8, maxsteps = 5000)
 ```
 
 ## Check the model implementation in mrgsolve
@@ -454,22 +463,20 @@ A good way to check the model is to plot the parameter function output
 
 ```{r TypicalPlotmrgsolve,fig.width=12,fig.asp=0.6,out.width="100%"}
 
-#Call the concentration time-profile function using a Ref covariate setting
-out<-as.data.frame(paramFunctionmrgsolve(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,times=seq(0,72,0.1),tau=24,model=mymodel))
+# Call the concentration time-profile function using a Ref covariate setting
+out <- as.data.frame(paramFunctionmrgsolve(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, times = seq(0, 72, 0.1), tau = 24, model = mymodel))
 
 
-p<-ggplot()+geom_line(aes(x=seq(0,72,0.1),y=out$CONC),size=1.8)+xlab("Time (h)")+ylab("Concentration ng/mL")
+p <- ggplot() + geom_line(aes(x = seq(0, 72, 0.1), y = out$CONC), size = 1.8) + xlab("Time (h)") + ylab("Concentration ng/mL")
 p
-
 ```
 
 
 Another function that is good to test is the `Cmax` function both within one dosing interval (24 hours) as well as following several doses, i.e. between time 0 and 72 hours.
 
 ```{r}
-cmax1tau<-Cmax(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=seq(0,24),tau = 24,model=mymodel)
-cmax3tau<-Cmax(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=seq(0,72),tau = 24,model=mymodel)
-
+cmax1tau <- Cmax(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, interval = seq(0, 24), tau = 24, model = mymodel)
+cmax3tau <- Cmax(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, interval = seq(0, 72), tau = 24, model = mymodel)
 ```
 
 The output of this function, i.e. Cmax, is `r round(cmax1tau,2)` ng/mL and `r round(cmax3tau,2)` ng/mL after one or three doses respectively.
@@ -479,9 +486,8 @@ The final test is to check the function that calculates the area under the curve
 
 ```{r}
 
-auc1dose<-AUC(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=c(0,72),tau=72,model=mymodel)
-auc3dose<-AUC(thetas = as.numeric(dfExt[2:17]),df=dfRefRow,interval=c(0,72),tau=24,model=mymodel)
-
+auc1dose <- AUC(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, interval = c(0, 72), tau = 72, model = mymodel)
+auc3dose <- AUC(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, interval = c(0, 72), tau = 24, model = mymodel)
 ```
 
 The output of this function, i.e. auc, is `r round(auc1dose,2)` ng*h/mL and `r round(auc3dose,2)` ng*h/mL.
@@ -492,50 +498,52 @@ The output of this function, i.e. auc, is `r round(auc1dose,2)` ng*h/mL and `r r
 The actual data to be plotted is assembled by the `getForestDFSCM` function. In addition to the information assembled above some additional argument is required - the number of fixed effects in the NONMEM model (`noBaseThetas`) as well as the extra parameters for the secondary parameter functions, the `interval` to calculate the secondary parameters within, the dosing interval (`tau`) and the compiled mrgsolve model (`model`). Note that in this particular example, `Cmax` is run first and then `AUC` due to high memory usage with `mrgsolve` in combination with `optimize` which is used in the `Cmax` function.
 
 ```{r Cmaxmrgsolve, cache=TRUE}
-#Cmax
-  dfresmrgsolveCmax <- getForestDFSCM(dfCovs = dfCovs,
-                          cdfCovsNames = covnames,
-                          functionList = list(Cmax),
-                          functionListName = c("CMAX"),
-                          noBaseThetas = 16,
-                          dfParameters = dfSamplesBS,
-                          dfRefRow = dfRefRow,
-                          cstrPackages  = c("mrgsolve","dplyr"),
-                          ncores = 56,
-                          interval=c(0,72),
-                          tau=24,
-                          model = mymodel)
-
+# Cmax
+dfresmrgsolveCmax <- getForestDFSCM(
+  dfCovs = dfCovs,
+  cdfCovsNames = covnames,
+  functionList = list(Cmax),
+  functionListName = c("CMAX"),
+  noBaseThetas = 16,
+  dfParameters = dfSamplesBS,
+  dfRefRow = dfRefRow,
+  cstrPackages = c("mrgsolve", "dplyr"),
+  ncores = 56,
+  interval = c(0, 72),
+  tau = 24,
+  model = mymodel
+)
 ```
 
 ```{r AUCmrgsolve, cache=TRUE}
-#AUC
-  dfresmrgsolveAuc <- getForestDFSCM(dfCovs = dfCovs,
-                          cdfCovsNames = covnames,
-                          functionList = list(AUC),
-                          functionListName = c("AUC"),
-                          noBaseThetas = 16,
-                          dfParameters = dfSamplesBS,
-                          dfRefRow = dfRefRow,
-                          cstrPackages  = c("mrgsolve","dplyr"),
-                          ncores = 56,
-                          interval=c(0,72),
-                          tau=24,
-                          model = mymodel)
-
+# AUC
+dfresmrgsolveAuc <- getForestDFSCM(
+  dfCovs = dfCovs,
+  cdfCovsNames = covnames,
+  functionList = list(AUC),
+  functionListName = c("AUC"),
+  noBaseThetas = 16,
+  dfParameters = dfSamplesBS,
+  dfRefRow = dfRefRow,
+  cstrPackages = c("mrgsolve", "dplyr"),
+  ncores = 56,
+  interval = c(0, 72),
+  tau = 24,
+  model = mymodel
+)
 ```
 
 
 The Forest plots below displays the data on a relative scale, with the reference being defined in the `dfRefRow` data.frame. Included are also dashed vertical lines at 0.8 and 1.25 to visualize a(n imagined) region of clinical irrelevance. The plotForestDF function returns a ggplot object so additions like this can easily be made. Since the Forest results data frame is available in two separate data frames, these are binded together to make a facet_wrap type of figure over the two secondary parameters.
 
 ```{r ForestCOVMRGSOLVE,fig.width=12,fig.asp=0.6,out.width="100%"}
-plotForestDF(rbind(dfresmrgsolveCmax,dfresmrgsolveAuc),
-             log10x = TRUE,
-             addTable=TRUE,
-             percentscalexmax = 7,
-             useRefUncertainty = FALSE)+
-  geom_vline(xintercept=c(0.8,1.25),linetype="dashed")
-
+plotForestDF(rbind(dfresmrgsolveCmax, dfresmrgsolveAuc),
+  log10x = TRUE,
+  addTable = TRUE,
+  percentscalexmax = 7,
+  useRefUncertainty = FALSE
+) +
+  geom_vline(xintercept = c(0.8, 1.25), linetype = "dashed")
 ```
 
 # References
