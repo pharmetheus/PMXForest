@@ -1,4 +1,4 @@
-#' getForestDFSCM
+#' getForestDFFREM
 #'
 #' @description Get a data frame with Forest border for each univariate or multivariate covariate (and value(s)) in the input data frame. If a list a data frame will be created from the list, see function dfCreateInputForestData
 #'
@@ -122,7 +122,7 @@ getForestDFFREM <- function(dfCovs,
           noSigmas     = noSigmas,
           dfext        = dfext,
           covNames     = covNames$covNames,
-          availCov     = names(dfRefRow)[as.numeric(dfRefRow) != iMiss & names(dfRefRow)[as.numeric(dfRefRow) != iMiss] %in% covNames$covNames],
+          availCov     = names(dfRefRow)[as.numeric(dfRefRow) != iMiss][names(dfRefRow)[as.numeric(dfRefRow) != iMiss] %in% covNames$covNames],
           quiet        = quiet,
           noSkipOm     = noSkipOm,
           noParCov     = noParCov
@@ -136,7 +136,7 @@ getForestDFFREM <- function(dfCovs,
         noSigmas     = noSigmas,
         dfext        = dfext,
         covNames     = covNames$covNames,
-        availCov     = names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != iMiss & names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != iMiss] %in% covNames$covNames],
+        availCov     = names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss][names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss] %in% covNames$covNames],
         quiet        = quiet,
         noSkipOm     = noSkipOm,
         noParCov     = noParCov

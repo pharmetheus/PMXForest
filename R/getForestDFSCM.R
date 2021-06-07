@@ -21,7 +21,7 @@
 #' @param pointFunction The function used to calculate the point for each covariate in the forest plot. default=median
 #' This function is also used for the reference covariate combination
 #' @param dfRefRow A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
-#' @param cGrouping A vector of numbers definig how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
+#' @param cGrouping A vector of numbers defining how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 #' If NULL (default) an educated guess of the grouping will be set
 #' @param ncores the number of cores to use for the calculations, default = 1 which means no parallellization
 #' @param cstrPackages a character vector with package names needed to run the calculations in parallel, default = NULL

@@ -2,7 +2,7 @@
 % Please edit documentation in R/getForestDFFREM.R
 \name{getForestDFFREM}
 \alias{getForestDFFREM}
-\title{getForestDFSCM}
+\title{getForestDFFREM}
 \usage{
 getForestDFFREM(dfCovs, cdfCovsNames = NULL,
   functionList = list(function(basethetas, covthetas, dfrow, ...) {    
@@ -56,7 +56,7 @@ This function is also used for the reference covariate combination}
 
 \item{dfRefRow}{A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
 
-\item{cGrouping}{A vector of numbers definig how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
+\item{cGrouping}{A vector of numbers defining how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 If NULL (default) an educated guess of the grouping will be set}
 
 \item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization}
