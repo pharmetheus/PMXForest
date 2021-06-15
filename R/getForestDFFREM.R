@@ -110,7 +110,7 @@ getForestDFFREM <- function(dfCovs,
     for (i in 1:nrow(dfCovs)) {
       currentNames <- names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != iMiss]
 
-      if (any(!currentNames %in% covNames$covNames) && quiet) {
+      if (any(!currentNames %in% covNames$covNames) && !quiet) {
         warning(paste0("Can't find some of the covariates: ", currentNames, " in the FREM model, perhaps they are structural covariates!"))
       }
 
