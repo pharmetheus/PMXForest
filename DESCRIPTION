@@ -1,7 +1,7 @@
 Package: PMXForest
 Type: Package
 Title: Create Forest plots based on NONMEM output
-Version: 0.2.2
+Version: 0.2.3
 Authors@R: c(
     person("Niclas", "Jonsson", email = "niclas.jonsson@pharmetheus.com", role = c("aut", "cre")),
     person("Joakim", "Nyberg", email = "joakim.nyberg@pharmetheus.com", role = c("aut"))
@@ -17,7 +17,8 @@ Suggests:
     rmarkdown,
     testthat,
     PMXFrem,
-    bookdown
+    bookdown,
+	PhRame
 Depends:
     tidyverse,
     foreach, 
@@ -25,4 +26,4 @@ Depends:
 Imports:
     MASS
 VignetteBuilder: knitr
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.2

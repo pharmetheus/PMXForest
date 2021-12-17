@@ -28,8 +28,17 @@
 #' @param useRefUncertainty A flag representing if the rleative reference (no covariate effect) should take the parameter uncertainty into account. Per default set to TRUE,
 #' indicating that the relative forest plot uncertainty is also accounting for the structural parameter uncertainty. If set to FALSE,
 #' the relative reference value as well as the uncertainty for a covariate without an effect will be 1.
-
-
+#' @param add.stamp if \strong{TRUE} adds a stamp with the source directory and
+#'   time of generation at the bottom of the plot using \code{\link{add_stamp}}
+#'   function. Default is \strong{FALSE}. If there is any variable defined in
+#'   the global environment with the same name, ie. \code{add.stamp}, this
+#'   argument will assume the globally defined value of \code{add.stamp}, unless
+#'   \code{add.stamp} argument is explicitly defined when this function is
+#'   called.
+#' @param ... is the additional optional arguments compatible with
+#'   \code{\link{add_stamp}}
+#'   
+#' @importFrom PhRame add_stamp
 #'
 #' @return a ggplot2 object with a Forest plot
 #' @export
@@ -60,8 +69,17 @@ plotForestDF <-function(df,
                         groupdist = 0.3,
                         withingroupdist = 0.2,
                         useTrueRef=FALSE,
-                        useRefUncertainty=TRUE)
+                        useRefUncertainty=TRUE,
+                        add.stamp = FALSE,
+                        ...)
 {
+  
+  # Adjust add.stamp if needed
+  if ("add.stamp" %in% ls(envir = .GlobalEnv) & missing(add.stamp)){
+    add.stamp <- get("add.stamp", envir = .GlobalEnv)
+  }else{
+    add.stamp
+  }
 
   if (plotRelative && useTrueRef && useRefUncertainty==FALSE) {
     warning("True ref cannot be mixed with RefUncertainty=FALSE, \nRefUncertainty is automatically set to TRUE")
@@ -177,5 +195,9 @@ plotForestDF <-function(df,
     p<-p+facet_wrap(~PARAMETER)
   }
 
+  if(add.stamp){
+    p <- PhRame::add_stamp(p, ...)
+  }
+  
   return(p)
 }

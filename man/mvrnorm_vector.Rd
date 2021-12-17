@@ -4,8 +4,7 @@
 \alias{mvrnorm_vector}
 \title{mvrnorm_vector}
 \usage{
-mvrnorm_vector(mu, sigma, fixed_mu = NULL, dSeed = NULL,
-  iSampleIndex = 1)
+mvrnorm_vector(mu, sigma, fixed_mu = NULL, dSeed = NULL, iSampleIndex = 1)
 }
 \arguments{
 \item{mu}{Vector of means}

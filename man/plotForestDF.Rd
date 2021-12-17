@@ -4,14 +4,31 @@
 \alias{plotForestDF}
 \title{plotForestDF()}
 \usage{
-plotForestDF(df, plotRelative = TRUE, addTable = TRUE,
-  strxlab = NULL, strylab = "", decdig = 2, percentscalexmax = 1.5,
-  xtextoffset = 0.25, xtextoffsetpercent = 1.1, textsize = 5,
-  vlinecol = "lightgrey", vlinesize = 1.5, pointsize = 3,
-  errorbarsize = 1, freescalex_wrap = (!plotRelative || addTable),
-  log10x = FALSE, fixedSpacing = TRUE, groupdist = 0.3,
-  withingroupdist = 0.2, useTrueRef = FALSE,
-  useRefUncertainty = TRUE)
+plotForestDF(
+  df,
+  plotRelative = TRUE,
+  addTable = TRUE,
+  strxlab = NULL,
+  strylab = "",
+  decdig = 2,
+  percentscalexmax = 1.5,
+  xtextoffset = 0.25,
+  xtextoffsetpercent = 1.1,
+  textsize = 5,
+  vlinecol = "lightgrey",
+  vlinesize = 1.5,
+  pointsize = 3,
+  errorbarsize = 1,
+  freescalex_wrap = (!plotRelative || addTable),
+  log10x = FALSE,
+  fixedSpacing = TRUE,
+  groupdist = 0.3,
+  withingroupdist = 0.2,
+  useTrueRef = FALSE,
+  useRefUncertainty = TRUE,
+  add.stamp = FALSE,
+  ...
+)
 }
 \arguments{
 \item{df}{the forest plot data frame, should be based on a call to getForestDF or manually created accfording to the getForestDF structure}
@@ -58,6 +75,19 @@ the True reference, i.e. the first sample in the dfSamples, which is often set t
 \item{useRefUncertainty}{A flag representing if the rleative reference (no covariate effect) should take the parameter uncertainty into account. Per default set to TRUE,
 indicating that the relative forest plot uncertainty is also accounting for the structural parameter uncertainty. If set to FALSE,
 the relative reference value as well as the uncertainty for a covariate without an effect will be 1.}
+
+\item{add.stamp}{if \strong{TRUE} adds a stamp with the source directory and
+time of generation at the bottom of the plot using \code{\link{add_stamp}}
+function. Default is \strong{FALSE}. If there is any variable defined in
+the global environment with the same name, ie. \code{add.stamp}, this
+argument will assume the globally defined value of \code{add.stamp}, unless
+\code{add.stamp} argument is explicitly defined when this function is
+called.}
+
+\item{...}{is the additional optional arguments compatible with
+\code{\link{add_stamp}}
+
+@importFrom PhRame add_stamp}
 
 \item{groupeddist}{A number defining the y distance between groups of covariates.}
 
