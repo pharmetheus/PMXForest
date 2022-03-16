@@ -4,27 +4,13 @@
 \alias{getForestDFemp}
 \title{getForestDFemp}
 \usage{
-getForestDFemp(
-  dfData,
-  covExpressionsList,
-  noBaseThetas,
-  dfParameters,
-  cdfCovsNames = NULL,
-  functionList = list(function(basethetas, dfrow, ...) {     return(basethetas[1]) }),
-  functionListName = "PAR1",
-  strID = "ID",
-  quiet = TRUE,
-  metricFunction = median,
-  probs = c(0.025, 0.975),
-  pointFunction = median,
-  dfRefRow = NULL,
-  cGrouping = NULL,
-  ncores = 1,
-  cstrPackages = NULL,
-  cstrExports = NULL,
-  iMiss = -99,
-  ...
-)
+getForestDFemp(dfData, covExpressionsList, noBaseThetas, dfParameters,
+  cdfCovsNames = NULL, functionList = list(function(basethetas, dfrow,
+  ...) {     return(basethetas[1]) }), functionListName = "PAR1",
+  strID = "ID", quiet = TRUE, metricFunction = median,
+  probs = c(0.025, 0.975), pointFunction = median, dfRefRow = NULL,
+  cGrouping = NULL, ncores = 1, cstrPackages = NULL,
+  cstrExports = NULL, iMiss = -99, ...)
 }
 \arguments{
 \item{noBaseThetas}{the number of structural thetas in the model}

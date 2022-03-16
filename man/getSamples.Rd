@@ -4,7 +4,8 @@
 \alias{getSamples}
 \title{getSamples}
 \usage{
-getSamples(input, extFile = NULL, n = NULL, indexvec = NULL, zerosindex = NULL)
+getSamples(input, extFile = NULL, n = NULL, indexvec = NULL,
+  zerosindex = NULL)
 }
 \arguments{
 \item{input}{The input file name (character string).

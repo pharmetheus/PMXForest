@@ -4,31 +4,14 @@
 \alias{plotForestDF}
 \title{plotForestDF()}
 \usage{
-plotForestDF(
-  df,
-  plotRelative = TRUE,
-  addTable = TRUE,
-  strxlab = NULL,
-  strylab = "",
-  decdig = 2,
-  percentscalexmax = 1.5,
-  xtextoffset = 0.25,
-  xtextoffsetpercent = 1.1,
-  textsize = 5,
-  vlinecol = "lightgrey",
-  vlinesize = 1.5,
-  pointsize = 3,
-  errorbarsize = 1,
-  freescalex_wrap = (!plotRelative || addTable),
-  log10x = FALSE,
-  fixedSpacing = TRUE,
-  groupdist = 0.3,
-  withingroupdist = 0.2,
-  useTrueRef = FALSE,
-  useRefUncertainty = TRUE,
-  add.stamp = FALSE,
-  ...
-)
+plotForestDF(df, plotRelative = TRUE, addTable = TRUE,
+  strxlab = NULL, strylab = "", decdig = 2, percentscalexmax = 1.5,
+  xtextoffset = 0.25, xtextoffsetpercent = 1.1, textsize = 5,
+  vlinecol = "lightgrey", vlinesize = 1.5, pointsize = 3,
+  errorbarsize = 1, freescalex_wrap = (!plotRelative || addTable),
+  log10x = FALSE, fixedSpacing = TRUE, groupdist = 0.3,
+  withingroupdist = 0.2, useTrueRef = FALSE,
+  useRefUncertainty = TRUE, add.stamp = FALSE, ...)
 }
 \arguments{
 \item{df}{the forest plot data frame, should be based on a call to getForestDF or manually created accfording to the getForestDF structure}
@@ -85,9 +68,7 @@ argument will assume the globally defined value of \code{add.stamp}, unless
 called.}
 
 \item{...}{is the additional optional arguments compatible with
-\code{\link{add_stamp}}
-
-@importFrom PhRame add_stamp}
+\code{\link{add_stamp}}}
 
 \item{groupeddist}{A number defining the y distance between groups of covariates.}
 
