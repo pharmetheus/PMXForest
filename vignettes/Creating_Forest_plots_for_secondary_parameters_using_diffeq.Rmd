@@ -290,7 +290,7 @@ dfres <- getForestDFSCM(
   noBaseThetas = 16,
   dfParameters = dfSamplesBS,
   dfRefRow = dfRefRow,
-  cstrPackages = c("deSolve"),
+  cstrPackages = c("deSolve","dplyr"),
   ncores = 4,
   interval = c(0, 24)
 )

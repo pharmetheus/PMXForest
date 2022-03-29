@@ -343,7 +343,8 @@ getPlotData <- function(dfSamples,dfRefRow=NULL) {
                           functionListName = functionListName,
                           noBaseThetas = 16,
                           dfParameters = dfSamples, 
-                          dfRefRow = dfRefRow
+                          dfRefRow = dfRefRow,
+                          cstrPackages = "dplyr"
                           )  
   
   return(dfres)
@@ -443,25 +444,25 @@ With these specifications the data for the Forest plot can be setup (using the f
 This is done differently for empirical Forest plots than for parametric Forest plots. In the parametric situation discrete covariate values are specified. For empirical Forest plots it is necessary to provide an expression that defines the covariate range for the subjects whose typical individual parameter estimates should be taken the median of. An example is provided below. It loosely corresponds to the parametric example above.
 
 ```{r}
-lsExpr<-rev(list(expression(SEX==2),
-                 expression(SEX==1),
-                 expression(CRCL>=146),
-                 expression(CRCL<94),
-                 expression(AGE>=57),
-                 expression(AGE<35),
-                 expression(WT>104),
-                 expression(WT<70),
-                 expression(RACEL==3),
-                 expression(RACEL==2),
-                 expression(RACEL==1),
-                 expression(GENO==4),
-                 expression(GENO==3),
-                 expression(GENO==2),
-                 expression(GENO==1),
-                 expression(FOOD==1),
-                 expression(FOOD==0),
-                 expression(FORM==1),
-                 expression(FORM==0)))
+lsExpr<-rev(list("SEX"=expression(SEX==2),
+                 "SEX"=expression(SEX==1),
+                 "CRCL"=expression(CRCL>=146),
+                 "CRCL"=expression(CRCL<94),
+                 "AGE"=expression(AGE>=57),
+                 "AGE"=expression(AGE<35),
+                 "WT"=expression(WT>104),
+                 "WT"=expression(WT<70),
+                 "RACE"=expression(RACEL==3),
+                 "RACE"=expression(RACEL==2),
+                 "RACE"=expression(RACEL==1),
+                 "GENO"=expression(GENO==4),
+                 "GENO"=expression(GENO==3),
+                 "GENO"=expression(GENO==2),
+                 "GENO"=expression(GENO==1),
+                 "FOOD"=expression(FOOD==1),
+                 "FOOD"=expression(FOOD==0),
+                 "FORM"=expression(FORM==1),
+                 "FORM"=expression(FORM==0)))
 ```
 
 Only "univariate" conditions are included in the above expression list but it is easy to see how combination conditions can be set up (e.g. `expression(SEX==1 & WT>100)`) but keep in mind that these expressions create subsets of the observed data set, the more conditions that are combined, the smaller the subgroup. With smaller data sets small subgroups will rapidly become an issue, even with only one condition in the expression.
@@ -513,7 +514,8 @@ getPlotDataEmp <- function(dfSamples,dfRefRow=NULL) {
     noBaseThetas       = 16,
     dfParameters       = dfSamples,
     dfRefRow           = dfRefRow,
-    ncores             = 6
+    ncores             = 6,
+    cstrPackages = "dplyr"
   )
 
   return(dfres)

@@ -86,6 +86,8 @@ getForestDFemp <- function(dfData,
 
   if (is.null(cGrouping)) cGrouping <- 1:length(covExpressionsList)
 
+  groupnames<-names(covExpressionsList)
+
   ## Register to allow for parallell computing
   registerDoParallel(cores = ncores)
 
@@ -177,10 +179,12 @@ getForestDFemp <- function(dfData,
       covname <- cdfCovsNames[i]
     }
     group <- cGrouping[i]
+    groupname<-groupnames[i]
+
     for (j in 1:length(functionListName)) {
       dft <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j] &
         dfres$SUBJ == -1, ]
-      quant <- quantile(dft$VALUE,
+         quant <- quantile(dft$VALUE,
         probs = probs, names = FALSE,
         na.rm = T
       )
@@ -198,14 +202,18 @@ getForestDFemp <- function(dfData,
       true_base <- dft$VALUEBASE[dft$ITER == 1]
       dfrow <- cbind(dfCovs[i, ], data.frame(
         GROUP = group,
+        GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
         REFFUNC = func_base, REFTRUE = true_base, FUNC=FUNCVAL, FUNC_NOVAR=FUNCNOVAR,
+        REFRELFUNC = FUNCVAL/func_base, TRUERELFUNC = FUNCVAL/true_base,
         COVEFF = !all(dft$RELINTERNAL==1)))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("q", k)]] <- quant[k]
-        dfrow <- cbind(dfrow, dfp[, 2])
-        names(dfrow)[ncol(dfrow)] <- paste0("q", k)
+        dfp[[paste0("q", k,"_RELREF")]] <-  quant[k]/func_base
+        dfp[[paste0("q", k,"_RELTRUE")]] <- quant[k]/true_base
+        dfrow <- cbind(dfrow, dfp[, 2:4])
+        #names(dfrow)[ncol(dfrow)] <- paste0("q", k)
       }
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
