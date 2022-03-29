@@ -10,25 +10,25 @@
 #'
 #' @examples
 #' \dontrun{
-#' lsExpr<-rev(list(expression(SEX==2),
-#' expression(SEX==1),
-#' expression(CRCL>=146),
-#' expression(CRCL<94),
-#' expression(AGE>=57),
-#' expression(AGE<35),
-#' expression(WT>104),
-#' expression(WT<70),
-#' expression(RACEL==3),
-#' expression(RACEL==2),
-#' expression(RACEL==1),
-#' expression(GENO==4),
-#' expression(GENO==3),
-#' expression(GENO==2),
-#' expression(GENO==1),
-#' expression(FOOD==1),
-#' expression(FOOD==0),
-#' expression(FORM==1),
-#' expression(FORM==0)))
+#' lsExpr<-rev(list("SEX"=expression(SEX==2),
+#' "SEX"=expression(SEX==1),
+#' "CRCL"=expression(CRCL>=146),
+#' "CRCL"=expression(CRCL<94),
+#' "AGE"=expression(AGE>=57),
+#' "AGE"=expression(AGE<35),
+#' "WT"=expression(WT>104),
+#' "WT"=expression(WT<70),
+#' "RACEL"=expression(RACEL==3),
+#' "RACEL"expression(RACEL==2),
+#' "RACEL"expression(RACEL==1),
+#' "GENO"=expression(GENO==4),
+#' "GENO"=expression(GENO==3),
+#' "GENO"=expression(GENO==2),
+#' "GENO"=expression(GENO==1),
+#' "FOOD"=expression(FOOD==1),
+#' "FOOD"=expression(FOOD==0),
+#' "FORM"=expression(FORM==1),
+#' "FORM"=expression(FORM==0)))
 #'
 #' cGrouping = c(1,1,2,2,3,3,3,3,4,4,4,5,5,6,6,7,7,8,8,9,9)
 #'
