@@ -190,21 +190,21 @@ getForestDFSCM <- function(dfCovs,
         GROUP = group,
         GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFFUNC = func_base, REFTRUE = true_base, FUNC=FUNCVAL, FUNC_NOVAR=FUNCNOVAR,
-        REFRELFUNC = FUNCVAL/func_base, TRUERELFUNC = FUNCVAL/true_base,
+        REFFUNC = func_base, REFTRUE = true_base, POINT=FUNCVAL, POINT_NOVAR_REL_REFFUNC=FUNCNOVAR,
+        POINT_REL_REFFUNC = FUNCVAL/func_base, POINT_REL_REFTRUE = FUNCVAL/true_base,
         COVEFF = !all(dft$RELINTERNAL==1)))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
-        dfp[[paste0("q", k)]] <- quant[k]
-        dfp[[paste0("q", k,"_RELREF")]] <-  quant[k]/func_base
-        dfp[[paste0("q", k,"_RELTRUE")]] <- quant[k]/true_base
+        dfp[[paste0("Q", k)]] <- quant[k]
+        dfp[[paste0("Q",k,"_REL_REFFUNC")]] <-  quant[k]/func_base
+        dfp[[paste0("Q",k,"_REL_REFTRUE")]] <-  quant[k]/true_base
         dfrow <- cbind(dfrow, dfp[, 2:4])
       }
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
-        dfp[[paste0("q", k,"_NOVAR")]] <- quantrel[k]
+        dfp[[paste0("Q",k,"_REL_REFFUNC_NOVAR")]] <- quantrel[k]
         dfrow <- cbind(dfrow, dfp[, 2])
-        names(dfrow)[ncol(dfrow)] <- paste0("q", k,"_NOVAR")
+        names(dfrow)[ncol(dfrow)] <- paste0("Q", k,"_REL_REFFUNC_NOVAR")
       }
       dfret <- rbind(dfret, dfrow)
     }
