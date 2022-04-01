@@ -174,9 +174,9 @@ gri<-dfres$GROUP[1]
 for (i in 1:nrow(dfres)) {
   #Get 95% CI and median
   q<-quantile(BoostrapPreds$t[,i],probs=c(0.025,0.5,0.975),names=FALSE)
-  dfres$q1[i]<-100*q[1] #Lower CI
-  dfres$FUNC[i]<-100*q[2] #Median 
-  dfres$q2[i]<-100*q[3] #Upper CI
+  dfres$Q1[i]<-100*q[1] #Lower CI
+  dfres$POINT[i]<-100*q[2] #Median 
+  dfres$Q2[i]<-100*q[3] #Upper CI
   if (dfres$GROUP[i]!=gri) { #New group
     y<-y+groups_dist
     gri<-dfres$GROUP[i]

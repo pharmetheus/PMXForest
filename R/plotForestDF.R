@@ -37,7 +37,7 @@
 #'   called.
 #' @param ... is the additional optional arguments compatible with
 #'   \code{\link{add_stamp}}
-#'   
+#'
 #' @importFrom PhRame add_stamp
 #'
 #' @return a ggplot2 object with a Forest plot
@@ -73,7 +73,7 @@ plotForestDF <-function(df,
                         add.stamp = FALSE,
                         ...)
 {
-  
+
   # Adjust add.stamp if needed
   if ("add.stamp" %in% ls(envir = .GlobalEnv) & missing(add.stamp)){
     add.stamp <- get("add.stamp", envir = .GlobalEnv)
@@ -124,27 +124,27 @@ plotForestDF <-function(df,
                                                                     strRV=strRefVar){
       if (pr) {
         if (ru) {
-          x$XMAX<-max(x$q2/x[[strRV]])
+          x$XMAX<-max(x$Q2/x[[strRV]])
         } else {
-          x$XMAX<-max(x$q2_NOVAR)
+          x$XMAX<-max(x$Q2_NOVAR_REL_REFFUNC)
         }
 
       } else {
-        x$XMAX<-max(x$q2)
+        x$XMAX<-max(x$Q2)
       }
       return(x)
     })
     if (plotRelative) {
       if (useRefUncertainty) {
-        df$Q1TEXT<-ifelse(df$q1/df[[strRefVar]]<df$q2/df[[strRefVar]],df$q1/df[[strRefVar]],df$q2/df[[strRefVar]])
-        df$Q2TEXT<-ifelse(df$q2/df[[strRefVar]]>df$q1/df[[strRefVar]],df$q2/df[[strRefVar]],df$q1/df[[strRefVar]])
+        df$Q1TEXT<-ifelse(df$Q1/df[[strRefVar]]<df$Q2/df[[strRefVar]],df$Q1/df[[strRefVar]],df$Q2/df[[strRefVar]])
+        df$Q2TEXT<-ifelse(df$Q2/df[[strRefVar]]>df$Q1/df[[strRefVar]],df$Q2/df[[strRefVar]],df$Q1/df[[strRefVar]])
       } else {
-        df$Q1TEXT<-ifelse(df$q1_NOVAR<df$q2_NOVAR,df$q1_NOVAR,df$q2_NOVAR)
-        df$Q2TEXT<-ifelse(df$q2_NOVAR>df$q1_NOVAR,df$q2_NOVAR,df$q1_NOVAR)
+        df$Q1TEXT<-ifelse(df$Q1_NOVAR_REL_REFFUNC<df$Q2_NOVAR_REL_REFFUNC,df$Q1_NOVAR_REL_REFFUNC,df$Q2_NOVAR_REL_REFFUNC)
+        df$Q2TEXT<-ifelse(df$Q2_NOVAR_REL_REFFUNC>df$Q1_NOVAR_REL_REFFUNC,df$Q2_NOVAR_REL_REFFUNC,df$Q1_NOVAR_REL_REFFUNC)
       }
     } else {
-      df$Q1TEXT<-ifelse(df$q1<df$q2,df$q1,df$q2)
-      df$Q2TEXT<-ifelse(df$q2>df$q1,df$q2,df$q1)
+      df$Q1TEXT<-ifelse(df$Q1<df$Q2,df$Q1,df$Q2)
+      df$Q2TEXT<-ifelse(df$Q2>df$Q1,df$Q2,df$Q1)
     }
   }
 
@@ -155,16 +155,16 @@ plotForestDF <-function(df,
     refcol<-sym(strRefVar)
     p<-p+geom_vline(aes(xintercept=1),size=vlinesize,color=vlinecol)
     if (useRefUncertainty) { #If uncertainty for the reference
-      p<-p+geom_errorbarh(aes(y=Y,xmin=q1/!!refcol,xmax=q2/!!refcol,color=as.factor(GROUP)),size=errorbarsize)
-      p<-p+geom_point(aes(y=Y,x=FUNC/!!refcol,color=as.factor(GROUP)),size=pointsize)
+      p<-p+geom_errorbarh(aes(y=Y,xmin=Q1/!!refcol,xmax=Q2/!!refcol,color=as.factor(GROUP)),size=errorbarsize)
+      p<-p+geom_point(aes(y=Y,x=POINT/!!refcol,color=as.factor(GROUP)),size=pointsize)
     } else { #Without uncertainty for the reference
-      p<-p+geom_errorbarh(aes(y=Y,xmin=q1_NOVAR,xmax=q2_NOVAR,color=as.factor(GROUP)),size=errorbarsize)
-      p<-p+geom_point(aes(y=Y,x=FUNC_NOVAR,color=as.factor(GROUP)),size=pointsize)
+      p<-p+geom_errorbarh(aes(y=Y,xmin=Q1_NOVAR_REL_REFFUNC,xmax=Q2_NOVAR_REL_REFFUNC,color=as.factor(GROUP)),size=errorbarsize)
+      p<-p+geom_point(aes(y=Y,x=POINT_NOVAR_REL_REFFUNC,color=as.factor(GROUP)),size=pointsize)
     }
   } else {
     #Based on actual values
-    p<-p+geom_errorbarh(aes(y=Y,xmin=q1,xmax=q2,color=as.factor(GROUP)),size=errorbarsize)
-    p<-p+geom_point(aes(y=Y,x=FUNC,color=as.factor(GROUP)),size=pointsize)
+    p<-p+geom_errorbarh(aes(y=Y,xmin=Q1,xmax=Q2,color=as.factor(GROUP)),size=errorbarsize)
+    p<-p+geom_point(aes(y=Y,x=POINT,color=as.factor(GROUP)),size=pointsize)
   }
 
   p<-p + scale_y_continuous(breaks=unique(df$Y),labels = unique(df$COVNAME))
@@ -177,15 +177,15 @@ plotForestDF <-function(df,
     if (plotRelative) {
         refcol<-sym(strRefVar)
         if (useRefUncertainty) {
-          p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(FUNC/!!refcol,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
-          p<-p+geom_segment(aes(y=Y,x=q1/!!refcol,yend=Y,xend=q2/!!refcol*percentscalexmax),color="NA")
+          p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(POINT/!!refcol,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+          p<-p+geom_segment(aes(y=Y,x=Q1/!!refcol,yend=Y,xend=Q2/!!refcol*percentscalexmax),color="NA")
         } else {
-          p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(FUNC_NOVAR,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
-          p<-p+geom_segment(aes(y=Y,x=q1_NOVAR,yend=Y,xend=q2_NOVAR*percentscalexmax),color="NA")
+          p<-p+geom_text(aes(y=Y,x=XMAX+xtextoffset,label=paste0(formatC(POINT_NOVAR_REL_REFFUNC,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+          p<-p+geom_segment(aes(y=Y,x=Q1_NOVAR_REL_REFFUNC,yend=Y,xend=Q2_NOVAR_REL_REFFUNC*percentscalexmax),color="NA")
         }
     } else {
-      p<-p+geom_text(aes(y=Y,x=XMAX*xtextoffsetpercent,label=paste0(formatC(FUNC,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
-      p<-p+geom_segment(aes(y=Y,x=q1,yend=Y,xend=q2*percentscalexmax),color="NA")
+      p<-p+geom_text(aes(y=Y,x=XMAX*xtextoffsetpercent,label=paste0(formatC(POINT,format="f",decdig)," [",formatC(Q1TEXT,format="f",decdig)," - ",formatC(Q2TEXT,format="f",decdig),"]")),hjust = 0,size=textsize)
+      p<-p+geom_segment(aes(y=Y,x=Q1,yend=Y,xend=Q2*percentscalexmax),color="NA")
     }
   }
 
@@ -198,6 +198,6 @@ plotForestDF <-function(df,
   if(add.stamp){
     p <- PhRame::add_stamp(p, ...)
   }
-  
+
   return(p)
 }
