@@ -80,6 +80,10 @@ getForestDFemp <- function(dfData,
   ## Create a fake dfCovs
   dfCovs <- data.frame(COV=rep(iMiss,length(covExpressionsList)))
 
+  if (!is.null(dfRefRow) && ((is.data.frame(dfRefRow) && nrow(dfRefRow)!=1 && nrow(dfRefRow)!=nrow(dfCovs)) ||
+                             (is.expression(dfRefRow[[1]]) && length(dfRefRow)!=1 && length(dfRefRow)!=nrow(dfCovs)))) {
+    stop("The number of reference rows/expressions (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to covExpressionsList (change reference for each covariate expression)")
+  }
 
   resList <- list()
   dfData$TMPINDEX1 <- 1:nrow(dfData) # Add a temp index to row evaluate later on
@@ -102,10 +106,10 @@ getForestDFemp <- function(dfData,
     ## Calculate TVpars
     # For all subjects, calculate the functionList plot
     for (m in 1:nrow(dfData)) {
+      n <- 1
       for (j in 1:length(functionList)) {
         val <- functionList[[j]](thetas = thetas, df = dfData[m, ], ...)
         listcount <- length(val)
-        n <- 1
 
         for (l in 1:listcount) {
           dftmp <- bind_rows(dftmp, data.frame(
@@ -118,32 +122,35 @@ getForestDFemp <- function(dfData,
       }
     }
 
-
+    dfvalbase<-data.frame() #Prepare for a different reference per expressionList index
     # The default ref=1
     valbase <- rep(1, length(functionListName))
+    for (m in 1:length(covExpressionsList)) { #Allow different ref rows per covExpressionList
+      n <- 1
+      # Calculate the ref for this sample
+      for (j in 1:length(functionList)) {
+        if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
+          if (m==1 || nrow(dfRefRow)>1) {
+            valbase_tmp <- functionList[[j]](thetas = thetas, df = dfRefRow[min(m,nrow(dfRefRow)),], ...)
+            listcount <- length(valbase_tmp)
 
-    # Calculate the ref for this sample
-    for (j in 1:length(functionList)) {
-      if (!is.null(dfRefRow)) {
-        valbase_tmp <- functionList[[j]](thetas = thetas, df = dfRefRow, ...)
-
-
-        listcount <- length(valbase_tmp)
-        n <- 1
-
-        for (l in 1:listcount) {
-          valbase[n] <- valbase_tmp[[l]]
-          n <- n + 1
+            for (l in 1:listcount) {
+              valbase[n] <- valbase_tmp[[l]]
+              n <- n + 1
+            }
+          }
         }
       }
+      dfvalbase<-rbind(dfvalbase,data.frame(rbind(valbase)))
     }
+
 
     if (is.null(dfRefRow)) { # Calculate a reference based on observed data. Set the reference to the `metricFunction` of the typical individual predictions
       for (j in 1:length(functionListName)) {
         valbase[j] <- metricFunction(subset(dftmp, ITER == k & NAME == functionListName[j])$VALUE)
       }
+      dfvalbase<-as.data.frame(data.frame(rbind(valbase))[rep(1,length(covExpressionsList)),])
     }
-
 
     ## Compute statistic for each "cov value"
     dfrest <- data.frame()
@@ -156,14 +163,35 @@ getForestDFemp <- function(dfData,
       NSubjs <- length(unique(subset(dfData, eval(covExpressionsList[[i]]))[strID]))
       # Get the values out
       dft <- subset(dftmp, ITER == k & SUBJ %in% subjs)
+
+      #If we have an expression reference
+      if (!is.null(dfRefRow) && is.expression(dfRefRow[[1]])) {
+        if (i==1 || length(dfRefRow)>1)
+          subjsref <- subset(dfData, eval(dfRefRow[[i]]))$TMPINDEX1
+        if (is.null(subjsref) || length(subjsref) == 0) {
+          stop(paste0("Error: no available data for reference subset: ", as.character(dfRefRow[[i]])))
+        }
+        # Get the reference values out
+        dfr <- subset(dftmp, ITER == k & SUBJ %in% subjsref)
+      }
+
+
       for (m in 1:length(functionListName)) {
+        #Get the metric value
         val <- metricFunction(subset(dft, NAME == functionListName[m])$VALUE)
+        #Get the metric ref value if expression ref
+        if (!is.null(dfRefRow) && is.expression(dfRefRow[[1]])) {
+          VB<-metricFunction(subset(dfr, NAME == functionListName[m])$VALUE)
+        } else {
+          VB=dfvalbase[i,m]
+        }
+
         # Store the val
         dfrest <- bind_rows(dfrest, data.frame(
           ITER = k,
           SUBJ = -1, NAME = functionListName[m], VALUE = val,
           COVS = i, NSUBJSCOVGROUP = NSubjs,
-          VALUEBASE = valbase[m], stringsAsFactors = FALSE
+          VALUEBASE = VB, stringsAsFactors = FALSE
         ))
       }
     }
