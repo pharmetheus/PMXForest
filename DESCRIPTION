@@ -18,12 +18,13 @@ Suggests:
     testthat,
     PMXFrem,
     bookdown,
-	PhRame
-Depends:
+	  PhRame
+Imports:
+    MASS,
     tidyverse,
     foreach, 
-    doParallel
-Imports:
-    MASS
+    doParallel,
+    table1,
+    ggpubr
 VignetteBuilder: knitr
-RoxygenNote: 7.1.2
+

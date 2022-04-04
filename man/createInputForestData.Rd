@@ -8,12 +8,12 @@ createInputForestData(listCovs, iMiss = NA)
 }
 \arguments{
 \item{listCovs}{a list with covariate names and values of the form; list("AGE"=c(1,2)) etc.
-For multiple covariates (i.e. not univariate) a list of lists should be used, e.g. list(list("AGE"=c(1,2),"BW"=3,4))}
+For multiple covariates (i.e. not univariate) a list of lists should be used, e.g. list("AGEBW"=list("AGE"=c(1,2),"BW"=c(3,4)))}
 
 \item{iMiss}{The value that should be filled for missing, default = NA}
 }
 \value{
-a data frame with a covariate value (univariate) per row or several covariate values per row (multivariate).
+a data frame with a covariate value (univariate) per row or several covariate values per row (multivariate). The data frame also contains a COVARIATEGROUPS column based on the names in the input list.
 }
 \description{
 createInputForestData
@@ -21,7 +21,7 @@ createInputForestData
 \examples{
 \dontrun{
 ## One covariate effect per 'group' on the Forest plot
-dfCovs <- dfCreateInputForestData(
+dfCovs <- createInputForestData(
 list("FORM" = c(0,1),
      "FOOD" = c(0,1),
      "GENO" = c(1,2,3,4),
@@ -35,12 +35,12 @@ list("FORM" = c(0,1),
 }
 
 ## In this case the GENO covariate levels (2,3 and 4) will be grouped in the Forest plot.
-dfCovs <- dfCreateInputForestData(
+dfCovs <- createInputForestData(
 list("FORM" = c(0,1),
      "FOOD" = c(0,1),
-     list("GENO_2" = c(0,1,0,0),
-          "GENO_3" = c(0,0,1,0),
-          "GENO_4" = c(0,0,0,1))
+     "GENO"=list("GENO_2" = c(0,1,0,0),
+                 "GENO_3" = c(0,0,1,0),
+                 "GENO_4" = c(0,0,0,1))
           ),
           iMiss=-99
 )

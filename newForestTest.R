@@ -1,7 +1,7 @@
-library(PMXForest)
-library(ggplot2)
-library(table1) # To get access to signif_pad
-library(ggpubr)
+# library(PMXForest)
+#library(ggplot2)
+# library(table1) # To get access to signif_pad
+# library(ggpubr)
 
 set.seed(865765)
 
@@ -86,56 +86,122 @@ covFile <- system.file("extdata",paste0("run",runno,".cov"),package="PMXForest")
 dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 
 
-dfres <- getForestDFSCM(dfCovs           = dfCovs,
-                        cdfCovsNames     = covnames,
-                        functionList     = list(paramFunction),
-                        functionListName = functionListName,
-                        noBaseThetas     = 16,
-                        dfParameters     = dfSamplesCOV
-)
 
-## Adjust dfres
-dfres <- dfres %>% mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME)))
-dfres <- dfres %>% mutate(GROUP = factor(GROUP,labels=covariate))
+setupPlotData <- function(dfCovs,covnames,functionList,functionListName,noBaseThetas,dfSamples,plotRelative=TRUE,noVar=FALSE,reference="func") {
 
-sigdigits <- 2
-dfres <- dfres %>% mutate(
-  meanlabel  = signif_pad(FUNC, sigdigits),
-  lowcilabel = signif_pad(q1, sigdigits),
-  upcilabel  = signif_pad(q2,sigdigits),
-  LABEL      = paste0(meanlabel, " [", lowcilabel, "-", upcilabel,"]")
-)
+  vars <- getPlotVars(plotRelative,noVar,reference)
+
+  dfres <- getForestDFSCM(dfCovs           = dfCovs,
+                          cdfCovsNames     = covnames,
+                          functionList     = functionList,
+                          functionListName = functionListName,
+                          noBaseThetas     = noBaseThetas,
+                          dfParameters     = dfSamples
+  )
+
+  sigdigits <- 2
+  plotData <- dfres %>% select(GROUPNAME,COVNUM,COVNAME,PARAMETER,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
+    mutate(
+      reference=reference,
+      REF=ifelse(plotRelative,1,REF)) %>%
+    mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME))) %>%
+    mutate(
+      meanlabel  = signif_pad(REF, sigdigits),
+      lowcilabel = signif_pad(q1, sigdigits),
+      upcilabel  = signif_pad(q2,sigdigits),
+      LABEL      = paste0(meanlabel, " [", lowcilabel, "-", upcilabel,"]"),
+      LABEL      = str_pad(LABEL,max(str_length(LABEL)),side="right",' ')
+    )
+
+  return(plotData)
+}
+
+plotData<- setupPlotData(dfCovs,covnames,list(paramFunction),functionListName,noBaseThetas = 16,dfSamplesCOV)
 
 
-## Original plot
-plotForestDF(dfres,useRefUncertainty =FALSE)
+# ## Adjust dfres
+# dfres <- dfres %>% mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME)))
+# #dfres <- dfres %>% mutate(GROUP = factor(GROUP,labels=covariate))
+#
+# sigdigits <- 2
+# dfres <- dfres %>% mutate(
+#   meanlabel  = signif_pad(POINT_REL_REFFUNC, sigdigits),
+#   lowcilabel = signif_pad(Q1_REL_REFFUNC, sigdigits),
+#   upcilabel  = signif_pad(Q2_REL_REFFUNC,sigdigits),
+#   LABEL      = paste0(meanlabel, " [", lowcilabel, "-", upcilabel,"]"),
+#   LABEL      = str_pad(LABEL,max(str_length(LABEL)),side="right",' ')
+#   )
 
 ## Main plot
-p1 <- ggplot(dfres,aes(x=FUNC,y=COVNAME,xmin=q1,xmax=q2)) +
-  theme_bw() +
-  geom_pointrange() +
-  facet_grid(GROUP~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5))
 
-p1a <- ggplot(subset(dfres,PARAMETER=="CL"),aes(x=FUNC,y=COVNAME,xmin=q1,xmax=q2)) +
+ref_value <- 1
+ref_area  <- c(0.8,1.2)
+ref_fill_col <- "gray"
+
+
+p1a <- ggplot(subset(plotData,PARAMETER=="CL"),aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
   theme_bw() +
-  geom_linerange(aes(color="CI"),key_glyph = "path") +
+  geom_blank() +
+  annotate("rect", xmin = ref_value * min(ref_area), xmax = ref_value * max(ref_area),
+           ymin = -Inf, ymax = Inf, fill = ref_fill_col,alpha=0.5) +
+
+  geom_ribbon(data = data.frame(x = ref_value, ymax = max(ref_area), ymin = min(ref_area),fill = "Reference area"),
+              aes(x = x, ymax = ymax, ymin = ymin, fill=fill),
+              size = 1,inherit.aes = FALSE) +
+
+  geom_vline(aes(xintercept = REF, linetype = "Reference subject",
+               color = "Reference subject"), size = 1,key_glyph = "path") +
+
+  geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
   geom_point(aes(color="CI",shape="Point estimate"),size=2.5) +
-  scale_color_manual(name=NULL,values = c("CI"="blue")) +
-  scale_shape_manual(name=NULL,values = c("Point estimate"=16)) +
-  guides(shape=guide_legend(override.aes = list(color="blue")),
-         color=guide_legend(override.aes = list(shape=NA))) +
-  theme(strip.text.y=element_blank()) +
-  theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt")) +
-  facet_grid(GROUP~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free")
 
-p1b <- ggplot(subset(dfres,PARAMETER=="FREL"),aes(x=FUNC,y=COVNAME,xmin=q1,xmax=q2)) +
+  scale_linetype_manual(name=NULL,values = c("CI"="solid","Reference subject"="dotted")) +
+  scale_fill_manual(name=NULL,values = c("Reference area"="gray")) +
+  scale_color_manual(name=NULL,values = c("CI"="blue","Reference subject"="black")) +
+  scale_shape_manual(name=NULL,values = c("Point estimate"=16)) +
+
+  guides(shape=guide_legend(override.aes = list(color=c("blue"))),
+         # linetype=guide_legend(override.aes=list(linetype="Reference subject")),
+         color=guide_legend(override.aes = list(shape=NA))
+          ) +
+  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free") +
+  ylab(NULL)+
+
+  theme(strip.text.y=element_blank()) +
+  theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
+
+
+p1b <- ggplot(subset(plotData,PARAMETER=="FREL"),aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
   theme_bw() +
-  geom_pointrange() +
+  geom_blank() +
+  annotate("rect", xmin = ref_value * min(ref_area), xmax = ref_value * max(ref_area),
+           ymin = -Inf, ymax = Inf, fill = ref_fill_col,alpha=0.5) +
+
+  geom_ribbon(data = data.frame(x = ref_value, ymax = max(ref_area), ymin = min(ref_area),fill = "Reference area"),
+              aes(x = x, ymax = ymax, ymin = ymin, fill=fill),
+              size = 1,inherit.aes = FALSE) +
+
+  geom_vline(aes(xintercept = REF, linetype = "Reference subject",
+                 color = "Reference subject"), size = 1,key_glyph = "path") +
+
+  geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
+  geom_point(aes(color="CI",shape="Point estimate"),size=2.5) +
+
+  scale_linetype_manual(name=NULL,values = c("CI"="solid","Reference subject"="dotted")) +
+  scale_fill_manual(name=NULL,values = c("Reference area"="gray")) +
+  scale_color_manual(name=NULL,values = c("CI"="blue","Reference subject"="black")) +
+  scale_shape_manual(name=NULL,values = c("Point estimate"=16)) +
+
+  guides(shape=guide_legend(override.aes = list(color=c("blue"))),
+         # linetype=guide_legend(override.aes=list(linetype="Reference subject")),
+         color=guide_legend(override.aes = list(shape=NA))
+  ) +
+  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free") +
   theme(strip.text.y=element_blank()) +
   theme(axis.text.y = element_blank()) +
   theme(axis.ticks.y = element_blank()) +
-  theme(axis.title.y = element_blank()) +
-  facet_grid(GROUP~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free")
+  theme(axis.title.y = element_blank())
+
 
 ## Stats plot
 
@@ -144,10 +210,11 @@ p1b <- ggplot(subset(dfres,PARAMETER=="FREL"),aes(x=FUNC,y=COVNAME,xmin=q1,xmax=
 parlabs <- c("CL statistics","FREL statistics")
 names(parlabs) <- c("CL","FREL")
 
-p2a <- ggplot(dfres %>% filter(PARAMETER=="CL"),aes(x=1,y=COVNAME)) +
+p2a <- ggplot(plotData %>% filter(PARAMETER=="CL"),aes(x=1,y=COVNAME)) +
   geom_text(aes(label = LABEL)) +
-  facet_grid(GROUP~PARAMETER,scales = "free",labeller = labeller(PARAMETER=parlabs),space = "free") +
+  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = labeller(PARAMETER=parlabs),space = "free") +
   theme_bw() +
+  #scale_x_continuous(expand=expand_scale(mult=c(0.01,0.02)))+
   #theme(panel.spacing.x = unit(0, "lines"))+
   theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt")) +
   theme(strip.text.y=element_blank()) +
@@ -157,9 +224,9 @@ p2a <- ggplot(dfres %>% filter(PARAMETER=="CL"),aes(x=1,y=COVNAME)) +
   theme(panel.grid.major = element_blank()) +
   theme(panel.grid.minor = element_blank())
 
-p2b <- ggplot(subset(dfres,PARAMETER=="FREL"),aes(x=1,y=COVNAME)) +
+p2b <- ggplot(subset(plotData,PARAMETER=="FREL"),aes(x=1,y=COVNAME)) +
   geom_text(aes(label = LABEL)) +
-  facet_grid(GROUP~PARAMETER,scales = "free",,labeller = labeller(PARAMETER=parlabs),space = "free") +
+  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = labeller(PARAMETER=parlabs),space = "free") +
   theme_bw() +
   # theme(strip.text.x=element_blank()) +
   theme(axis.text = element_blank()) +
