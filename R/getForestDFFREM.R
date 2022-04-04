@@ -58,6 +58,11 @@ getForestDFFREM <- function(dfCovs,
 
   if(!is.list(covNames)) stop("covNames must be a list")
 
+  if (!is.null(dfRefRow) && nrow(dfRefRow)!=1 && nrow(dfRefRow)!=nrow(dfCovs)) {
+    stop("The number of reference rows (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to dfCovs (change reference for each covariate combination)")
+  }
+
+
   #If a needed covariate is not present in dfCovs, set it to missing
   if(!all(covNames$covNames %in% names(dfCovs))) {
     if (!quiet) warning("Not all covariates in frem model are present in dfCovs, setting them to missing")
@@ -122,13 +127,14 @@ getForestDFFREM <- function(dfCovs,
 
       ## Calculate the ffemObj in case reference covariates have been specified
       if (!is.null(dfRefRow)) {
-        ffemObjRef <- PMXFrem::calcFFEM(
+          indi<-min(i,nrow(dfRefRow))
+          ffemObjRef <- PMXFrem::calcFFEM(
           noBaseThetas = noBaseThetas,
           noCovThetas  = noCovThetas,
           noSigmas     = noSigmas,
           dfext        = dfext,
           covNames     = covNames$covNames,
-          availCov     = names(dfRefRow)[as.numeric(dfRefRow) != iMiss][names(dfRefRow)[as.numeric(dfRefRow) != iMiss] %in% covNames$covNames],
+          availCov     = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
           quiet        = quiet,
           noSkipOm     = noSkipOm,
           noParCov     = noParCov
@@ -161,7 +167,8 @@ getForestDFFREM <- function(dfCovs,
         }
 
         if (!is.null(dfRefRow)) {
-          ffem_expr_base <- str_replace_all(ffemObjRef$Expr[j],pattern = "data\\$", replacement = "dfRefRow$")
+          data47_jxrtp_ref<-dfRefRow[indi,]
+          ffem_expr_base <- str_replace_all(ffemObjRef$Expr[j],pattern = "data\\$", replacement = "data47_jxrtp_ref$")
           coveffects_base[j] <- as.numeric(eval(parse(text = ffem_expr_base)))
         }
       }
@@ -173,7 +180,7 @@ getForestDFFREM <- function(dfCovs,
 
         ## Do it for the reference
         if (!is.null(dfRefRow)) {
-          valbase <- functionList[[j]](basethetas = thetas,covthetas = coveffects_base, dfrow = dfRefRow, ...)
+          valbase <- functionList[[j]](basethetas = thetas,covthetas = coveffects_base, dfrow = dfRefRow[indi,], ...)
         } else {
           dfmissing <- dfCovs[1, ]
           dfmissing[, ] <- iMiss
