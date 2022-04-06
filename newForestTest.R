@@ -74,10 +74,10 @@ paramFunction <- function(thetas, df, ...) {
   CL <- TVCL
   V <- TVV
 
-  return(list(CL,FREL))
+  return(list(CL,FREL,V))
 }
 
-functionListName <- c("CL","FREL")
+functionListName <- c("CL","FREL","V")
 
 
 runno   <- 1
@@ -86,157 +86,227 @@ covFile <- system.file("extdata",paste0("run",runno,".cov"),package="PMXForest")
 dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 
 
+# dfres <- getForestDFSCM(dfCovs           = dfCovs,
+#                         cdfCovsNames     = covnames,
+#                         functionList     = list(paramFunction),
+#                         functionListName = functionListName,
+#                         noBaseThetas     = noBaseThetas,
+#                         dfParameters     = dfSamplesCOV,
+#                         dfRefRow         = NULL
+# )
+#
+# dfRefRow <- dfCovs[13,1:8]
+dfRefRow <- NULL
+plotData<- setupForestPlotData(dfCovs,covnames,list(paramFunction),functionListName,noBaseThetas = 16,dfSamplesCOV,plotRelative=FALSE,noVar=TRUE,dfRefRow = dfRefRow)
 
-setupPlotData <- function(dfCovs,covnames,functionList,functionListName,noBaseThetas,dfSamples,plotRelative=TRUE,noVar=FALSE,reference="func") {
 
-  vars <- getPlotVars(plotRelative,noVar,reference)
 
-  dfres <- getForestDFSCM(dfCovs           = dfCovs,
-                          cdfCovsNames     = covnames,
-                          functionList     = functionList,
-                          functionListName = functionListName,
-                          noBaseThetas     = noBaseThetas,
-                          dfParameters     = dfSamples
-  )
 
-  sigdigits <- 2
-  plotData <- dfres %>% select(GROUPNAME,COVNUM,COVNAME,PARAMETER,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
-    mutate(
-      reference=reference,
-      REF=ifelse(plotRelative,1,REF)) %>%
-    mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME))) %>%
-    mutate(
-      meanlabel  = signif_pad(REF, sigdigits),
-      lowcilabel = signif_pad(q1, sigdigits),
-      upcilabel  = signif_pad(q2,sigdigits),
-      LABEL      = paste0(meanlabel, " [", lowcilabel, "-", upcilabel,"]"),
-      LABEL      = str_pad(LABEL,max(str_length(LABEL)),side="right",' ')
-    )
+old <- theme_set(theme_bw())
 
-  return(plotData)
+forestPlot <- function(plotData,
+                       parameters=unique(plotData$PARAMETER),
+                      # ref_value=1,
+                       ref_area=c(0.8,1.2),
+                       ref_fill_col="gray",
+                       ref_fill_alpha=0.5,
+                       ref_line_size=1,
+                       ref_line_type="dotted",
+                       ref_line_col="black",
+                       ci_line_type="solid",
+                       ci_line_col="blue",
+                       point_shape=16,
+                       point_color="blue",
+                       ref_subj_label = "Reference subject",
+                       ref_area_label = "Reference area",
+                       point_label    = "Point estimate",
+                       ci_label       = "Confidence interval",
+                       statlabs = paste(parameters,"statistics"),
+                       xlb = "Parameter value",
+                       returnPlotList = FALSE,
+                       table=TRUE,
+                       rightStrip=TRUE) {
+
+
+  #######
+  ## Create two functions, one for the error bar charts and one for the tables
+  #######
+  parPlot <- function(data,...) {
+
+    ## This function is designed to only deal with one parameter at a time.
+    if(length(unique(data$PARAMETER)) !=1 ) stop("Can only deal with one oparameter at a time.")
+
+    ref_value <- unique(data$REF)
+    rect_data <- data.frame(xmin=ref_value * min(ref_area),
+                            xmax = ref_value * max(ref_area),
+                            ymin = -Inf, ymax = Inf)
+
+    p1a <- ggplot(data,aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
+      geom_blank() +
+
+      geom_rect(data=rect_data,
+                aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,fill="Reference area"),alpha=ref_fill_alpha,
+                inherit.aes = FALSE) +
+      #  annotate("rect", xmin = ref_value * min(ref_area), xmax = ref_value * max(ref_area),
+      #          ymin = -Inf, ymax = Inf, fill = ref_fill_col,alpha=ref_fill_alpha) +
+      #
+      # geom_ribbon(data = data.frame(x = ref_value,
+      #                               ymax = max(ref_area),
+      #                               ymin = min(ref_area),
+      #                               fill = "Reference area"),
+      #             aes(x = x, ymax = ymax, ymin = ymin, fill=fill),alpha=ref_fill_alpha,
+      #             inherit.aes = FALSE) +
+
+      geom_vline(aes(xintercept = ref_value,
+                     linetype = "Reference subject",
+                     color    = "Reference subject"
+                     ),
+                 size     = ref_line_size,
+                 key_glyph = "path") +
+
+      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
+      geom_point(aes(shape="Point estimate"),color=point_color,size=2.5) +
+
+      scale_fill_manual(name     = NULL, values = c("Reference area"    = ref_fill_col),
+                        labels=c(ref_area_label)) +
+      scale_color_manual(name    = NULL, values = c("Reference subject" = ref_line_col,"CI"=ci_line_col),
+                         labels=c(ci_label,ref_subj_label)) +
+      scale_linetype_manual(name = NULL, values = c("Reference subject" = ref_line_type,"CI"=ci_line_type),
+                            labels=c(ci_label,ref_subj_label)) +
+      scale_shape_manual(name    = NULL, values = c("Point estimate"    = point_shape),
+                         labels=c(point_label)) +
+
+      guides(linetype=guide_legend(override.aes=list(size=1))) +
+      facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free") +
+      ylab(NULL) +
+      xlab(xlb) +
+      theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
+  }
+
+  names(statlabs) <- parameters
+
+  tablePlot <- function(data,...) {
+
+    p2a <- ggplot(data,aes(x=1,y=COVNAME)) +
+      geom_text(aes(label = LABEL)) +
+      facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = labeller(PARAMETER=statlabs),space = "free") +
+      theme(axis.text = element_blank()) +
+      theme(axis.ticks = element_blank()) +
+      theme(axis.title = element_blank()) +
+      theme(panel.grid.major = element_blank()) +
+      theme(panel.grid.minor = element_blank())
+
+      return(p2a)
+  }
+
+  ######
+  ## Create the plots and determine how each panel in the plot should be formatted in terms of axis text and strip
+  ######
+  plotList <- list()
+  tabList <- list()
+
+  ## The errorbar plots
+  for(i in 1:length(parameters)) {
+
+    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i])) +
+      theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
+
+    ## Deal with y-axis elements
+    if(i==1 && i != length(parameters)) {
+      plotList[[i]] <- plotList[[i]]
+    }
+
+    if(i <= length(parameters) && i!=1) {
+        plotList[[i]] <- plotList[[i]] +
+          theme(axis.text.y = element_blank()) +
+          theme(axis.ticks.y = element_blank()) +
+          theme(axis.title.y = element_blank())
+    }
+
+    ## Deal with the strip
+    if(i != length(parameters)) {
+      plotList[[i]] <- plotList[[i]] +
+        theme(strip.text.y=element_blank())
+    }
+
+    if(i == length(parameters)) {
+
+      if(table) {
+        plotList[[i]] <- plotList[[i]] +
+          theme(strip.text.y=element_blank())
+      }
+
+      if(!table && !rightStrip) {
+        plotList[[i]] <- plotList[[i]] +
+          theme(strip.text.y=element_blank())
+      }
+
+      if(!table && rightStrip) {
+        plotList[[i]] <- plotList[[i]]
+      }
+    }
+
+  }
+
+  ## The table plots
+  for(i in 1:length(parameters)) {
+
+    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i])) +
+      theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt"))
+
+    if(i < length(parameters)) {
+      tabList[[i]] <- tabList[[i]] +
+        theme(strip.text.y=element_blank())
+    }
+
+    if(i == length(parameters) & rightStrip) {  # Last panel with right strip
+      tabList[[i]] <- tabList[[i]]
+    }
+
+    if(i == length(parameters) & !rightStrip) {  # Last panel with noright strip
+      tabList[[i]] <- tabList[[i]] +
+        theme(strip.text.y=element_blank())
+    }
+
+  }
+
+  ## If the tables are to be included, assemble a combined list with alternating plots and tables,
+  ## otherwise just return  plotList
+  totList <- list()
+  is.even <- function(x) x %% 2 == 0
+
+  if(table) {
+    for(j in 1:(2*length(plotList))) {
+
+      if(!is.even(j)) {
+        totList[[j]] <- plotList[[ceiling(j/2)]]
+      } else {
+        totList[[j]] <- tabList[[j/2]]
+      }
+    }
+
+  } else {
+    totList <- plotList
+  }
+
+  if(table) {
+    myPlot <- ggarrange(plotlist=totList,nrow=1,widths =rep(c(1,0.5),length(parameters)),align="h",common.legend = T)
+  } else{
+    myPlot <- ggarrange(plotlist=totList,nrow=1,align="h",common.legend = T)
+  }
+
+  ## return either the arranged plot or the list of plot objects
+  if(!returnPlotList) {
+    return(myPlot)
+  } else {
+    return(totList)
+  }
 }
 
-plotData<- setupPlotData(dfCovs,covnames,list(paramFunction),functionListName,noBaseThetas = 16,dfSamplesCOV)
+
+forestPlot(plotData)
 
 
-# ## Adjust dfres
-# dfres <- dfres %>% mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME)))
-# #dfres <- dfres %>% mutate(GROUP = factor(GROUP,labels=covariate))
-#
-# sigdigits <- 2
-# dfres <- dfres %>% mutate(
-#   meanlabel  = signif_pad(POINT_REL_REFFUNC, sigdigits),
-#   lowcilabel = signif_pad(Q1_REL_REFFUNC, sigdigits),
-#   upcilabel  = signif_pad(Q2_REL_REFFUNC,sigdigits),
-#   LABEL      = paste0(meanlabel, " [", lowcilabel, "-", upcilabel,"]"),
-#   LABEL      = str_pad(LABEL,max(str_length(LABEL)),side="right",' ')
-#   )
-
-## Main plot
-
-ref_value <- 1
-ref_area  <- c(0.8,1.2)
-ref_fill_col <- "gray"
-
-
-p1a <- ggplot(subset(plotData,PARAMETER=="CL"),aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
-  theme_bw() +
-  geom_blank() +
-  annotate("rect", xmin = ref_value * min(ref_area), xmax = ref_value * max(ref_area),
-           ymin = -Inf, ymax = Inf, fill = ref_fill_col,alpha=0.5) +
-
-  geom_ribbon(data = data.frame(x = ref_value, ymax = max(ref_area), ymin = min(ref_area),fill = "Reference area"),
-              aes(x = x, ymax = ymax, ymin = ymin, fill=fill),
-              size = 1,inherit.aes = FALSE) +
-
-  geom_vline(aes(xintercept = REF, linetype = "Reference subject",
-               color = "Reference subject"), size = 1,key_glyph = "path") +
-
-  geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
-  geom_point(aes(color="CI",shape="Point estimate"),size=2.5) +
-
-  scale_linetype_manual(name=NULL,values = c("CI"="solid","Reference subject"="dotted")) +
-  scale_fill_manual(name=NULL,values = c("Reference area"="gray")) +
-  scale_color_manual(name=NULL,values = c("CI"="blue","Reference subject"="black")) +
-  scale_shape_manual(name=NULL,values = c("Point estimate"=16)) +
-
-  guides(shape=guide_legend(override.aes = list(color=c("blue"))),
-         # linetype=guide_legend(override.aes=list(linetype="Reference subject")),
-         color=guide_legend(override.aes = list(shape=NA))
-          ) +
-  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free") +
-  ylab(NULL)+
-
-  theme(strip.text.y=element_blank()) +
-  theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
-
-
-p1b <- ggplot(subset(plotData,PARAMETER=="FREL"),aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
-  theme_bw() +
-  geom_blank() +
-  annotate("rect", xmin = ref_value * min(ref_area), xmax = ref_value * max(ref_area),
-           ymin = -Inf, ymax = Inf, fill = ref_fill_col,alpha=0.5) +
-
-  geom_ribbon(data = data.frame(x = ref_value, ymax = max(ref_area), ymin = min(ref_area),fill = "Reference area"),
-              aes(x = x, ymax = ymax, ymin = ymin, fill=fill),
-              size = 1,inherit.aes = FALSE) +
-
-  geom_vline(aes(xintercept = REF, linetype = "Reference subject",
-                 color = "Reference subject"), size = 1,key_glyph = "path") +
-
-  geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
-  geom_point(aes(color="CI",shape="Point estimate"),size=2.5) +
-
-  scale_linetype_manual(name=NULL,values = c("CI"="solid","Reference subject"="dotted")) +
-  scale_fill_manual(name=NULL,values = c("Reference area"="gray")) +
-  scale_color_manual(name=NULL,values = c("CI"="blue","Reference subject"="black")) +
-  scale_shape_manual(name=NULL,values = c("Point estimate"=16)) +
-
-  guides(shape=guide_legend(override.aes = list(color=c("blue"))),
-         # linetype=guide_legend(override.aes=list(linetype="Reference subject")),
-         color=guide_legend(override.aes = list(shape=NA))
-  ) +
-  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free") +
-  theme(strip.text.y=element_blank()) +
-  theme(axis.text.y = element_blank()) +
-  theme(axis.ticks.y = element_blank()) +
-  theme(axis.title.y = element_blank())
-
-
-## Stats plot
-
-#p2a <- ggplot(subset(dfres,PARAMETER=="CL"),aes(x=1,y=COVNAME)) +
-
-parlabs <- c("CL statistics","FREL statistics")
-names(parlabs) <- c("CL","FREL")
-
-p2a <- ggplot(plotData %>% filter(PARAMETER=="CL"),aes(x=1,y=COVNAME)) +
-  geom_text(aes(label = LABEL)) +
-  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = labeller(PARAMETER=parlabs),space = "free") +
-  theme_bw() +
-  #scale_x_continuous(expand=expand_scale(mult=c(0.01,0.02)))+
-  #theme(panel.spacing.x = unit(0, "lines"))+
-  theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt")) +
-  theme(strip.text.y=element_blank()) +
-  theme(axis.text = element_blank()) +
-  theme(axis.ticks = element_blank()) +
-  theme(axis.title = element_blank()) +
-  theme(panel.grid.major = element_blank()) +
-  theme(panel.grid.minor = element_blank())
-
-p2b <- ggplot(subset(plotData,PARAMETER=="FREL"),aes(x=1,y=COVNAME)) +
-  geom_text(aes(label = LABEL)) +
-  facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = labeller(PARAMETER=parlabs),space = "free") +
-  theme_bw() +
-  # theme(strip.text.x=element_blank()) +
-  theme(axis.text = element_blank()) +
-  theme(axis.ticks = element_blank()) +
-  theme(axis.title = element_blank()) +
-  theme(panel.grid.major = element_blank()) +
-  theme(panel.grid.minor = element_blank())
-
-
-ggpubr::ggarrange(p1a,p2a,p1b,p2b,nrow=1,widths =rep(c(1,0.5),2),align="h",common.legend = T)
 
 
 
