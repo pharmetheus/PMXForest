@@ -86,18 +86,40 @@ covFile <- system.file("extdata",paste0("run",runno,".cov"),package="PMXForest")
 dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 
 
-# dfres <- getForestDFSCM(dfCovs           = dfCovs,
-#                         cdfCovsNames     = covnames,
-#                         functionList     = list(paramFunction),
-#                         functionListName = functionListName,
-#                         noBaseThetas     = noBaseThetas,
-#                         dfParameters     = dfSamplesCOV,
-#                         dfRefRow         = NULL
-# )
-#
-# dfRefRow <- dfCovs[13,1:8]
-dfRefRow <- NULL
-plotData<- setupForestPlotData(dfCovs,covnames,list(paramFunction),functionListName,noBaseThetas = 16,dfSamplesCOV,plotRelative=FALSE,noVar=TRUE,dfRefRow = dfRefRow)
+dfres <- getForestDFSCM(dfCovs           = dfCovs,
+                        cdfCovsNames     = covnames,
+                        functionList     = list(paramFunction),
+                        functionListName = functionListName,
+                        noBaseThetas     = noBaseThetas,
+                        dfParameters     = dfSamplesCOV,
+                        dfRefRow         = NULL
+)
+
+
+refRow <- dfCovs %>% mutate(
+  FORM = -99,
+  FOOD = -99,
+  GENO = -99,
+  RACEL= -99,
+  WT   =- 99,
+  AGE  = -99,
+  CRCL = -99,
+  SEX = -99) %>%
+  group_by(COVARIATEGROUPS) %>%
+  mutate(WT=sample(c(50,75,100),1))
+
+dfresRefRow <- getForestDFSCM(dfCovs           = dfCovs,
+                              cdfCovsNames     = covnames,
+                              functionList     = list(paramFunction),
+                              functionListName = functionListName,
+                              noBaseThetas     = noBaseThetas,
+                              dfParameters     = dfSamplesCOV,
+                              dfRefRow         = refRow
+)
+
+
+plotData<- setupForestPlotData(dfres,plotRelative=FALSE,noVar=TRUE)
+plotDataRefRow<- setupForestPlotData(dfresRefRow,plotRelative=FALSE,noVar=TRUE,sigdig=3)
 
 
 
@@ -106,7 +128,6 @@ old <- theme_set(theme_bw())
 
 forestPlot <- function(plotData,
                        parameters=unique(plotData$PARAMETER),
-                      # ref_value=1,
                        ref_area=c(0.8,1.2),
                        ref_fill_col="gray",
                        ref_fill_alpha=0.5,
@@ -136,10 +157,15 @@ forestPlot <- function(plotData,
     ## This function is designed to only deal with one parameter at a time.
     if(length(unique(data$PARAMETER)) !=1 ) stop("Can only deal with one oparameter at a time.")
 
-    ref_value <- unique(data$REF)
-    rect_data <- data.frame(xmin=ref_value * min(ref_area),
-                            xmax = ref_value * max(ref_area),
-                            ymin = -Inf, ymax = Inf)
+
+    ref_value <- data %>% distinct(GROUPNAME,PARAMETER,REF)
+    rect_data <- data.frame(ref_value=ref_value$REF,
+                            xmin=ref_value$REF * min(ref_area),
+                            xmax = ref_value$REF * max(ref_area),
+                            ymin = -Inf, ymax = Inf,
+                            GROUPNAME=ref_value$GROUPNAME,
+                            PARAMETER=ref_value$PARAMETER)
+
 
     p1a <- ggplot(data,aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
       geom_blank() +
@@ -147,17 +173,9 @@ forestPlot <- function(plotData,
       geom_rect(data=rect_data,
                 aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,fill="Reference area"),alpha=ref_fill_alpha,
                 inherit.aes = FALSE) +
-      #  annotate("rect", xmin = ref_value * min(ref_area), xmax = ref_value * max(ref_area),
-      #          ymin = -Inf, ymax = Inf, fill = ref_fill_col,alpha=ref_fill_alpha) +
-      #
-      # geom_ribbon(data = data.frame(x = ref_value,
-      #                               ymax = max(ref_area),
-      #                               ymin = min(ref_area),
-      #                               fill = "Reference area"),
-      #             aes(x = x, ymax = ymax, ymin = ymin, fill=fill),alpha=ref_fill_alpha,
-      #             inherit.aes = FALSE) +
 
-      geom_vline(aes(xintercept = ref_value,
+      geom_vline(data=rect_data,
+                 aes(xintercept = ref_value,
                      linetype = "Reference subject",
                      color    = "Reference subject"
                      ),
@@ -305,7 +323,9 @@ forestPlot <- function(plotData,
 
 
 forestPlot(plotData)
-
+forestPlot(plotDataRefRow)
+forestPlot(plotData,parameters="CL")
+forestPlot(plotData2,parameters="CL")
 
 
 
