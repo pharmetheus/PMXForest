@@ -110,6 +110,7 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
     dfParameters        <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu = fixedmu))
     names(dfParameters) <- strNames
     dfParameters        <- cbind(dfParameters, OBJ = 0) # Add a dummy column with the OBJ to make it look more like a ext file
+    dfParameters        <- rbind(dfExt[,-1],dfParameters) # Add final parameters in the top row.
     return(dfParameters)
   }
 
