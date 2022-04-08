@@ -3,6 +3,7 @@
 #' @description Function that gets samples, either from a regular bootstrap (Psn output) a SIR (PsN output), a covariance matrix (NM output)
 #' or samples from a small bootstrap using the estimated covariance matrix
 #'
+#' @importFrom dplyr filter
 #' @param input The input file name (character string).
 #' bootstrap or SIR. If the file name extension is ".cov" it is assumed that the file
 #' is a a NONMEM .cov file and if the extension is '.csv' is is assumed that it is a PsN raw results file from either a bootstrap or a SIR.
@@ -36,12 +37,12 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
   if (is.character(input)) {
     if(tools::file_ext(input) == "") stop("The input file name needs to have an extension")
     if(tools::file_ext(input) != "cov" &
-      tools::file_ext(input) != "csv") stop("The input file name needs to have either a .cov or .csv extension")
+       tools::file_ext(input) != "csv") stop("The input file name needs to have either a .cov or .csv extension")
     if(!file.exists(input)) stop(paste("Can not find",input))
-}
-    ## Check the extFile argument
-    if(!is.null(extFile) && tools::file_ext(extFile) != "ext") stop(paste(extFile, "does not have a .ext extension"))
-    if(!is.null(extFile) && !file.exists(extFile)) stop(paste("Can not find",extFile))
+  }
+  ## Check the extFile argument
+  if(!is.null(extFile) && tools::file_ext(extFile) != "ext") stop(paste(extFile, "does not have a .ext extension"))
+  if(!is.null(extFile) && !file.exists(extFile)) stop(paste("Can not find",extFile))
 
   # A data frame was provided
   if (is.data.frame(input)) {
@@ -55,21 +56,21 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
         dfParameters <- cbind(dfParameters, OBJ = 0)
         return(dfParameters)
       } else {
-       # Now construct sigma and mu
-       sigma <- cov(dfParameters)
-       mu    <- colMeans(dfParameters)
+        # Now construct sigma and mu
+        sigma <- cov(dfParameters)
+        mu    <- colMeans(dfParameters)
 
-       #Get the parameters which are fixed based on the covariance
-       fixedmu = rep(FALSE,1,ncol(sigma))
-       for (j in 1:ncol(sigma)) {
-         fixedmu[j]<-all(sigma[,j]==0)
-       }
+        #Get the parameters which are fixed based on the covariance
+        fixedmu = rep(FALSE,1,ncol(sigma))
+        for (j in 1:ncol(sigma)) {
+          fixedmu[j]<-all(sigma[,j]==0)
+        }
 
-      dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
-      dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
-      dfParameters <- cbind(dfParameters, OBJ = 0)
-      return(dfParameters)
-    }
+        dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
+        dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+        dfParameters <- cbind(dfParameters, OBJ = 0)
+        return(dfParameters)
+      }
     } else {
       if (is.null(n)) return(dfParameters)
       # Now construct sigma and mu
