@@ -1,5 +1,10 @@
 #' getForestDFemp
 #'
+#'
+#' @import doParallel
+#' @import foreach
+#' @import dplyr
+#'
 #' @param covExpressionList A list of expressions that define the covariate values to visualize in the Forest plot.
 #' @param metricfunction The function to use to summarise the parameter values in each covariate category. Default is median.
 #' @param cGrouping A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.
@@ -232,26 +237,30 @@ getForestDFemp <- function(dfData,
         GROUP = group,
         GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFFUNC = func_base, REFTRUE = true_base, POINT=FUNCVAL, POINT_NOVAR_REL_REFFUNC=FUNCNOVAR,
-        POINT_REL_REFFUNC = FUNCVAL/func_base, POINT_REL_REFTRUE = FUNCVAL/true_base,
+        REFFUNC = func_base, REFFINAL = true_base, POINT=FUNCVAL, POINT_NOVAR_REL_REFFUNC=FUNCNOVAR,
+        POINT_REL_REFFUNC = FUNCVAL/func_base, POINT_REL_REFFINAL = FUNCVAL/true_base,
         COVEFF = !all(dft$RELINTERNAL==1)))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k)]] <- quant[k]
         dfp[[paste0("Q",k,"_REL_REFFUNC")]] <-  quant[k]/func_base
-        dfp[[paste0("Q",k,"_REL_REFTRUE")]] <-  quant[k]/true_base
+        dfp[[paste0("Q",k,"_REL_REFFINAL")]] <-  quant[k]/true_base
         dfrow <- cbind(dfrow, dfp[, 2:4])
       }
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
-        dfp[[paste0("Q",k,"_REL_REFFUNC_NOVAR")]] <- quantrel[k]
+        dfp[[paste0("Q",k,"_NOVAR_REL_REFFUNC")]] <- quantrel[k]
         dfrow <- cbind(dfrow, dfp[, 2])
-        names(dfrow)[ncol(dfrow)] <- paste0("Q", k,"_REL_REFFUNC_NOVAR")
+        names(dfrow)[ncol(dfrow)] <- paste0("Q", k,"_NOVAR_REL_REFFUNC")
       }
       dfret <- rbind(dfret, dfrow)
     }
   }
 
   stopImplicitCluster()
+
+  ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
+  dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
+
   return(dfret)
 }

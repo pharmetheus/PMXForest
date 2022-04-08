@@ -2,6 +2,10 @@
 #'
 #' @description Get a data frame with Forest border for each univariate or multivariate covariate (and value(s)) in the input data frame. If a list a data frame will be created from the list, see function dfCreateInputForestData
 #'
+#' @import doParallel
+#' @import foreach
+#' @import dplyr
+#'
 #' @param noSigmas  Number of sigma (epsilon) parameters in the model.
 #' @param noParCov Number of parameters for which covariate relations are sought (often the same as noBaseThetas).
 #' @param noSkipOm Nof diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.
@@ -255,28 +259,32 @@ getForestDFFREM <- function(dfCovs,
         data.frame(GROUP = group,
         GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFFUNC = func_base, REFTRUE = true_base, POINT=FUNCVAL, POINT_NOVAR_REL_REFFUNC=FUNCNOVAR,
-        POINT_REL_REFFUNC = FUNCVAL/func_base, POINT_REL_REFTRUE = FUNCVAL/true_base,
+        REFFUNC = func_base, REFFINAL = true_base, POINT=FUNCVAL, POINT_NOVAR_REL_REFFUNC=FUNCNOVAR,
+        POINT_REL_REFFUNC = FUNCVAL/func_base, POINT_REL_REFFINAL = FUNCVAL/true_base,
         COVEFF = !all(dft$RELINTERNAL==1)))
 
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k)]] <- quant[k]
         dfp[[paste0("Q",k,"_REL_REFFUNC")]] <-  quant[k]/func_base
-        dfp[[paste0("Q",k,"_REL_REFTRUE")]] <-  quant[k]/true_base
+        dfp[[paste0("Q",k,"_REL_REFFINAL")]] <-  quant[k]/true_base
         dfrow <- cbind(dfrow, dfp[, 2:4])
       }
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
-        dfp[[paste0("Q",k,"_REL_REFFUNC_NOVAR")]] <- quantrel[k]
+        dfp[[paste0("Q",k,"_NOVAR_REL_REFFUNC")]] <- quantrel[k]
         dfrow <- cbind(dfrow, dfp[, 2])
-        names(dfrow)[ncol(dfrow)] <- paste0("Q", k,"_REL_REFFUNC_NOVAR")
+        names(dfrow)[ncol(dfrow)] <- paste0("Q", k,"_NOVAR_REL_REFFUNC")
       }
       dfret <- rbind(dfret, dfrow)
     }
   }
 
   stopImplicitCluster()
+
+  ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
+  dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
+
   return(dfret)
 }
 
