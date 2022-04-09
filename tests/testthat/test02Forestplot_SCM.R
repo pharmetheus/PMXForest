@@ -1,10 +1,8 @@
-context("Forest plot functions")
 library(testthat)
-library(PMXForest)
 
+test_that("Forest plots for SCM works properly", {
 
-test_that("dfCovs is created properly", {
-  dfCovs1 <- createInputForestData(
+  dfCovs <- createInputForestData(
     list( "FORM" = c(0,1),
           "FOOD" = c(0,1),
           "GENO" = c(1,2,3,4),
@@ -15,18 +13,123 @@ test_that("dfCovs is created properly", {
           "SEX"  = c(1,2)),
     iMiss=-99)
 
-  expect_equal_to_reference(dfCovs1,"test_output/dfCovs1Output")
+  expect_equal_to_reference(dfCovs,"test_output/dfCovsOutput")
+
+  paramFunction <- function(thetas, df, ...) {
+
+    FRELNCIL <- 1
+    if (any(names(df) == "NCIL") && df$NCIL == 1) FRELNCIL <- 1 + thetas[16]
+
+    FRELFORM <- 1
+    if (any(names(df) == "FORM") && df$FORM == 0) FRELFORM <- 1 + thetas[15]
+
+    FRELCOV <- FRELFORM * FRELNCIL
+
+    CLFOOD <- 1
+    if (df$FOOD == 0) CLFOOD <- 1 + thetas[14]
+
+    CLCOV <- CLFOOD
+
+    TVFREL <- thetas[1]
+    if(any(names(df) == "GENO")) {
+      if(df$GENO == 1) TVFREL <- TVFREL * (1 + thetas[11])
+      if(df$GENO == 3) TVFREL <- TVFREL * (1 + thetas[12])
+      if(df$GENO == 4) TVFREL <- TVFREL * (1 + thetas[13])
+    }
+
+    TVFREL <- FRELCOV * TVFREL
+
+    if (!any(names(df) == "WT") || df$WT == -99) {
+      TVCL <- thetas[4]
+    } else {
+      TVCL <- thetas[4] * (df$WT / 75)**thetas[2]
+    }
+
+    if(any(names(df) == "GENO")) {
+      if (df$GENO == 1) TVCL <- TVCL * (1 + thetas[8])
+      if (df$GENO == 3) TVCL <- TVCL * (1 + thetas[9])
+      if (df$GENO == 4) TVCL <- TVCL * (1 + thetas[10])
+    }
+
+    TVCL <- CLCOV * TVCL
+
+    if (!any(names(df) == "WT") || df$WT == -99) {
+      TVV <- thetas[5]
+    } else {
+      TVV <- thetas[5] * (df$WT / 75)**thetas[3]
+    }
+    TVMAT <- thetas[6]
+    TVD1  <- thetas[7]
+
+    FREL <- TVFREL
+    CL <- TVCL
+    V <- TVV
+
+    return(list(CL,FREL,V))
+  }
+
+  functionListName <- c("CL","FREL","V")
+
+  set.seed(123)
+  runno   <- 1
+  extFile <- system.file("extdata",paste0("run",runno,".ext"),package="PMXForest")
+  covFile <- system.file("extdata",paste0("run",runno,".cov"),package="PMXForest")
+  dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=200)
+
+  covnames  <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
+                 "African American","Asian and other","WT 65 kg","WT 115 kg",
+                 "Age 27 y","Age 62 y","CRCL 83 mL/min","CRCL 150 mL/min","Male","Female")
+
+  ## The print names of the covariates
+  covariates <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex")
+
+  dfresSCM <- getForestDFSCM(dfCovs           = dfCovs,
+                             cdfCovsNames     = covnames,
+                             functionList     = list(paramFunction),
+                             functionListName = functionListName,
+                             noBaseThetas     = 16,
+                             dfParameters     = dfSamplesCOV,
+                             dfRefRow         = NULL
+  )
+
+
+  expect_equal_to_reference(dfresSCM,"test_output/dfresSCM")
+
+
+  ## Tests for setupData
+  plotData1 <- setupForestPlotData(dfresSCM)
+  plotData2 <- setupForestPlotData(dfresSCM,plotRelative = FALSE,noVar=TRUE)
+  plotData4 <- setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel"),groupNameLabels=covariates,plotRelative=FALSE,noVar=TRUE,statisticsLabel=c("CL (L/h)","V (L)","Frel"))
+  expect_equal_to_reference(plotData1,"test_output/plotData1")
+  expect_equal_to_reference(plotData2,"test_output/plotData2")
+  expect_equal_to_reference(plotData4,"test_output/plotData4")
+
+
+  ## Create a number of Forest plots to test functionality
+  fp5 <- forestPlot(dfresSCM)
+  fp6 <- forestPlot(dfresSCM,plotData=plotData1)
+  fp7 <- forestPlot(dfresSCM,plotData=plotData1 %>%
+                      filter(PARAMETER=="CL") %>%
+                      group_by(GROUPNAME) %>%
+                      mutate(COVEFF=ifelse(any(COVEFF==TRUE),TRUE,FALSE)) %>%
+                      filter(COVEFF==TRUE),parameters="CL")
+  fp8 <- forestPlot(dfresSCM,plotRelative = FALSE)
+  fp9 <- forestPlot(dfresSCM,parameters="CL")
+  fp10 <- forestPlot(dfresSCM,rightStrip = FALSE)
+  fp11 <- forestPlot(dfresSCM,rightStrip = FALSE,table=FALSE)
+  fp12 <- forestPlot(dfresSCM,table=FALSE)
+
+  expect_equal_to_reference(fp5,"test_output/fp5")
+  expect_equal_to_reference(fp6,"test_output/fp6")
+  expect_equal_to_reference(fp7,"test_output/fp7")
+  expect_equal_to_reference(fp8,"test_output/fp8")
+  expect_equal_to_reference(fp9,"test_output/fp9")
+  expect_equal_to_reference(fp10,"test_output/fp10")
+  expect_equal_to_reference(fp11,"test_output/fp11")
+  expect_equal_to_reference(fp12,"test_output/fp12")
 })
 
-# test_that("getForestDFSCM works properly", {
-#
-#   set.seed(123)
-#   runno   <- 1
-#   extFile <- system.file("extdata",paste0("run",runno,".ext"),package="PMXForest")
-#   covFile <- system.file("extdata",paste0("run",runno,".cov"),package="PMXForest")
-#
-#   dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=200)
-#
+
 #   paramFunction <- function(thetas, df, ...) {
 #
 #     FRELNCIL <- 1 # Most common

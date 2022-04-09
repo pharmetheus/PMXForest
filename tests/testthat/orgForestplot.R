@@ -21,3 +21,8 @@ test_that("getPlotVars returns correct values", {
                c(point="POINT_REL_REFTRUE",q1="Q1_REL_REFTRUE",q2="Q2_REL_REFTRUE",ref="REFTRUE"))
 
 })
+
+# test_that("setupForestPlotData works as expected", {
+#
+#   expect_is()
+# })

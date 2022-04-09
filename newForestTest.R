@@ -1,8 +1,7 @@
-# library(PMXForest)
-#library(ggplot2)
-# library(table1) # To get access to signif_pad
-# library(ggpubr)
-
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+## This file sets up the reference objects for the ubuts tests
 set.seed(865765)
 
 dfCovs <- createInputForestData(
@@ -16,13 +15,13 @@ dfCovs <- createInputForestData(
         "SEX"  = c(1,2)),
   iMiss=-99)
 
-cGrouping <- c(1,1,2,2,3,3,3,3,4,4,4,5,5,6,6,7,7,8,8)
+#cGrouping <- c(1,1,2,2,3,3,3,3,4,4,4,5,5,6,6,7,7,8,8)
 covnames  <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
                "African American","Asian and other","WT 65 kg","WT 115 kg",
                "Age 27 y","Age 62 y","CRCL 83 mL/min","CRCL 150 mL/min","Male","Female")
 
 ## The print names of the covariates
-covariate <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine clearance","Sex")
+covariates <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex")
 
 paramFunction <- function(thetas, df, ...) {
 
@@ -118,215 +117,16 @@ dfresRefRow <- getForestDFSCM(dfCovs           = dfCovs,
 )
 
 
-plotData<- setupForestPlotData(dfres,plotRelative=FALSE,noVar=TRUE)
-plotDataRefRow<- setupForestPlotData(dfresRefRow,plotRelative=FALSE,noVar=TRUE,sigdig=3)
-
-
+plotData       <- setupForestPlotData(dfres,plotRelative=FALSE,noVar=TRUE)
+plotDataRefRow <- setupForestPlotData(dfresRefRow,plotRelative=FALSE,noVar=TRUE,sigdig=3)
 
 
 old <- theme_set(theme_bw())
 
-forestPlot <- function(plotData,
-                       parameters=unique(plotData$PARAMETER),
-                       ref_area=c(0.8,1.2),
-                       ref_fill_col="gray",
-                       ref_fill_alpha=0.5,
-                       ref_line_size=1,
-                       ref_line_type="dotted",
-                       ref_line_col="black",
-                       ci_line_type="solid",
-                       ci_line_col="blue",
-                       point_shape=16,
-                       point_color="blue",
-                       ref_subj_label = "Reference subject",
-                       ref_area_label = "Reference area",
-                       point_label    = "Point estimate",
-                       ci_label       = "Confidence interval",
-                       statlabs = paste(parameters,"statistics"),
-                       xlb = "Parameter value",
-                       returnPlotList = FALSE,
-                       table=TRUE,
-                       rightStrip=TRUE) {
-
-
-  #######
-  ## Create two functions, one for the error bar charts and one for the tables
-  #######
-  parPlot <- function(data,...) {
-
-    ## This function is designed to only deal with one parameter at a time.
-    if(length(unique(data$PARAMETER)) !=1 ) stop("Can only deal with one oparameter at a time.")
-
-
-    ref_value <- data %>% distinct(GROUPNAME,PARAMETER,REF)
-    rect_data <- data.frame(ref_value=ref_value$REF,
-                            xmin=ref_value$REF * min(ref_area),
-                            xmax = ref_value$REF * max(ref_area),
-                            ymin = -Inf, ymax = Inf,
-                            GROUPNAME=ref_value$GROUPNAME,
-                            PARAMETER=ref_value$PARAMETER)
-
-
-    p1a <- ggplot(data,aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
-      geom_blank() +
-
-      geom_rect(data=rect_data,
-                aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,fill="Reference area"),alpha=ref_fill_alpha,
-                inherit.aes = FALSE) +
-
-      geom_vline(data=rect_data,
-                 aes(xintercept = ref_value,
-                     linetype = "Reference subject",
-                     color    = "Reference subject"
-                     ),
-                 size     = ref_line_size,
-                 key_glyph = "path") +
-
-      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
-      geom_point(aes(shape="Point estimate"),color=point_color,size=2.5) +
-
-      scale_fill_manual(name     = NULL, values = c("Reference area"    = ref_fill_col),
-                        labels=c(ref_area_label)) +
-      scale_color_manual(name    = NULL, values = c("Reference subject" = ref_line_col,"CI"=ci_line_col),
-                         labels=c(ci_label,ref_subj_label)) +
-      scale_linetype_manual(name = NULL, values = c("Reference subject" = ref_line_type,"CI"=ci_line_type),
-                            labels=c(ci_label,ref_subj_label)) +
-      scale_shape_manual(name    = NULL, values = c("Point estimate"    = point_shape),
-                         labels=c(point_label)) +
-
-      guides(linetype=guide_legend(override.aes=list(size=1))) +
-      facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = label_wrap_gen(width=5),space = "free") +
-      ylab(NULL) +
-      xlab(xlb) +
-      theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
-  }
-
-  names(statlabs) <- parameters
-
-  tablePlot <- function(data,...) {
-
-    p2a <- ggplot(data,aes(x=1,y=COVNAME)) +
-      geom_text(aes(label = LABEL)) +
-      facet_grid(GROUPNAME~PARAMETER,scales = "free",labeller = labeller(PARAMETER=statlabs),space = "free") +
-      theme(axis.text = element_blank()) +
-      theme(axis.ticks = element_blank()) +
-      theme(axis.title = element_blank()) +
-      theme(panel.grid.major = element_blank()) +
-      theme(panel.grid.minor = element_blank())
-
-      return(p2a)
-  }
-
-  ######
-  ## Create the plots and determine how each panel in the plot should be formatted in terms of axis text and strip
-  ######
-  plotList <- list()
-  tabList <- list()
-
-  ## The errorbar plots
-  for(i in 1:length(parameters)) {
-
-    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i])) +
-      theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
-
-    ## Deal with y-axis elements
-    if(i==1 && i != length(parameters)) {
-      plotList[[i]] <- plotList[[i]]
-    }
-
-    if(i <= length(parameters) && i!=1) {
-        plotList[[i]] <- plotList[[i]] +
-          theme(axis.text.y = element_blank()) +
-          theme(axis.ticks.y = element_blank()) +
-          theme(axis.title.y = element_blank())
-    }
-
-    ## Deal with the strip
-    if(i != length(parameters)) {
-      plotList[[i]] <- plotList[[i]] +
-        theme(strip.text.y=element_blank())
-    }
-
-    if(i == length(parameters)) {
-
-      if(table) {
-        plotList[[i]] <- plotList[[i]] +
-          theme(strip.text.y=element_blank())
-      }
-
-      if(!table && !rightStrip) {
-        plotList[[i]] <- plotList[[i]] +
-          theme(strip.text.y=element_blank())
-      }
-
-      if(!table && rightStrip) {
-        plotList[[i]] <- plotList[[i]]
-      }
-    }
-
-  }
-
-  ## The table plots
-  for(i in 1:length(parameters)) {
-
-    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i])) +
-      theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt"))
-
-    if(i < length(parameters)) {
-      tabList[[i]] <- tabList[[i]] +
-        theme(strip.text.y=element_blank())
-    }
-
-    if(i == length(parameters) & rightStrip) {  # Last panel with right strip
-      tabList[[i]] <- tabList[[i]]
-    }
-
-    if(i == length(parameters) & !rightStrip) {  # Last panel with noright strip
-      tabList[[i]] <- tabList[[i]] +
-        theme(strip.text.y=element_blank())
-    }
-
-  }
-
-  ## If the tables are to be included, assemble a combined list with alternating plots and tables,
-  ## otherwise just return  plotList
-  totList <- list()
-  is.even <- function(x) x %% 2 == 0
-
-  if(table) {
-    for(j in 1:(2*length(plotList))) {
-
-      if(!is.even(j)) {
-        totList[[j]] <- plotList[[ceiling(j/2)]]
-      } else {
-        totList[[j]] <- tabList[[j/2]]
-      }
-    }
-
-  } else {
-    totList <- plotList
-  }
-
-  if(table) {
-    myPlot <- ggarrange(plotlist=totList,nrow=1,widths =rep(c(1,0.5),length(parameters)),align="h",common.legend = T)
-  } else{
-    myPlot <- ggarrange(plotlist=totList,nrow=1,align="h",common.legend = T)
-  }
-
-  ## return either the arranged plot or the list of plot objects
-  if(!returnPlotList) {
-    return(myPlot)
-  } else {
-    return(totList)
-  }
-}
-
-
-forestPlot(plotData)
-forestPlot(plotDataRefRow)
-forestPlot(plotData,parameters="CL")
-forestPlot(plotData2,parameters="CL")
-
-
-
-
+forestPlot(dfres)
+forestPlot(dfres,tabTextSize=5)
+forestPlot(dfresRefRow,plotRelative = FALSE)
+forestPlot(dfres,plotData=plotData)
+forestPlot(dfres,plotRelative = FALSE)
+forestPlot(dfres,parameters = c("CL","FREL"),parameterLabels=c("CL(L/h)","F[rel]"),groupNameLabels=covariates)
+forestPlot(dfres,plotData=myPlotData,parameters = c("CL","FREL"),parameterLabels=c("CL(L/h)","F[rel]"),groupNameLabels=covariates)

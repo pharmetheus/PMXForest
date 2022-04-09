@@ -1,30 +1,37 @@
-Package: PMXForest
 Type: Package
+Package: PMXForest
 Title: Create Forest plots based on NONMEM output
 Version: 0.2.3
-Authors@R: c(
-    person("Niclas", "Jonsson", email = "niclas.jonsson@pharmetheus.com", role = c("aut", "cre")),
-    person("Joakim", "Nyberg", email = "joakim.nyberg@pharmetheus.com", role = c("aut"))
-  )
+Authors@R: 
+    c(person(given = "Niclas",
+             family = "Jonsson",
+             role = c("aut", "cre"),
+             email = "niclas.jonsson@pharmetheus.com"),
+      person(given = "Joakim",
+             family = "Nyberg",
+             role = "aut",
+             email = "joakim.nyberg@pharmetheus.com"))
 Author: Niclas Jonsson and Joakim Nyberg
 Maintainer: Niclas Jonsson <niclas.jonsson@pharmetheus.com>
 Description: Functions to support the creation of Forest plots.
 License: What license is it under?
+Imports:
+    doParallel,
+    foreach,
+    ggpubr,
+    MASS,
+    stringr,
+    table1,
+    tidyverse
+Suggests: 
+    bookdown,
+    knitr,
+    PhRame,
+    PMXFrem,
+    rmarkdown,
+    testthat
+VignetteBuilder: 
+    knitr
 Encoding: UTF-8
 LazyData: true
-Suggests: 
-    knitr,
-    rmarkdown,
-    testthat,
-    PMXFrem,
-    bookdown,
-	  PhRame
-Imports:
-    MASS,
-    tidyverse,
-    foreach, 
-    doParallel,
-    table1,
-    ggpubr
-VignetteBuilder: knitr
-
+RoxygenNote: 6.1.1
