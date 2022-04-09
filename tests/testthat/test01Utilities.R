@@ -1,6 +1,10 @@
-context("Sampling for uncertainty estimation")
 library(testthat)
-library(PMXForest)
+
+
+test_that("Ext files are read properly", {
+  extData <- getExt(system.file("extdata","run1.ext",package="PMXForest"))
+  expect_is(extData,"data.frame")
+})
 
 
 test_that("mvrnorm_vector samples correctly", {
@@ -53,7 +57,7 @@ test_that("getSamples works correctly for .cov input", {
   set.seed("123")
   tmp <- getSamples(covFile,extFile=extFile,n=20)
   expect_is(tmp,"data.frame")
-  expect_equal(nrow(tmp),20)
+  expect_equal(nrow(tmp),21)
 
   ## Test that the output is the same as a saved reference
   expect_equal_to_reference(tmp,"test_output/getSamplesCovOutput")
@@ -141,4 +145,24 @@ test_that("getSamples works correctly for a time-to-event model without SIGMA", 
   expect_equal_to_reference(tmp,"test_output/dfSampleTTE")
 })
 
+test_that("getPlotVars returns correct values", {
 
+
+  expect_equal(getPlotVars(plotRelative=FALSE,noVar=TRUE,reference="func"),c(point="POINT",q1="Q1",q2="Q2",ref="REFFUNC"))
+  expect_equal(getPlotVars(plotRelative=FALSE,noVar=TRUE,reference="final"),c(point="POINT",q1="Q1",q2="Q2",ref="REFFINAL"))
+
+  expect_error(getPlotVars(plotRelative=FALSE,noVar=FALSE,reference="func"))
+  expect_error(getPlotVars(plotRelative=FALSE,noVar=FALSE,reference="final"))
+
+  expect_equal(getPlotVars(plotRelative=TRUE,noVar=TRUE,reference="func"),
+               c(point="POINT_NOVAR_REL_REFFUNC",q1="Q1_NOVAR_REL_REFFUNC",q2="Q2_NOVAR_REL_REFFUNC",ref="REFFUNC"))
+
+  expect_error(getPlotVars(plotRelative=TRUE,noVar=TRUE,reference="final"))
+
+  expect_equal(getPlotVars(plotRelative=TRUE,noVar=FALSE,reference="func"),
+               c(point="POINT_REL_REFFUNC",q1="Q1_REL_REFFUNC",q2="Q2_REL_REFFUNC",ref="REFFUNC"))
+
+  expect_equal(getPlotVars(plotRelative=TRUE,noVar=FALSE,reference="final"),
+               c(point="POINT_REL_REFFINAL",q1="Q1_REL_REFFINAL",q2="Q2_REL_REFFINAL",ref="REFFINAL"))
+
+})

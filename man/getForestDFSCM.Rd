@@ -40,7 +40,7 @@ as the uncertainties in the Forest plots. The probs vector position one and two 
 \item{pointFunction}{The function used to calculate the point for each covariate in the forest plot. default=median
 This function is also used for the reference covariate combination}
 
-\item{dfRefRow}{A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
+\item{dfRefRow}{A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
 
 \item{cGrouping}{A vector of numbers defining how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 If NULL (default) an educated guess of the grouping will be set}

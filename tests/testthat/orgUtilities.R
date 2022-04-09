@@ -1,6 +1,5 @@
-context("Utility functions")
 library(testthat)
-library(PMXForest)
+#library(PMXForest)
 
 
 test_that("Ext files are read properly", {
