@@ -12,7 +12,8 @@ forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
   ref_fill_col = "gray", ref_fill_alpha = 0.5, ref_line_size = 1,
   ref_line_type = "dotted", ref_line_col = "black",
   ci_line_type = "solid", ci_line_col = "blue", point_shape = 16,
-  point_color = "blue", tabTextSize = 3.5,
+  point_color = "blue", point_size = 2.5, tabTextSize = 10,
+  strip.right.size = NULL, strip.top.size = NULL,
   ref_subj_label = "Reference subject",
   ref_area_label = "Reference area", point_label = "Point estimate",
   ci_label = "Confidence interval",
@@ -70,7 +71,13 @@ xmin and xmax values for the reference area.}
 
 \item{point_color}{Point estimate color.}
 
-\item{tabTextSize}{The size of the text in the table plots}
+\item{point_size}{Size of the point estimate symbol.}
+
+\item{tabTextSize}{The size (pt) of the text in the table plots.}
+
+\item{strip.right.size}{Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.}
+
+\item{strip.top.size}{Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.}
 
 \item{ref_subj_label}{A character string indicating the label to be used for the reference subject in the figure legend. Default is "Reference subject".}
 
