@@ -111,34 +111,6 @@ dfresEmp <- getForestDFemp(
 
 
 
-
-# refRow <- dfCovs %>% mutate(
-#   FORM = -99,
-#   FOOD = -99,
-#   GENO = -99,
-#   RACEL= -99,
-#   WT   =- 99,
-#   AGE  = -99,
-#   CRCL = -99,
-#   SEX = -99) %>%
-#   group_by(COVARIATEGROUPS) %>%
-#   mutate(WT=sample(c(50,75,100),1))
-#
-#
-# dfresRefRow <- getForestDFemp(
-#   dfData             = dfData,
-#   covExpressionsList = lsExpr,
-#   cdfCovsNames       = covnamesEmp,
-#   functionList       = list(paramFunction),
-#   functionListName   = functionListName,
-#   noBaseThetas       = 16,
-#   dfParameters       = dfSamplesCOV,
-#   dfRefRow           = refRow,
-#   ncores             = 6,
-#   cstrPackages       = "dplyr"
-# )
-
-
 plotData       <- setupForestPlotData(dfresEmp,plotRelative=FALSE,noVar=TRUE)
 # plotDataRefRow <- setupForestPlotData(dfresRefRow,plotRelative=FALSE,noVar=TRUE,sigdig=3)
 
