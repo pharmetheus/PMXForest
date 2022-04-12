@@ -101,6 +101,7 @@ dfresEmp <- getForestDFemp(
   cdfCovsNames       = covnamesEmp,
   functionList       = list(paramFunction),
   functionListName   = functionListName,
+  metricFunction     = mean,
   noBaseThetas       = 16,
   dfParameters       = dfSamplesCOV,
   dfRefRow           = NULL,
