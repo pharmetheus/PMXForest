@@ -165,7 +165,7 @@ getForestDFemp <- function(dfData,
       if (is.null(subjs) || length(subjs) == 0) {
         stop(paste0("Error: no available data for subset: ", as.character(covExpressionsList[[i]])))
       }
-      NSubjs <- length(unique(subset(dfData, eval(covExpressionsList[[i]]))[strID]))
+      NSubjs <- length(unique(subset(dfData, eval(covExpressionsList[[i]]))[[strID]]))
       # Get the values out
       dft <- subset(dftmp, ITER == k & SUBJ %in% subjs)
 
