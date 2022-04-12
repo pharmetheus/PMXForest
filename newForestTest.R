@@ -84,7 +84,7 @@ extFile <- system.file("extdata",paste0("run",runno,".ext"),package="PMXForest")
 covFile <- system.file("extdata",paste0("run",runno,".cov"),package="PMXForest")
 dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 
-
+noBaseThetas <- 16
 dfres <- getForestDFSCM(dfCovs           = dfCovs,
                         cdfCovsNames     = covnames,
                         functionList     = list(paramFunction),

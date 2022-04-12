@@ -83,20 +83,31 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
   ## Input checks
   if(!is.null(parameterLabels) & length(parameterLabels) != length(parameters)) stop("The number of parameter labels must be the same as the number of parameters.")
   if(!is.null(groupNameLabels) & length(groupNameLabels) != length(unique(dfres$GROUPNAME))) stop("The number of group name labels must be the same as the number of unique values in GROUPNAME.")
+  if(!is.null(statisticsLabels) & length(statisticsLabels) != length(unique(parameters))) stop("The number of statistics labels must be the same as the number of parameters.")
 
   ## Filter the parameters to use
   dfres <- dfres %>% filter(PARAMETER %in% parameters)
 
   ## Name the PARAMETER column
   if(!is.null(parameterLabels)) {
-    names(parameterLabels) <- parameters
+    #names(parameterLabels) <- parameters
 
-    dfres <- dfres %>%
-      mutate(PARM2 = PARAMETER) %>%
-      group_by(PARM2) %>%
-      mutate(PARAMETERLABEL = parameterLabels[PARAMETER[1]]) %>%
-      ungroup %>%
-      select(-PARM2)
+    dfres$PARAMETERLABEL <- parameterLabels
+    # browser()
+    # dfres %>%
+    #   mutate(PARM2 = PARAMETER) %>%
+    #   group_by(PARM2) %>%
+    #   mutate(PARAMETERLABEL = parameterLabels["MAT"]) %>%
+    #   mutate(test = PARAMETER[1]) %>% View
+    #   ungroup %>%
+    #   select(-PARM2)
+    #
+    # dfres <- dfres %>%
+    #   mutate(PARM2 = PARAMETER) %>%
+    #   group_by(PARM2) %>%
+    #   mutate(PARAMETERLABEL = parameterLabels[PARAMETER[1]]) %>%
+    #   ungroup %>%
+    #   select(-PARM2)
   } else {
     dfres$PARAMETERLABEL <- dfres$PARAMETER
   }
@@ -106,14 +117,14 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 
   ## Name the GROUPNAME column
   if(!is.null(groupNameLabels)) {
-    names(groupNameLabels) <- unique(dfres$GROUPNAME)
+   names(groupNameLabels) <- unique(dfres$GROUPNAME)
 
-    dfres <- dfres %>%
-      mutate(GROUPNAME2 = GROUPNAME) %>%
-      group_by(GROUPNAME2) %>%
-      mutate(GROUPNAMELABEL = groupNameLabels[GROUPNAME[1]]) %>%
-      ungroup %>%
-      select(-GROUPNAME2)
+   dfres <- dfres %>%
+     mutate(GROUPNAME2 = GROUPNAME) %>%
+     group_by(GROUPNAME2) %>%
+     mutate(GROUPNAMELABEL = groupNameLabels[GROUPNAME[1]]) %>%
+     ungroup %>%
+     select(-GROUPNAME2)
   } else {
     dfres$GROUPNAMELABEL <- dfres$GROUPNAME
   }
@@ -123,14 +134,16 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 
   ## Name the STATISTICS column
   if(!is.null(statisticsLabels)) {
-    names(statisticsLabels) <- parameters
+    #names(statisticsLabels) <- parameters
 
-    dfres <- dfres %>%
-      mutate(PARM2 = PARAMETER) %>%
-      group_by(PARM2) %>%
-      mutate(STATISTICSLABEL = statisticsLabels[PARAMETER[1]]) %>%
-      ungroup %>%
-      select(-PARM2)
+    dfres$STATISTICSLABEL <- statisticsLabels
+    #
+    # dfres <- dfres %>%
+    #   mutate(PARM2 = PARAMETER) %>%
+    #   group_by(PARM2) %>%
+    #   mutate(STATISTICSLABEL = statisticsLabels[PARAMETER[1]]) %>%
+    #   ungroup %>%
+    #   select(-PARM2)
   } else {
     dfres$STATISTICSLABEL <- dfres$PARAMETERLABEL
   }
@@ -142,7 +155,8 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
   vars <- getPlotVars(plotRelative,noVar,reference)
 
 
-  plotData <- dfres %>% select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
+  plotData <- dfres %>%
+    select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
     mutate(reference=reference) %>%
     group_by(PARAMETER,COVNAME) %>%
     mutate(REF=ifelse(plotRelative,1,REF)) %>%
@@ -186,8 +200,11 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #' @param ci_line_type Errorbar linetype.
 #' @param ci_line_col Errorbar color.
 #' @param point_shape Point estimate shape.
-#' @param tabTextSize The size of the text in the table plots
+#' @param point_size Size of the point estimate symbol.
+#' @param tabTextSize The size (pt) of the text in the table plots.
 #' @param point_color Point estimate color.
+#' @param strip.right.size Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.
+#' @param strip.top.size Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.
 #' @param ref_subj_label A character string indicating the label to be used for the reference subject in the figure legend. Default is "Reference subject".
 #' @param ref_area_label A character string indicating the label to be used for the reference area in the figure legend. Default is "Reference area".
 #' @param point_label A character string indicating the label to be used for the point estimates in the figure legend. Default is "Point estimate".
@@ -238,7 +255,10 @@ forestPlot <- function(dfres,
                        ci_line_col="blue",
                        point_shape=16,
                        point_color="blue",
-                       tabTextSize=3.5,
+                       point_size=2.5,
+                       tabTextSize=10,
+                       strip.right.size = NULL,
+                       strip.top.size = NULL,
                        ref_subj_label = "Reference subject",
                        ref_area_label = "Reference area",
                        point_label    = "Point estimate",
@@ -299,7 +319,7 @@ forestPlot <- function(dfres,
                  key_glyph = "path") +
 
       geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
-      geom_point(aes(shape="Point estimate"),color=point_color,size=2.5) +
+      geom_point(aes(shape="Point estimate"),color=point_color,size=point_size) +
 
       scale_fill_manual(name     = NULL, values = c("Reference area"    = ref_fill_col),
                         labels=c(ref_area_label)) +
@@ -318,10 +338,10 @@ forestPlot <- function(dfres,
   }
 
 
-  tablePlot <- function(data,parameters,tabTextSize=12,label_fun=label_parsed) {
+  tablePlot <- function(data,parameters,tabTextSize=10,label_fun=label_parsed) {
 
     p2a <- ggplot(data,aes(x=1,y=COVNAME)) +
-      geom_text(aes(label =STATISTIC),size=tabTextSize) +
+      geom_text(aes(label =STATISTIC),size=tabTextSize*0.36) +  # 0.36 will scale size down to regular ggplot size
       facet_grid(GROUPNAMELABEL~STATISTICSLABEL,scales = "free",
                  labeller = labeller(STATISTICSLABEL=label_fun),space = "free") +
       theme(axis.text = element_blank()) +
@@ -343,7 +363,8 @@ forestPlot <- function(dfres,
   for(i in 1:length(parameters)) {
 
     plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i]),parameters,parameterLabels,labelfun) +
-      theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
+      theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt")) +
+      theme(strip.text.x=element_text(size=strip.top.size))
 
     ## Deal with y-axis elements
     if(i==1 && i != length(parameters)) {
@@ -376,7 +397,8 @@ forestPlot <- function(dfres,
       }
 
       if(!table && rightStrip) {
-        plotList[[i]] <- plotList[[i]]
+        plotList[[i]] <- plotList[[i]] +
+          theme(strip.text.y=element_text(size=strip.right.size))
       }
     }
 
@@ -386,7 +408,8 @@ forestPlot <- function(dfres,
   for(i in 1:length(parameters)) {
 
     tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i]),parameters,labelfun,tabTextSize = tabTextSize) +
-      theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt"))
+      theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt")) +
+      theme(strip.text.x=element_text(size=strip.top.size))
 
     if(i < length(parameters)) {
       tabList[[i]] <- tabList[[i]] +
@@ -394,7 +417,8 @@ forestPlot <- function(dfres,
     }
 
     if(i == length(parameters) & rightStrip) {  # Last panel with right strip
-      tabList[[i]] <- tabList[[i]]
+      tabList[[i]] <- tabList[[i]] +
+        theme(strip.text.y=element_text(size=strip.right.size))
     }
 
     if(i == length(parameters) & !rightStrip) {  # Last panel with noright strip
@@ -439,7 +463,7 @@ forestPlot <- function(dfres,
   if(is.null(referenceInfo)) {
     myPlot <- myPlot
   } else if(!is.null(referenceInfo) & referenceInfo != "auto") {
-    myPlot <- annotate_figure(tmp,bottom=text_grob(referenceInfo,...))
+    myPlot <- annotate_figure(myPlot,bottom=text_grob(referenceInfo,...))
   } else if(referenceInfo=="auto") {
 
     if(dfres[1,"REFROW"]=="NO" && referenceParameters=="final") {
