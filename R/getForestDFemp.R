@@ -233,7 +233,7 @@ getForestDFemp <- function(dfData,
       #Calculate reference value based one the pointFunction
       func_base<-pointFunction(dft$VALUEBASE)
       true_base <- dft$VALUEBASE[dft$ITER == 1]
-      dfrow <- cbind(dfCovs[i, ], data.frame(
+      dfrow <- cbind(data.frame(COV=as.character(covExpressionsList[[i]])), data.frame(
         GROUP = group,
         GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
