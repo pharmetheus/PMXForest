@@ -4,31 +4,36 @@ library(ggpubr)
 ## This file sets up the reference objects for the ubuts tests
 set.seed(865765)
 
-lsExpr<-rev(list("SEX"=expression(SEX==2),
-                 "SEX"=expression(SEX==1),
-                 "CRCL"=expression(CRCL>=146),
-                 "CRCL"=expression(CRCL<94),
-                 "AGE"=expression(AGE>=57),
-                 "AGE"=expression(AGE<35),
-                 "WT"=expression(WT>104),
-                 "WT"=expression(WT<70),
-                 "RACE"=expression(RACEL==3),
-                 "RACE"=expression(RACEL==2),
-                 "RACE"=expression(RACEL==1),
-                 "GENO"=expression(GENO==4),
-                 "GENO"=expression(GENO==3),
-                 "GENO"=expression(GENO==2),
-                 "GENO"=expression(GENO==1),
-                 "FOOD"=expression(FOOD==1),
-                 "FOOD"=expression(FOOD==0),
-                 "FORM"=expression(FORM==1),
-                 "FORM"=expression(FORM==0)))
+lsExpr<-rev(list("SEX" = expression(SEX==2),
+                 "SEX" = expression(SEX==1),
+                 "CRCL"= expression(CRCL>=146),
+                 "CRCL"= expression(CRCL<94),
+                 "AGE" = expression(AGE>=57),
+                 "AGE" = expression(AGE<35),
+                 "WT"  = expression(WT>104),
+                 "WT"  = expression(WT<70),
+                 "RACE"= expression(RACEL==3),
+                 "RACE"= expression(RACEL==2),
+                 "RACE"= expression(RACEL==1),
+                 "GENO"= expression(GENO==4),
+                 "GENO"= expression(GENO==3),
+                 "GENO"= expression(GENO==2),
+                 "GENO"= expression(GENO==1),
+                 "FOOD"= expression(FOOD==1),
+                 "FOOD"= expression(FOOD==0),
+                 "FORM"= expression(FORM==1),
+                 "FORM"= expression(FORM==0),
+                 "NCI" = expression(NCIL==1),
+                 "NCI" = expression(NCIL==0)
+                 )
+            )
 
-covnamesEmp <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian","African American","Asian and other","WT<70 kg","WT>104 kg",
+
+covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian","African American","Asian and other","WT<70 kg","WT>104 kg",
                  "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min","Male","Female")
 
 ## The print names of the covariates
-covariates <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex")
+covariates <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex","NCI")
 
 paramFunction <- function(thetas, df, ...) {
 
@@ -101,7 +106,7 @@ dfresEmp <- getForestDFemp(
   cdfCovsNames       = covnamesEmp,
   functionList       = list(paramFunction),
   functionListName   = functionListName,
-  metricFunction     = mean,
+  metricFunction     = median,
   noBaseThetas       = 16,
   dfParameters       = dfSamplesCOV,
   dfRefRow           = NULL,

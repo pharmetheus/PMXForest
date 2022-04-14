@@ -1,0 +1,1 @@
+This directory contains the files that are the basis for the PMXForest vignettes and examples. The actual runs were made in PMX-REP-PMX-2/Analysis/Model/SimVal, copied to PMX-REP-PMX-2/Analysis/Model/SimVal-for-Forest and then copied to this location.

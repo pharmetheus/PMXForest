@@ -5,23 +5,24 @@ library(ggpubr)
 set.seed(865765)
 
 dfCovs <- createInputForestData(
-  list( "FORM" = c(0,1),
-        "FOOD" = c(0,1),
-        "GENO" = c(1,2,3,4),
-        "RACEL"= c(1,2,3),
-        "WT"   = c(65,115),
-        "AGE"  = c(27,62),
-        "CRCL" = c(83,150),
-        "SEX"  = c(1,2)),
+  list("NCIL" = c(0,1),
+       "FORM" = c(0,1),
+       "FOOD" = c(0,1),
+       "GENO" = c(1,2,3,4),
+       "RACEL"= c(1,2,3),
+       "WT"   = c(65,115),
+       "AGE"  = c(27,62),
+       "CRCL" = c(83,150),
+       "SEX"  = c(1,2)),
   iMiss=-99)
 
 #cGrouping <- c(1,1,2,2,3,3,3,3,4,4,4,5,5,6,6,7,7,8,8)
-covnames  <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
+covnames  <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
                "African American","Asian and other","WT 65 kg","WT 115 kg",
                "Age 27 y","Age 62 y","CRCL 83 mL/min","CRCL 150 mL/min","Male","Female")
 
 ## The print names of the covariates
-covariates <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex")
+covariates <- c("NCI","Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex")
 
 paramFunction <- function(thetas, df, ...) {
 
@@ -123,7 +124,7 @@ plotDataRefRow <- setupForestPlotData(dfresRefRow,plotRelative=FALSE,noVar=TRUE,
 
 old <- theme_set(theme_bw())
 
-forestPlot(dfres)
+forestPlot(dfres,plotRelative = FALSE)
 forestPlot(dfres,tabTextSize=5)
 forestPlot(dfresRefRow,plotRelative = FALSE)
 forestPlot(dfres,plotData=plotData)
