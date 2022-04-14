@@ -5,6 +5,7 @@
 #' @import doParallel
 #' @import foreach
 #' @import dplyr
+#' @import stringr
 #'
 #' @param noSigmas  Number of sigma (epsilon) parameters in the model.
 #' @param noParCov Number of parameters for which covariate relations are sought (often the same as noBaseThetas).

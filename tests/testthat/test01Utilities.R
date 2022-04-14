@@ -2,7 +2,7 @@ library(testthat)
 
 
 test_that("Ext files are read properly", {
-  extData <- getExt(system.file("extdata","run1.ext",package="PMXForest"))
+  extData <- getExt(system.file("extdata","SimVal/run7.ext",package="PMXForest"))
   expect_is(extData,"data.frame")
 })
 
@@ -10,10 +10,10 @@ test_that("Ext files are read properly", {
 test_that("mvrnorm_vector samples correctly", {
 
   ## Read the ext-file
-  extFile <- getExt(system.file("extdata","run1.ext",package="PMXForest"))
+  extFile <- getExt(system.file("extdata","SimVal/run7.ext",package="PMXForest"))
 
   ## Read the cov-file and extract the covmatrix
-  dfcov     <- read.table(system.file("extdata","run1.cov",package="PMXForest"),
+  dfcov     <- read.table(system.file("extdata","SimVal/run7.cov",package="PMXForest"),
                           fill = TRUE, header = TRUE, sep = "",
                           skip = 1, stringsAsFactors = FALSE)
   sigma     <- data.matrix(dfcov[, 2:ncol(dfcov)])
@@ -40,8 +40,8 @@ test_that("mvrnorm_vector samples correctly", {
 test_that("getSamples works correctly for .cov input", {
 
   ## .cov file input
-  covFile <- system.file("extdata","run1.cov",package="PMXForest")
-  extFile <- system.file("extdata","run1.ext",package="PMXForest")
+  covFile <- system.file("extdata","SimVal/run7.cov",package="PMXForest")
+  extFile <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
 
   expect_error(getSamples(10),"input needs to be a character string")
   expect_error(getSamples("fileNameWithoutExtension"),"The input file name needs to have an extension")
@@ -65,7 +65,7 @@ test_that("getSamples works correctly for .cov input", {
 
 test_that("getParamPositions works correctly", {
 
-  bootFile  <- system.file("extdata","bs1_n100.dir/raw_results_run1.csv",package="PMXForest")
+  bootFile  <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package="PMXForest")
   rr_struct <- file.path(dirname(bootFile), "raw_results_structure")
 
   res <- getParamPositions(rr_struct)
@@ -78,8 +78,8 @@ test_that("getParamPositions works correctly", {
 test_that("getSamples works correctly for bootstrap .csv input", {
 
   ## .csv file input
-  bootFile <- system.file("extdata","bs1_n100.dir/raw_results_run1.csv",package="PMXForest")
-  extFile  <- system.file("extdata","run1.ext",package="PMXForest")
+  bootFile <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package="PMXForest")
+  extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
 
   set.seed("123")
   tmp0 <- getSamples(bootFile,extFile=extFile)
@@ -93,8 +93,8 @@ test_that("getSamples works correctly for bootstrap .csv input", {
 test_that("getSamples works correctly for SIR .csv input", {
 
   ## .csv file input
-  sirFile  <- system.file("extdata","sir_dir1/raw_results_run1.csv",package="PMXForest")
-  extFile  <- system.file("extdata","run1.ext",package="PMXForest")
+  sirFile  <- system.file("extdata","SimVal/sir7.dir/raw_results_run7.csv",package="PMXForest")
+  extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
 
   set.seed("123")
   tmp0 <- getSamples(sirFile,extFile=extFile)
@@ -107,21 +107,21 @@ test_that("getSamples works correctly for SIR .csv input", {
 test_that("getSamples works correctly for data frame with bootstrap headings", {
 
   ## .csv file input
-  bootFile <- system.file("extdata","bs1_n100.dir/raw_results_run1.csv",package="PMXForest")
-  extFile  <- system.file("extdata","run1.ext",package="PMXForest")
+  bootFile <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package="PMXForest")
+  extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
 
   dft<-read.csv(bootFile)
 
   set.seed("123")
   tmp0 <- getSamples(subset(dft,ofv!=0))
 
-  tmp1 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41))
+  tmp1 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:34,40,35:39))
 
-  tmp2 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),n=150)
+  tmp2 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:34,40,35:39),n=150)
 
-  tmp3 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile)
+  tmp3 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:34,40,35:39),extFile = extFile)
 
-  tmp4 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:36,42,37:41),extFile = extFile,n=170)
+  tmp4 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:34,40,35:39),extFile = extFile,n=170)
 
   ## Test that the output is the same as a saved reference
   expect_equal_to_reference(tmp0,"test_output/dfSample0")
