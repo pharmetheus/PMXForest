@@ -1,8 +1,13 @@
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
-## This file sets up the reference objects for the ubuts tests
+
+
 set.seed(865765)
+
+################################
+## Define the covariate input ##
+################################
 
 dfCovs <- createInputForestData(
   list("NCIL" = c(0,1),
@@ -11,19 +16,25 @@ dfCovs <- createInputForestData(
        "GENO"=list("GENO1" = c(1,0,0,0),
                    "GENO3" = c(0,0,1,0),
                    "GENO4" = c(0,0,0,1)),
-       "RACEL"= c(1,2,3),
+       "RACEL2"= c(0,1),
        "WT"   = c(65,115),
        "AGE"  = c(27,62),
        "CRCL" = c(83,150),
        "SEX"  = c(1,2)),
   iMiss=-99)
 
-covnames  <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
-               "African American","Asian and other","WT 65 kg","WT 115 kg",
+## The names associated with the entries in dfCovs
+covnames  <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM",
+               "Caucasian","Other","WT 65 kg","WT 115 kg",
                "Age 27 y","Age 62 y","CRCL 83 mL/min","CRCL 150 mL/min","Male","Female")
 
-## The print names of the covariates
-covariates <- c("NCI","Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex")
+## The print names of the covariates (covariate groups)
+covariates <- c("NCI","Formulation","Food status","2D6 genotype","Race","Weight","Age",
+                "Createnine\nclearance","Sex")
+
+###################################
+## Define the parameter function ##
+###################################
 
 paramFunction <- function(thetas, df, ...) {
 
@@ -87,16 +98,21 @@ paramFunction <- function(thetas, df, ...) {
 functionListName <- c("CL","Frel","AUC","V","MAT")
 
 
-runno   <- 7
-extFile <- system.file("extdata",paste0("newExample/run",runno,".ext"),package="PMXForest")
-covFile <- system.file("extdata",paste0("newExample/run",runno,".cov"),package="PMXForest")
-bsFile  <- system.file("extdata",paste0("newExample/bs",runno,".dir/raw_results_run",runno,"bs.csv"),package="PMXForest")
+####################################################
+## Define the NONMEM run information and sampling ##
+####################################################
+runno   <- "7"
+modDir <- "SimVal"
+extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package="PMXForest")
+covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package="PMXForest")
 
 dfSamplesCOVscm <- getSamples(covFile,extFile=extFile,n=175)
-dfSamplesBSscm  <- getSamples(bsFile,extFile=extFile,n=175)
 
 noBaseThetas <- 14
 
+######################################
+## Calculate Forest plot statistics ##
+######################################
 dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
                               cdfCovsNames     = covnames,
                               functionList     = list(paramFunction),
@@ -106,7 +122,18 @@ dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
                               dfRefRow         = NULL
 )
 
-forestPlot(dfresCOVscm,plotRelative=FALSE,parameters = c("CL","Frel","V"))
+#####################
+## Create the plot ##
+#####################
+
+forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
+
+#############################################################
+## Create the same plot based on the bootstrap information ##
+#############################################################
+
+bsFile         <- system.file("extdata",paste0(modDir,"/bs",runno,".dir/raw_results_run",runno,"bs.csv"),package="PMXForest")
+dfSamplesBSscm <- getSamples(bsFile,extFile=extFile,n=175)
 
 dfresBSscm <- getForestDFSCM(dfCovs           = dfCovs,
                               cdfCovsNames     = covnames,
@@ -117,4 +144,4 @@ dfresBSscm <- getForestDFSCM(dfCovs           = dfCovs,
                               dfRefRow         = NULL
 )
 
-forestPlot(dfresBSscm,plotRelative=FALSE,parameters = c("CL","Frel","V"))
+forestPlot(dfresBSscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)

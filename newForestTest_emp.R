@@ -1,105 +1,127 @@
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
-## This file sets up the reference objects for the ubuts tests
+
 set.seed(865765)
 
-lsExpr<-rev(list("SEX" = expression(SEX==2),
-                 "SEX" = expression(SEX==1),
-                 "CRCL"= expression(CRCL>=146),
-                 "CRCL"= expression(CRCL<94),
-                 "AGE" = expression(AGE>=57),
-                 "AGE" = expression(AGE<35),
-                 "WT"  = expression(WT>104),
-                 "WT"  = expression(WT<70),
-                 "RACE"= expression(RACEL==3),
-                 "RACE"= expression(RACEL==2),
-                 "RACE"= expression(RACEL==1),
-                 "GENO"= expression(GENO==4),
-                 "GENO"= expression(GENO==3),
-                 "GENO"= expression(GENO==2),
-                 "GENO"= expression(GENO==1),
-                 "FOOD"= expression(FOOD==1),
-                 "FOOD"= expression(FOOD==0),
-                 "FORM"= expression(FORM==1),
-                 "FORM"= expression(FORM==0),
-                 "NCI" = expression(NCIL==1),
-                 "NCI" = expression(NCIL==0)
-                 )
-            )
+################################
+## Define the covariate input ##
+################################
 
+lsExpr<-list("NCI" = expression(NCIL==0),
+             "NCI" = expression(NCIL==1),
+             "FORM"= expression(FORM==0),
+             "FORM"= expression(FORM==1),
+             "FOOD"= expression(FOOD==0),
+             "FOOD"= expression(FOOD==1),
+             "GENO"= expression(GENO==1),
+             "GENO"= expression(GENO==2),
+             "GENO"= expression(GENO==3),
+             "GENO"= expression(GENO==4),
+             "RACE"= expression(RACEL2==0),
+             "RACE"= expression(RACEL2==1),
+             "WT"  = expression(WT<70),
+             "WT"  = expression(WT>104),
+             "AGE" = expression(AGE<35),
+             "AGE" = expression(AGE>=57),
+             "CRCL"= expression(CRCL<94),
+             "CRCL"= expression(CRCL>=146),
+             "SEX" = expression(SEX==1),
+             "SEX" = expression(SEX==2)
+)
 
-covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian","African American","Asian and other","WT<70 kg","WT>104 kg",
+## The names associated with the entries in lsExpr
+covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM",
+                 "Caucasian","Other","WT<70 kg","WT>104 kg",
                  "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min","Male","Female")
 
-## The print names of the covariates
-covariates <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex","NCI")
+## The print names of the covariates (covariate groups)
+covariates <- c("NCI","Formulation","Food status","2D6 genotype","Race","Weight","Age",
+                "Createnine\nclearance","Sex")
+
+###################################
+## Define the parameter function ##
+###################################
 
 paramFunction <- function(thetas, df, ...) {
 
-  FRELNCIL <- 1
-  if (any(names(df) == "NCIL") && df$NCIL == 1) FRELNCIL <- 1 + thetas[16]
-
-  FRELFORM <- 1
-  if (any(names(df) == "FORM") && df$FORM == 0) FRELFORM <- 1 + thetas[15]
-
-  FRELCOV <- FRELFORM * FRELNCIL
-
   CLFOOD <- 1
-  if (df$FOOD == 0) CLFOOD <- 1 + thetas[14]
+  if (any(names(df)=="FOOD") && df$FOOD !=-99 && df$FOOD == 0) CLFOOD <- (1 + thetas[11])
 
   CLCOV <- CLFOOD
 
+  FRELGENO4 <- 1
+  if (any(names(df)=="GENO4") && df$GENO4 !=-99 && df$GENO4 == 1) FRELGENO4 <- (1 + thetas[13])
+
+  FRELFORM <- 1
+  if (any(names(df)=="FORM") && df$FORM !=-99 && df$FORM == 0) FRELFORM <- (1 + thetas[12])
+
+  FRELSEX <- 1
+  if (any(names(df)=="SEX") && df$SEX !=-99 && df$SEX == 2) FRELSEX <- (1 + thetas[14])
+
+  FRELCOV <- FRELSEX * FRELFORM * FRELGENO4
+
   TVFREL <- thetas[1]
-  if(any(names(df) == "GENO")) {
-    if(df$GENO == 1) TVFREL <- TVFREL * (1 + thetas[11])
-    if(df$GENO == 3) TVFREL <- TVFREL * (1 + thetas[12])
-    if(df$GENO == 4) TVFREL <- TVFREL * (1 + thetas[13])
-  }
 
   TVFREL <- FRELCOV * TVFREL
 
-  if (!any(names(df) == "WT") || df$WT == -99) {
-    TVCL <- thetas[4]
-  } else {
+  if(any(names(df)=="WT") && df$WT !=-99) {
     TVCL <- thetas[4] * (df$WT / 75)**thetas[2]
+  } else {
+    TVCL <- thetas[4]
   }
 
-  if(any(names(df) == "GENO")) {
-    if (df$GENO == 1) TVCL <- TVCL * (1 + thetas[8])
-    if (df$GENO == 3) TVCL <- TVCL * (1 + thetas[9])
-    if (df$GENO == 4) TVCL <- TVCL * (1 + thetas[10])
-  }
+  if (any(names(df)=="GENO1") && df$GENO1 !=-99 && df$GENO1 == 1) TVCL <- TVCL * (1 + thetas[8])
+  if (any(names(df)=="GENO3") && df$GENO3 !=-99 && df$GENO3 == 1) TVCL <- TVCL * (1 + thetas[9])
+  if (any(names(df)=="GENO4") && df$GENO4 !=-99 && df$GENO4 == 1) TVCL <- TVCL * (1 + thetas[10])
 
   TVCL <- CLCOV * TVCL
 
-  if (!any(names(df) == "WT") || df$WT == -99) {
-    TVV <- thetas[5]
-  } else {
+  if(any(names(df)=="WT") && df$WT !=-99) {
     TVV <- thetas[5] * (df$WT / 75)**thetas[3]
+  } else {
+    TVV <- thetas[5]
   }
+
   TVMAT <- thetas[6]
-  TVD1  <- thetas[7]
+  TVMAT <- TVMAT
+
+  TVD1 <- thetas[7]
 
   FREL <- TVFREL
-  CL <- TVCL
-  V <- TVV
+  CL   <- TVCL
+  V    <- TVV
+  MAT  <- TVMAT
+  D1   <- MAT * (1 - TVD1)
+  KA   <- 1 / (MAT - D1)
 
-  return(list(CL,FREL,V))
+  ## Compute AUC after 80 mg dose
+
+  AUC <- 80/(CL/FREL)
+
+  return(list(CL,FREL,AUC,V,MAT))
 }
 
-functionListName <- c("CL","FREL","V")
+functionListName <- c("CL","Frel","AUC","V","MAT")
 
+####################################################
+## Define the NONMEM run information and sampling ##
+####################################################
+runno   <- "7"
+modDir  <- "SimVal"
+extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package="PMXForest")
+covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package="PMXForest")
 
-runno   <- 1
-extFile <- system.file("extdata",paste0("run",runno,".ext"),package="PMXForest")
-covFile <- system.file("extdata",paste0("run",runno,".cov"),package="PMXForest")
-dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
+dfSamplesCOVscm <- getSamples(covFile,extFile=extFile,n=175)
 
-dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package="PMXForest")
+dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package="PMXForest")
 dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE)
 
+noBaseThetas <- 14
 
+######################################
+## Calculate Forest plot statistics ##
+######################################
 dfresEmp <- getForestDFemp(
   dfData             = dfData,
   covExpressionsList = lsExpr,
@@ -107,25 +129,14 @@ dfresEmp <- getForestDFemp(
   functionList       = list(paramFunction),
   functionListName   = functionListName,
   metricFunction     = median,
-  noBaseThetas       = 16,
-  dfParameters       = dfSamplesCOV,
+  noBaseThetas       = noBaseThetas,
+  dfParameters       = dfSamplesCOVscm,
   dfRefRow           = NULL,
   ncores             = 6,
   cstrPackages       = "dplyr"
 )
 
-
-
-plotData       <- setupForestPlotData(dfresEmp,plotRelative=FALSE,noVar=TRUE)
-# plotDataRefRow <- setupForestPlotData(dfresRefRow,plotRelative=FALSE,noVar=TRUE,sigdig=3)
-
-
-old <- theme_set(theme_bw())
-
-forestPlot(dfresEmp,plotRelative=FALSE)
-# forestPlot(dfres,tabTextSize=5)
-# forestPlot(dfresRefRow,plotRelative = FALSE)
-# forestPlot(dfres,plotData=plotData)
-# forestPlot(dfres,plotRelative = FALSE)
-# forestPlot(dfres,parameters = c("CL","FREL"),parameterLabels=c("CL(L/h)","F[rel]"),groupNameLabels=covariates)
-# forestPlot(dfres,plotData=myPlotData,parameters = c("CL","FREL"),parameterLabels=c("CL(L/h)","F[rel]"),groupNameLabels=covariates)
+#####################
+## Create the plot ##
+#####################
+forestPlot(dfresEmp,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
