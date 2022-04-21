@@ -54,6 +54,7 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
       if (is.null(n)) {
         dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
         dfParameters <- cbind(dfParameters, OBJ = 0)
+        dfParameters        <- rbind(dfExt[,-1],dfParameters) # Add final parameters in the top row.
         return(dfParameters)
       } else {
         # Now construct sigma and mu
@@ -69,6 +70,7 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
         dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
         dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
         dfParameters <- cbind(dfParameters, OBJ = 0)
+        dfParameters        <- rbind(dfExt[,-1],dfParameters) # Add final parameters in the top row.
         return(dfParameters)
       }
     } else {
