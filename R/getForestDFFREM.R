@@ -111,6 +111,7 @@ getForestDFFREM <- function(dfCovs,
     cGrouping <- getGroups(dfCovs)
   }
 
+
   ## Register to allow for parallell computing
   registerDoParallel(cores = ncores)
 
@@ -181,8 +182,9 @@ getForestDFFREM <- function(dfCovs,
       ## Send the expresssions to the functions in functionList
       n <- 1
       for (j in 1:length(functionList)) {
-        val <- functionList[[j]](thetas, coveffects,dfrow = dfCovs[i, ], ...)
 
+        val <- functionList[[j]](thetas, coveffects,dfrow = dfCovs[i, ], ...)
+        cat("And then I'm here\n")
         ## Do it for the reference
         if (!is.null(dfRefRow)) {
           valbase <- functionList[[j]](basethetas = thetas,covthetas = coveffects_base, dfrow = dfRefRow[indi,], ...)
@@ -191,6 +193,8 @@ getForestDFFREM <- function(dfCovs,
           dfmissing[, ] <- iMiss
           valbase <- functionList[[j]](basethetas = thetas,covthetas = rep(0, length(parNames)), dfrow = dfmissing, ...)
         }
+
+
 
         ## Do it for the parameters
         listcount <- length(val)
@@ -204,6 +208,7 @@ getForestDFFREM <- function(dfCovs,
         }
       }
     }
+
     dfrest
   }
 

@@ -189,7 +189,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #' then the character string will be displayed below the plot. Uses \code{ggpubr::annotate_figure} and \code{ggpubr::text_grob} to place and format the text.
 #' Formatting instructions to \code{ggpubr::text_grob} are passed on through \code{...}. Default is "auto".
 #' @param labelfun A label function compatible with \code{labeller}. Used to format \code{parameterLabels} used as column facet labels for the errorbar and table plots.
-#' Default is \code{label_parsed}.
+#' Default is \code{label_value}.
 #' @param ref_area Numerical vector indicating the horizontal size of the reference area. The default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
 #' xmin and xmax values for the reference area.
 #' @param ref_fill_col Reference area color.
@@ -199,6 +199,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #' @param ref_line_col Reference line color.
 #' @param ci_line_type Errorbar linetype.
 #' @param ci_line_col Errorbar color.
+#' @param ci_line_size Errorbar size.
 #' @param point_shape Point estimate shape.
 #' @param point_size Size of the point estimate symbol.
 #' @param tabTextSize The size (pt) of the text in the table plots.
@@ -244,7 +245,7 @@ forestPlot <- function(dfres,
                        parameterLabels=parameters,
                        groupNameLabels = NULL,
                        referenceInfo = "auto",
-                       labelfun=label_parsed,
+                       labelfun=label_value,
                        ref_area=c(0.8,1.2),
                        ref_fill_col="gray",
                        ref_fill_alpha=0.5,
@@ -253,9 +254,10 @@ forestPlot <- function(dfres,
                        ref_line_col="black",
                        ci_line_type="solid",
                        ci_line_col="blue",
+                       ci_line_size=1,
                        point_shape=16,
                        point_color="blue",
-                       point_size=2.5,
+                       point_size=3,
                        tabTextSize=10,
                        strip.right.size = NULL,
                        strip.top.size = NULL,
@@ -318,7 +320,7 @@ forestPlot <- function(dfres,
                  size     = ref_line_size,
                  key_glyph = "path") +
 
-      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0) +
+      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0,size=ci_line_size) +
       geom_point(aes(shape="Point estimate"),color=point_color,size=point_size) +
 
       scale_fill_manual(name     = NULL, values = c("Reference area"    = ref_fill_col),
@@ -362,7 +364,7 @@ forestPlot <- function(dfres,
   ## The errorbar plots
   for(i in 1:length(parameters)) {
 
-    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i]),parameters,parameterLabels,labelfun) +
+    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i]),parameters,parameterLabels,label_fun = labelfun) +
       theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt")) +
       theme(strip.text.x=element_text(size=strip.top.size))
 
@@ -407,7 +409,7 @@ forestPlot <- function(dfres,
   ## The table plots
   for(i in 1:length(parameters)) {
 
-    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i]),parameters,labelfun,tabTextSize = tabTextSize) +
+    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i]),parameters,label_fun = labelfun,tabTextSize = tabTextSize) +
       theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt")) +
       theme(strip.text.x=element_text(size=strip.top.size))
 

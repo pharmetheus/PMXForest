@@ -11,9 +11,9 @@ forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
   labelfun = label_parsed, ref_area = c(0.8, 1.2),
   ref_fill_col = "gray", ref_fill_alpha = 0.5, ref_line_size = 1,
   ref_line_type = "dotted", ref_line_col = "black",
-  ci_line_type = "solid", ci_line_col = "blue", point_shape = 16,
-  point_color = "blue", point_size = 2.5, tabTextSize = 10,
-  strip.right.size = NULL, strip.top.size = NULL,
+  ci_line_type = "solid", ci_line_col = "blue", ci_line_size = 1,
+  point_shape = 16, point_color = "blue", point_size = 3,
+  tabTextSize = 10, strip.right.size = NULL, strip.top.size = NULL,
   ref_subj_label = "Reference subject",
   ref_area_label = "Reference area", point_label = "Point estimate",
   ci_label = "Confidence interval",
@@ -66,6 +66,8 @@ xmin and xmax values for the reference area.}
 \item{ci_line_type}{Errorbar linetype.}
 
 \item{ci_line_col}{Errorbar color.}
+
+\item{ci_line_size}{Errorbar size.}
 
 \item{point_shape}{Point estimate shape.}
 

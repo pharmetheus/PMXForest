@@ -139,6 +139,35 @@ dfresCOVfrem <-getForestDFFREM(dfCovs           = dfCovs,
                                ncores           = 1,
                                cstrPackages     = c("PMXFrem","dplyr"))
 
+dfCovsCRCL <- createInputForestData(
+  list("CRCL"   = c(30,50,80,120),
+       "CRCL"  = c(84,150)),
+  iMiss=-99)
+
+dfCovsCRCL$COVARIATEGROUPS[c(5,6)] <- "CRCL2"
+
+## The names associated with the entries in dfCovs
+covnamesCRCL  <- c("CRCL 30 mL/min(*)","CRCL 50 mL/min","CRCL 80 mL/min","CRCL 120 mL/min","CRCL 84 mL/min","CRCL 150 mL/min")
+
+## The print names of the covariates (covariate groups)
+covariatesCRCL <- c("Createnine\nclearance groups","Createnine\nclearance percentiles")
+
+dfresCOVfremCRCL <-getForestDFFREM(dfCovsCRCL,
+                                   cdfCovsNames     = covnamesCRCL,
+                                   covNames         = PMXFrem::getCovNames(modFile),
+                                   functionList     = list(paramFunction),
+                                   functionListName = functionListName,
+                                   noBaseThetas     = 13,#noBaseThetas,
+                                   noParCov         = 4,
+                                   noSigmas         = 2,
+                                   noSkipOm         = 2,
+                                   noCovThetas      = 11,#noCovThetas,
+                                   dfParameters     = dfSamplesCOVfrem,
+                                   probs            = c(0.05, 0.95),
+                                   dfRefRow         = NULL,
+                                   quiet            = TRUE,
+                                   ncores           = 1,
+                                   cstrPackages     = c("PMXFrem","dplyr"))
 #####################
 ## Create the plot ##
 #####################
