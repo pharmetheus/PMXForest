@@ -23,7 +23,7 @@ columns for fixed parameters, rearranging and renaming columns.
 \examples{
 \dontrun{
 dfParameters <- read.csv(file = input, header = TRUE)
-dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
+dfExt        <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 dfParameters <- addMissingColumns(dfParameters, dfExt)
 }
 

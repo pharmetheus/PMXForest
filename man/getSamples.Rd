@@ -40,6 +40,25 @@ or samples from a small bootstrap using the estimated covariance matrix
 }
 \examples{
 \dontrun{
-dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=200)
+
+# Covariance matrix
+getSamples(covFile,extFile,n=175)
+
+# Bootstrap
+getSamples(BSFile,extFile)
+
+# SIRFile
+getSamples(SIRFile,extFile)
+
+# Small bootstrap mvnorm sampling
+getSamples(BSFile,extFile,n=175)
+
+# Data frame
+dfParameters<-read.csv(rawresFile)
+
+getSamples(dfParameters)
+
+# Data frame mvnorm sampling
+getSamples(dfParameters,n=175)
 }
 }

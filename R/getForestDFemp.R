@@ -15,44 +15,46 @@
 #'
 #' @examples
 #' \dontrun{
-#' lsExpr<-rev(list("SEX"=expression(SEX==2),
-#' "SEX"=expression(SEX==1),
-#' "CRCL"=expression(CRCL>=146),
-#' "CRCL"=expression(CRCL<94),
-#' "AGE"=expression(AGE>=57),
-#' "AGE"=expression(AGE<35),
-#' "WT"=expression(WT>104),
-#' "WT"=expression(WT<70),
-#' "RACEL"=expression(RACEL==3),
-#' "RACEL"expression(RACEL==2),
-#' "RACEL"expression(RACEL==1),
-#' "GENO"=expression(GENO==4),
-#' "GENO"=expression(GENO==3),
-#' "GENO"=expression(GENO==2),
-#' "GENO"=expression(GENO==1),
-#' "FOOD"=expression(FOOD==1),
-#' "FOOD"=expression(FOOD==0),
-#' "FORM"=expression(FORM==1),
-#' "FORM"=expression(FORM==0)))
+#'lsExpr<-list("NCI" = expression(NCIL==0),
+#'             "NCI" = expression(NCIL==1),
+#'             "FORM"= expression(FORM==0),
+#'             "FORM"= expression(FORM==1),
+#'             "FOOD"= expression(FOOD==0),
+#'             "FOOD"= expression(FOOD==1),
+#'             "GENO"= expression(GENO==1),
+#'             "GENO"= expression(GENO==2),
+#'             "GENO"= expression(GENO==3),
+#'             "GENO"= expression(GENO==4),
+#'             "RACE"= expression(RACEL2==0),
+#'             "RACE"= expression(RACEL2==1),
+#'             "WT"  = expression(WT<70),
+#'             "WT"  = expression(WT>104),
+#'             "AGE" = expression(AGE<35),
+#'             "AGE" = expression(AGE>=57),
+#'             "CRCL"= expression(CRCL<94),
+#'             "CRCL"= expression(CRCL>=146),
+#'             "SEX" = expression(SEX==1),
+#'             "SEX" = expression(SEX==2)
+#')
 #'
-#' cGrouping = c(1,1,2,2,3,3,3,3,4,4,4,5,5,6,6,7,7,8,8,9,9)
+#'## The names associated with the entries in lsExpr
+#'covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM",
+#'                 "Caucasian","Other","WT<70 kg","WT>104 kg",
+#'                 "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min","Male","Female")
 #'
-#' covnamesEmp <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian","African American","Asian and other","WT<70 kg","WT>104 kg",
-#'                "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min","Male","Female")
-#'
-#'
-#'
-#' dfresCOVemp<-getForestDFemp(
-#'   metricFunction     = median,
-#'   cGrouping          = cGrouping,
-#'   dfData             = dfData,
-#'   covExpressionsList = lsExpr,
-#'   cdfCovsNames       = covnamesEmp,
-#'   functionList       = list(paramFunction),
-#'   functionListName   = functionListName,
-#'   noBaseThetas       = 16,
-#'   dfParameters       = dfSamplesCOV,
-#'   ncores             = 6)
+#'dfresEmp <- getForestDFemp(
+#'  dfData             = dfData,
+#'  covExpressionsList = lsExpr,
+#'  cdfCovsNames       = covnamesEmp,
+#'  functionList       = list(paramFunction),
+#'  functionListName   = functionListName,
+#'  metricFunction     = median,
+#'  noBaseThetas       = 14,
+#'  dfParameters       = dfSamplesCOV,
+#'  dfRefRow           = NULL,
+#'  ncores             = 6,
+#'  cstrPackages       = "dplyr"
+#')
 #' }
 getForestDFemp <- function(dfData,
                           covExpressionsList,

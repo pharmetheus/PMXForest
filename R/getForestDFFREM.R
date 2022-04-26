@@ -22,16 +22,22 @@
 #'
 #' @examples
 #' \dontrun{
-#' dfresCOV <- getForestDFSCM(
-#'             dfCovs = dfCovs1,
-#'             cdfCovsNames = covnames,
-#'             functionList = list(paramFunction),
-#'             functionListName = functionListName,
-#'             noBaseThetas = 16,
-#'             dfParameters = dfSamplesCOV,
-#'             probs = c(0.05, 0.95),
-#'             dfRefRow = dfRefRow,
-#'             quiet = TRUE)
+#'dfresCOVfrem <-getForestDFFREM(dfCovs           = dfCovs,
+#'                               cdfCovsNames     = covnames,
+#'                               covNames         = getCovNames(modFile),
+#'                               functionList     = list(paramFunction),
+#'                               functionListName = functionListName,
+#'                               noBaseThetas     = noBaseThetas,
+#'                               noParCov         = 4,
+#'                               noSigmas         = 2,
+#'                               noSkipOm         = 2,
+#'                               noCovThetas      = noCovThetas,
+#'                               dfParameters     = dfSamplesCOVfrem,
+#'                               probs            = c(0.05, 0.95),
+#'                               dfRefRow         = NULL,
+#'                               quiet            = TRUE,
+#'                               ncores           = 1,
+#'                               cstrPackages     = c("PMXFrem","dplyr"))
 #' }
 
 getForestDFFREM <- function(dfCovs,

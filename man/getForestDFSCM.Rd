@@ -63,15 +63,13 @@ Get a data frame with Forest border for each univariate or multivariate covariat
 }
 \examples{
 \dontrun{
-dfresCOV <- getForestDFSCM(
-            dfCovs = dfCovs1,
-            cdfCovsNames = covnames,
-            functionList = list(paramFunction),
-            functionListName = functionListName,
-            noBaseThetas = 16,
-            dfParameters = dfSamplesCOV,
-            probs = c(0.05, 0.95),
-            dfRefRow = dfRefRow,
-            quiet = TRUE)
+dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
+                              cdfCovsNames     = covnames,
+                              functionList     = list(paramFunction),
+                              functionListName = functionListName,
+                              noBaseThetas     = noBaseThetas,
+                              dfParameters     = dfSamplesCOVscm,
+                              dfRefRow         = NULL
+)
 }
 }
