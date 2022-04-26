@@ -8,7 +8,7 @@ forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
   referenceParameters = "func", sigdigits = 2,
   parameters = unique(dfres$PARAMETER), parameterLabels = parameters,
   groupNameLabels = NULL, referenceInfo = "auto",
-  labelfun = label_parsed, ref_area = c(0.8, 1.2),
+  labelfun = label_value, ref_area = c(0.8, 1.2),
   ref_fill_col = "gray", ref_fill_alpha = 0.5, ref_line_size = 1,
   ref_line_type = "dotted", ref_line_col = "black",
   ci_line_type = "solid", ci_line_col = "blue", ci_line_size = 1,
@@ -20,7 +20,8 @@ forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
   statisticsLabel = paste("Statistics:", parameterLabels),
   xlb = "Parameter value", return = "plot", table = TRUE,
   rightStrip = TRUE, errbartabwidth = rep(c(2, 1), length(parameters)),
-  errbarplotscale = 1.45, tabplotscale = 1.1, ...)
+  errbarplotscale = 1.45, tabplotscale = 1.1,
+  onlySignificant = FALSE, ...)
 }
 \arguments{
 \item{dfres}{A data.frame as output from getForestDFSCM, getForestDFFREM or getForestDFemp.}
@@ -48,7 +49,7 @@ then the character string will be displayed below the plot. Uses \code{ggpubr::a
 Formatting instructions to \code{ggpubr::text_grob} are passed on through \code{...}. Default is "auto".}
 
 \item{labelfun}{A label function compatible with \code{labeller}. Used to format \code{parameterLabels} used as column facet labels for the errorbar and table plots.
-Default is \code{label_parsed}.}
+Default is \code{label_value}.}
 
 \item{ref_area}{Numerical vector indicating the horizontal size of the reference area. The default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
 xmin and xmax values for the reference area.}
@@ -124,6 +125,20 @@ The graphical settings use standard \code{ggplot} syntax.
 }
 \examples{
 \dontrun{
-forestPlot(dfres,plotRelative = FALSE)
+# Create a Forest plot, including the table part, for all parameters in dfres.
+
+forestPlot(dfres)
+
+# Exclude the table part of the plot
+
+forestPlot(dfres,table=FALSE)
+
+# Create a Forest plot for the specified parameter (which need to be included in dfres).
+
+forestPlot(dfres,parameters="CL")
+
+# Specify group name labels, the size of the table text and x-axis label
+
+forestPlot(dfresCOVscmCombo,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
 }
 }

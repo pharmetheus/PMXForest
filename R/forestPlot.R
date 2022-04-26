@@ -10,7 +10,15 @@
 #' @export
 #'
 #' @examples
+#' # Get the relative variables with uncertainty in the reference:
+#' # "POINT_REL_REFFUNC"    "Q1_REL_REFFUNC"    "Q2_REL_REFFUNC"           "REFFUNC"
+#'
 #' getPlotVars()
+#'
+#' # Get the relative variables without uncertainty in the reference:
+#' # "POINT_NOVAR_REL_REFFUNC"    "Q1_NOVAR_REL_REFFUNC"    "Q2_NOVAR_REL_REFFUNC"                 "REFFUNC"
+#'
+#' getPlotVars(noVar=TRUE)
 #'
 getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 
@@ -75,7 +83,7 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #'
 #' @examples
 #' \dontrun{
-#' plotData<- setupForestPlotData(ddfres)
+#' plotData<- setupForestPlotData(dfres)
 #' }
 setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),parameterLabels=NULL,groupNameLabels=NULL,statisticsLabels=NULL,
                                 plotRelative=TRUE,noVar=FALSE,reference="func",sigdigits=2) {
@@ -90,24 +98,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 
   ## Name the PARAMETER column
   if(!is.null(parameterLabels)) {
-    #names(parameterLabels) <- parameters
-
     dfres$PARAMETERLABEL <- parameterLabels
-    # browser()
-    # dfres %>%
-    #   mutate(PARM2 = PARAMETER) %>%
-    #   group_by(PARM2) %>%
-    #   mutate(PARAMETERLABEL = parameterLabels["MAT"]) %>%
-    #   mutate(test = PARAMETER[1]) %>% View
-    #   ungroup %>%
-    #   select(-PARM2)
-    #
-    # dfres <- dfres %>%
-    #   mutate(PARM2 = PARAMETER) %>%
-    #   group_by(PARM2) %>%
-    #   mutate(PARAMETERLABEL = parameterLabels[PARAMETER[1]]) %>%
-    #   ungroup %>%
-    #   select(-PARM2)
   } else {
     dfres$PARAMETERLABEL <- dfres$PARAMETER
   }
@@ -134,16 +125,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 
   ## Name the STATISTICS column
   if(!is.null(statisticsLabels)) {
-    #names(statisticsLabels) <- parameters
-
     dfres$STATISTICSLABEL <- statisticsLabels
-    #
-    # dfres <- dfres %>%
-    #   mutate(PARM2 = PARAMETER) %>%
-    #   group_by(PARM2) %>%
-    #   mutate(STATISTICSLABEL = statisticsLabels[PARAMETER[1]]) %>%
-    #   ungroup %>%
-    #   select(-PARM2)
   } else {
     dfres$STATISTICSLABEL <- dfres$PARAMETERLABEL
   }
@@ -154,14 +136,13 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
   ## Determine which statistic to use
   vars <- getPlotVars(plotRelative,noVar,reference)
 
-
   plotData <- dfres %>%
     select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
     mutate(reference=reference) %>%
     group_by(PARAMETER,COVNAME) %>%
     mutate(REF=ifelse(plotRelative,1,REF)) %>%
     ungroup %>%
-    mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME))) %>%
+    #mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME))) %>%
     mutate(
       meanlabel  = table1::signif_pad(point, sigdigits),
       lowcilabel = table1::signif_pad(q1, sigdigits),
@@ -233,7 +214,21 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #'
 #' @examples
 #' \dontrun{
-#' forestPlot(dfres,plotRelative = FALSE)
+#' # Create a Forest plot, including the table part, for all parameters in dfres.
+#'
+#' forestPlot(dfres)
+#'
+#' # Exclude the table part of the plot
+#'
+#' forestPlot(dfres,table=FALSE)
+#'
+#' # Create a Forest plot for the specified parameter (which need to be included in dfres).
+#'
+#' forestPlot(dfres,parameters="CL")
+#'
+#' # Specify group name labels, the size of the table text and x-axis label
+#'
+#' forestPlot(dfresCOVscmCombo,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
 #' }
 forestPlot <- function(dfres,
                        plotData=NULL,
@@ -273,10 +268,17 @@ forestPlot <- function(dfres,
                        errbartabwidth = rep(c(2,1),length(parameters)),
                        errbarplotscale = 1.45,
                        tabplotscale    = 1.1,
+                       onlySignificant = FALSE,
                        ...) {
 
   ## Some input checks
   if(length(parameterLabels) != length(parameters)) stop("The number of parameter labels must be the same as the number of parameters to include in the Forest plot.")
+
+  ## Check if only significant covariates is to be used
+  if(onlySignificant) {
+     dfres <- droplevels(dfres %>% filter(PARAMETER%in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF==TRUE)))
+  }
+
 
   ## Setup the plotting data frame
   if(is.null(plotData)) {

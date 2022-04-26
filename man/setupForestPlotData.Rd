@@ -49,6 +49,6 @@ Creates the data.frame that is actually used for generating the Forest plots. Us
 }
 \examples{
 \dontrun{
-plotData<- setupForestPlotData(ddfres)
+plotData<- setupForestPlotData(dfres)
 }
 }

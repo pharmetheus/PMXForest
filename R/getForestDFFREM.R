@@ -184,7 +184,7 @@ getForestDFFREM <- function(dfCovs,
       for (j in 1:length(functionList)) {
 
         val <- functionList[[j]](thetas, coveffects,dfrow = dfCovs[i, ], ...)
-        cat("And then I'm here\n")
+
         ## Do it for the reference
         if (!is.null(dfRefRow)) {
           valbase <- functionList[[j]](basethetas = thetas,covthetas = coveffects_base, dfrow = dfRefRow[indi,], ...)

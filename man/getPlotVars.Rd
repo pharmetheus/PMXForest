@@ -20,7 +20,15 @@ A vector with the names from dfres to use for POINT, q1, q2 and ref
 Determine which variables from dfres to base the forest plot on
 }
 \examples{
+# Get the relative variables with uncertainty in the reference:
+# "POINT_REL_REFFUNC"    "Q1_REL_REFFUNC"    "Q2_REL_REFFUNC"           "REFFUNC"
+
 getPlotVars()
+
+# Get the relative variables without uncertainty in the reference:
+# "POINT_NOVAR_REL_REFFUNC"    "Q1_NOVAR_REL_REFFUNC"    "Q2_NOVAR_REL_REFFUNC"                 "REFFUNC"
+
+getPlotVars(noVar=TRUE)
 
 }
 \keyword{internal}
