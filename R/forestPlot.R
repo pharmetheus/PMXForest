@@ -164,12 +164,14 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #' @inheritParams setupForestPlotData
 #' @param plotData A \code{data.frame} to be used for creating the Forest plot. If \code{plotData} is provided \code{dfres} is ignored. See Details.
 #' @param referenceParameters Character string indicating how the reference parameter estimates were obtained.
-#' "true" means the final parameter estimates from the model. "func" means the mean parameter estimates across the posterior distribution.
+#' "final" means the final parameter estimates from the model. "func" means the mean parameter estimates across the posterior distribution.
 #' @param referenceInfo A character string or NULL. If set to NULL, no information about how the reference line was derived will be displayed. If set to "auto",
 #' generic information based on \code{referenceParameters} and the \code{REFROW} column in \code{dfres} will be included at the bottom of the plot. If not NULL or "auto",
 #' then the character string will be displayed below the plot. Uses \code{ggpubr::annotate_figure} and \code{ggpubr::text_grob} to place and format the text.
 #' Formatting instructions to \code{ggpubr::text_grob} are passed on through \code{...}. Default is "auto".
 #' @param labelfun A label function compatible with \code{labeller}. Used to format \code{parameterLabels} used as column facet labels for the errorbar and table plots.
+#' Default is \code{label_value}.
+#' @param groupname_labelfun A label function compatible with \code{labeller}. Used to format \code{groupNameLabels} used as row facet labels for the errorbar and table plots.
 #' Default is \code{label_value}.
 #' @param ref_area Numerical vector indicating the horizontal size of the reference area. The default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
 #' xmin and xmax values for the reference area.
@@ -185,8 +187,8 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #' @param point_size Size of the point estimate symbol.
 #' @param tabTextSize The size (pt) of the text in the table plots.
 #' @param point_color Point estimate color.
-#' @param strip.right.size Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.
-#' @param strip.top.size Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.
+#' @param strip_right_size Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.
+#' @param strip_top_size Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.
 #' @param ref_subj_label A character string indicating the label to be used for the reference subject in the figure legend. Default is "Reference subject".
 #' @param ref_area_label A character string indicating the label to be used for the reference area in the figure legend. Default is "Reference area".
 #' @param point_label A character string indicating the label to be used for the point estimates in the figure legend. Default is "Point estimate".
@@ -241,6 +243,7 @@ forestPlot <- function(dfres,
                        groupNameLabels = NULL,
                        referenceInfo = "auto",
                        labelfun=label_value,
+                       groupname_labelfun=label_value,
                        ref_area=c(0.8,1.2),
                        ref_fill_col="gray",
                        ref_fill_alpha=0.5,
@@ -254,14 +257,15 @@ forestPlot <- function(dfres,
                        point_color="blue",
                        point_size=3,
                        tabTextSize=10,
-                       strip.right.size = NULL,
-                       strip.top.size = NULL,
+                       keepYlabs = FALSE,
+                       strip_right_size = NULL,
+                       strip_top_size = NULL,
                        ref_subj_label = "Reference subject",
                        ref_area_label = "Reference area",
                        point_label    = "Point estimate",
                        ci_label       = "Confidence interval",
                        statisticsLabel = paste("Statistics:",parameterLabels),
-                       xlb = "Parameter value",
+                       xlb = ifelse(plotRelative,"Relative parameter value","Parameter value"),
                        return = "plot",
                        table=TRUE,
                        rightStrip=TRUE,
@@ -292,7 +296,7 @@ forestPlot <- function(dfres,
   #######
   ## Create two functions, one for the error bar charts and one for the tables
   #######
-  parPlot <- function(data,parameters,parameterLabels,label_fun=label_parsed) {
+  parPlot <- function(data,parameters,parameterLabels,label_fun=label_parsed,group_name_label_fun=label_value) {
 
     ## This function is designed to only deal with one parameter at a time.
     if(length(unique(data$PARAMETER)) !=1 ) stop("Can only deal with one parameter at a time.")
@@ -335,19 +339,22 @@ forestPlot <- function(dfres,
                          labels=c(point_label)) +
 
       guides(linetype=guide_legend(override.aes=list(size=1))) +
-      facet_grid(GROUPNAMELABEL~PARAMETERLABEL,scales = "free",labeller = label_fun) +
+      facet_grid(GROUPNAMELABEL~PARAMETERLABEL,scales = "free",
+                 labeller = labeller(PARAMETERLABEL= label_fun,
+                                     GROUPNAMELABEL = group_name_label_fun)) +
       ylab(NULL) +
       xlab(xlb) +
       theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
   }
 
 
-  tablePlot <- function(data,parameters,tabTextSize=10,label_fun=label_parsed) {
+  tablePlot <- function(data,parameters,tabTextSize=10,label_fun=label_parsed,group_name_label_fun=label_value) {
 
     p2a <- ggplot(data,aes(x=1,y=COVNAME)) +
       geom_text(aes(label =STATISTIC),size=tabTextSize*0.36) +  # 0.36 will scale size down to regular ggplot size
       facet_grid(GROUPNAMELABEL~STATISTICSLABEL,scales = "free",
-                 labeller = labeller(STATISTICSLABEL=label_fun),space = "free") +
+                 labeller = labeller(STATISTICSLABEL= label_fun,
+                                     GROUPNAMELABEL = group_name_label_fun),space = "free") +
       theme(axis.text = element_blank()) +
       theme(axis.ticks = element_blank()) +
       theme(axis.title = element_blank()) +
@@ -366,9 +373,11 @@ forestPlot <- function(dfres,
   ## The errorbar plots
   for(i in 1:length(parameters)) {
 
-    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i]),parameters,parameterLabels,label_fun = labelfun) +
+    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i]),parameters,parameterLabels,
+                             label_fun = labelfun,
+                             group_name_label_fun = groupname_labelfun) +
       theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt")) +
-      theme(strip.text.x=element_text(size=strip.top.size))
+      theme(strip.text.x=element_text(size=strip_top_size))
 
     ## Deal with y-axis elements
     if(i==1 && i != length(parameters)) {
@@ -376,10 +385,12 @@ forestPlot <- function(dfres,
     }
 
     if(i <= length(parameters) && i!=1) {
-      plotList[[i]] <- plotList[[i]] +
-        theme(axis.text.y = element_blank()) +
-        theme(axis.ticks.y = element_blank()) +
-        theme(axis.title.y = element_blank())
+      if(!keepYlabs) {
+        plotList[[i]] <- plotList[[i]] +
+          theme(axis.text.y = element_blank()) +
+          theme(axis.ticks.y = element_blank()) +
+          theme(axis.title.y = element_blank())
+      }
     }
 
     ## Deal with the strip
@@ -402,7 +413,7 @@ forestPlot <- function(dfres,
 
       if(!table && rightStrip) {
         plotList[[i]] <- plotList[[i]] +
-          theme(strip.text.y=element_text(size=strip.right.size))
+          theme(strip.text.y=element_text(size=strip_right_size))
       }
     }
 
@@ -411,9 +422,12 @@ forestPlot <- function(dfres,
   ## The table plots
   for(i in 1:length(parameters)) {
 
-    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i]),parameters,label_fun = labelfun,tabTextSize = tabTextSize) +
+    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i]),parameters,
+                              label_fun = labelfun,
+                              group_name_label_fun = groupname_labelfun,
+                              tabTextSize = tabTextSize) +
       theme(plot.margin = unit(c(5.5,5.5,5.5,0), "pt")) +
-      theme(strip.text.x=element_text(size=strip.top.size))
+      theme(strip.text.x=element_text(size=strip_top_size))
 
     if(i < length(parameters)) {
       tabList[[i]] <- tabList[[i]] +
@@ -422,7 +436,7 @@ forestPlot <- function(dfres,
 
     if(i == length(parameters) & rightStrip) {  # Last panel with right strip
       tabList[[i]] <- tabList[[i]] +
-        theme(strip.text.y=element_text(size=strip.right.size))
+        theme(strip.text.y=element_text(size=strip_right_size))
     }
 
     if(i == length(parameters) & !rightStrip) {  # Last panel with noright strip
@@ -460,7 +474,8 @@ forestPlot <- function(dfres,
     myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=1,widths = errbartabwidth,align="h",common.legend = T)
 
   } else{
-    myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=1,align="h",common.legend = T)
+    errbartabwidth[1] <- errbartabwidth[1]*errbarplotscale
+    myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=1,widths = errbartabwidth,align="h",common.legend = T)
   }
 
   ## Add information about the reference subject if needed
