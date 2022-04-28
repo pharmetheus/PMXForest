@@ -18,12 +18,13 @@ knitr::opts_chunk$set(
 
 <!-- output: rmarkdown::html_vignette -->
 
-```{r setup,}
-suppressPackageStartupMessages(library(PMXForest))
+```{r setup,cache=F}
+#suppressPackageStartupMessages(library(PMXForest))
 library(tools)
 library(ggplot2)
 library(stats)
 library(boot)
+#library(PMXForest)
 theme_set(theme_bw(base_size=18))
 theme_update(plot.title = element_text(hjust = 0.5))
 
@@ -153,12 +154,6 @@ BoostrapPreds <- boot(dfData,R=500,statistic=glmfitpredfunc,
 #Do predictions using the original fit
 orgpred<-glmfitpredfunc(dfData,1:nrow(dfData),strDV = "Survived",strCovs = c("Class","Age","Sex"),strInteraction = "")
 
-
-#The distance in forest plot between groups
-groups_dist<-0.2
-#The distance in forest plot within groups
-within_groups_dist<-0.1
-
 dfres<-dfCovs
 dfres$COVNAME<-covnames
 iGroups<-c(1,1,1,1,5,5,7,7) #Make the grouping of the covariates
@@ -169,25 +164,17 @@ dfres$REFFUNC=100*median(BoostrapPreds$t[,3])
 #Set the orginal data median reference
 dfres$REFTRUE<-100*median(orgpred)
 
-y<-0
-gri<-dfres$GROUP[1]
 for (i in 1:nrow(dfres)) {
   #Get 95% CI and median
   q<-quantile(BoostrapPreds$t[,i],probs=c(0.025,0.5,0.975),names=FALSE)
   dfres$Q1[i]<-100*q[1] #Lower CI
   dfres$POINT[i]<-100*q[2] #Median 
   dfres$Q2[i]<-100*q[3] #Upper CI
-  if (dfres$GROUP[i]!=gri) { #New group
-    y<-y+groups_dist
-    gri<-dfres$GROUP[i]
-  } else { #Old group
-    y<-y+within_groups_dist
-  }  
-  dfres$Y[i]<-y
 }
 
+dfres$GROUPNAME<-dfres$COVARIATEGROUPS
 dfres$PARAMETER="Chance of surviving Titanic %"
-
+dfres$COVEFF=F
 ```
 ### Create the Forest plot {#sec:createForest}
 
@@ -195,9 +182,8 @@ dfres$PARAMETER="Chance of surviving Titanic %"
 
 The Forest plots below displays the data on an absolute scale which is probabilities of survival. The reference line represent the median survival in the observed data. The model is centered around the most common combination of covariates, i.e. a boy in 3rd class.
 
-```{r ForestSurvival,fig.width=10,fig.asp=.5,out.width="100%"}
-p<-PMXForest::plotForestDF(dfres,plotRelative = FALSE,strxlab = "")
-p+geom_vline(aes(xintercept=REFTRUE),size=1.5,linetype="dashed")
+```{r ForestSurvival,fig.width=10,fig.asp=.5,out.width="100%",cache=F}
+PMXForest::forestPlot(dfres,plotRelative = F,referenceInfo=NULL,xlb = "Reference subject is a boy in 3rd class",errbartabwidth = c(1,1))
 
 ```
 
