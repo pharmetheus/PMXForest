@@ -8,17 +8,19 @@ forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
   referenceParameters = "func", sigdigits = 2,
   parameters = unique(dfres$PARAMETER), parameterLabels = parameters,
   groupNameLabels = NULL, referenceInfo = "auto",
-  labelfun = label_value, ref_area = c(0.8, 1.2),
-  ref_fill_col = "gray", ref_fill_alpha = 0.5, ref_line_size = 1,
-  ref_line_type = "dotted", ref_line_col = "black",
-  ci_line_type = "solid", ci_line_col = "blue", ci_line_size = 1,
-  point_shape = 16, point_color = "blue", point_size = 3,
-  tabTextSize = 10, strip.right.size = NULL, strip.top.size = NULL,
+  labelfun = label_value, groupname_labelfun = label_value,
+  ref_area = c(0.8, 1.2), ref_fill_col = "gray",
+  ref_fill_alpha = 0.5, ref_line_size = 1, ref_line_type = "dotted",
+  ref_line_col = "black", ci_line_type = "solid",
+  ci_line_col = "blue", ci_line_size = 1, point_shape = 16,
+  point_color = "blue", point_size = 3, tabTextSize = 10,
+  keepYlabs = FALSE, strip_right_size = NULL, strip_top_size = NULL,
   ref_subj_label = "Reference subject",
   ref_area_label = "Reference area", point_label = "Point estimate",
   ci_label = "Confidence interval",
   statisticsLabel = paste("Statistics:", parameterLabels),
-  xlb = "Parameter value", return = "plot", table = TRUE,
+  xlb = ifelse(plotRelative, "Relative parameter value",
+  "Parameter value"), return = "plot", table = TRUE,
   rightStrip = TRUE, errbartabwidth = rep(c(2, 1), length(parameters)),
   errbarplotscale = 1.45, tabplotscale = 1.1,
   onlySignificant = FALSE, ...)
@@ -33,15 +35,17 @@ forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
 \item{noVar}{Should the uncertainty in the reference be included (FALSE) or not (TRUE)}
 
 \item{referenceParameters}{Character string indicating how the reference parameter estimates were obtained.
-"true" means the final parameter estimates from the model. "func" means the mean parameter estimates across the posterior distribution.}
+"final" means the final parameter estimates from the model. "func" means the mean parameter estimates across the posterior distribution.}
 
 \item{sigdigits}{An integer number specifying the number of significant digits to use in the statistics tables.}
 
 \item{parameters}{A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.}
 
-\item{parameterLabels}{A character vector with the names of the parameters as they will appear in the Forest plot. Can be \code{plotmath} expressions. Is by default the same as dfres$PARAMETER.}
+\item{parameterLabels}{A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
 
-\item{groupNameLabels}{A character vector with the names of the covariate groups as they will appear in the Forest plot. Is by default the same as dfres$GROUPNAME.}
+\item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
+Is by default the same as \code{dfres$GROUPNAME}.}
 
 \item{referenceInfo}{A character string or NULL. If set to NULL, no information about how the reference line was derived will be displayed. If set to "auto",
 generic information based on \code{referenceParameters} and the \code{REFROW} column in \code{dfres} will be included at the bottom of the plot. If not NULL or "auto",
@@ -49,6 +53,9 @@ then the character string will be displayed below the plot. Uses \code{ggpubr::a
 Formatting instructions to \code{ggpubr::text_grob} are passed on through \code{...}. Default is "auto".}
 
 \item{labelfun}{A label function compatible with \code{labeller}. Used to format \code{parameterLabels} used as column facet labels for the errorbar and table plots.
+Default is \code{label_value}.}
+
+\item{groupname_labelfun}{A label function compatible with \code{labeller}. Used to format \code{groupNameLabels} used as row facet labels for the errorbar and table plots.
 Default is \code{label_value}.}
 
 \item{ref_area}{Numerical vector indicating the horizontal size of the reference area. The default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
@@ -78,9 +85,9 @@ xmin and xmax values for the reference area.}
 
 \item{tabTextSize}{The size (pt) of the text in the table plots.}
 
-\item{strip.right.size}{Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.}
+\item{strip_right_size}{Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.}
 
-\item{strip.top.size}{Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.}
+\item{strip_top_size}{Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.}
 
 \item{ref_subj_label}{A character string indicating the label to be used for the reference subject in the figure legend. Default is "Reference subject".}
 

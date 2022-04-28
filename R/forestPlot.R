@@ -60,9 +60,12 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #' @inheritParams getPlotVars
 #' @param dfres A data.frame as output from getForestDFSCM, getForestDFFREM or getForestDFemp.
 #' @param parameters A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.
-#' @param parameterLabels A character vector with the names of the parameters as they will appear in the Forest plot. Can be \code{plotmath} expressions. Is by default the same as dfres$PARAMETER.
-#' @param groupNameLabels A character vector with the names of the covariate groups as they will appear in the Forest plot. Is by default the same as dfres$GROUPNAME.
-#' @param statisticsLabels A character vector with the names of the parameter in the table plots in the Forest plot. Can be \code{plotmath} expressions. Is by default the same as dfres$PARAMETER.
+#' @param parameterLabels A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+#' Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).
+#' @param groupNameLabels A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
+#'  Is by default the same as \code{dfres$GROUPNAME}.
+#' @param statisticsLabels A vector of labels for the parameters in the table plots. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+#'  Can be \code{plotmath} expressions. Is by default the same as \code{dfres$PARAMETER}.
 #' @param sigdigits An integer number specifying the number of significant digits to use in the statistics tables.
 #'
 #' @return A processed data.frame to the used for creating the Forest plot. Only the columns used in the actual Forest plot is included:
@@ -89,9 +92,27 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
                                 plotRelative=TRUE,noVar=FALSE,reference="func",sigdigits=2) {
 
   ## Input checks
-  if(!is.null(parameterLabels) & length(parameterLabels) != length(parameters)) stop("The number of parameter labels must be the same as the number of parameters.")
-  if(!is.null(groupNameLabels) & length(groupNameLabels) != length(unique(dfres$GROUPNAME))) stop("The number of group name labels must be the same as the number of unique values in GROUPNAME.")
-  if(!is.null(statisticsLabels) & length(statisticsLabels) != length(unique(parameters))) stop("The number of statistics labels must be the same as the number of parameters.")
+  if(!is.null(parameterLabels)) {
+    if(!((length(parameterLabels) == length(parameters)) |
+       (length(parameterLabels) ==nrow(dfres)))) {
+         stop("The number of parameter labels must either be the same as the number of parameters or have the same length as the number of rows in dfres.")
+       }
+  }
+
+  if(!is.null(groupNameLabels)) {
+    if(!((length(groupNameLabels) == length(unique(dfres$GROUPNAME))) |
+        (length(groupNameLabels)  == nrow(dfres)))) {
+          stop("The number of group name labels must either be the same as the number of unique values in GROUPNAME or have the same length as the number of rows in dfres.")
+        }
+  }
+
+  if(!is.null(statisticsLabels)) {
+    if(!((length(statisticsLabels) == length(parameters)) |
+         (length(statisticsLabels) ==nrow(dfres)))) {
+      stop("The number of statistics labels must either be the same as the number of parameters or have the same length as the number of rows in dfres.")
+    }
+  }
+ # if(!is.null(statisticsLabels) & length(statisticsLabels) != length(unique(parameters))) stop("The number of statistics labels must be the same as the number of parameters.")
 
   ## Filter the parameters to use
   dfres <- dfres %>% filter(PARAMETER %in% parameters)
@@ -108,14 +129,20 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 
   ## Name the GROUPNAME column
   if(!is.null(groupNameLabels)) {
-   names(groupNameLabels) <- unique(dfres$GROUPNAME)
 
-   dfres <- dfres %>%
-     mutate(GROUPNAME2 = GROUPNAME) %>%
-     group_by(GROUPNAME2) %>%
-     mutate(GROUPNAMELABEL = groupNameLabels[GROUPNAME[1]]) %>%
-     ungroup %>%
-     select(-GROUPNAME2)
+    if(length(groupNameLabels) == length(unique(dfres$GROUPNAME))) {
+      names(groupNameLabels) <- unique(dfres$GROUPNAME)
+
+      dfres <- dfres %>%
+        mutate(GROUPNAME2 = GROUPNAME) %>%
+        group_by(GROUPNAME2) %>%
+        mutate(GROUPNAMELABEL = groupNameLabels[GROUPNAME[1]]) %>%
+        ungroup %>%
+        select(-GROUPNAME2)
+    } else {
+      dfres$GROUPNAMELABEL <- groupNameLabels
+    }
+
   } else {
     dfres$GROUPNAMELABEL <- dfres$GROUPNAME
   }
@@ -275,8 +302,6 @@ forestPlot <- function(dfres,
                        onlySignificant = FALSE,
                        ...) {
 
-  ## Some input checks
-  if(length(parameterLabels) != length(parameters)) stop("The number of parameter labels must be the same as the number of parameters to include in the Forest plot.")
 
   ## Check if only significant covariates is to be used
   if(onlySignificant) {

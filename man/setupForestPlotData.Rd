@@ -14,11 +14,14 @@ setupForestPlotData(dfres, parameters = unique(dfres$PARAMETER),
 
 \item{parameters}{A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.}
 
-\item{parameterLabels}{A character vector with the names of the parameters as they will appear in the Forest plot. Can be \code{plotmath} expressions. Is by default the same as dfres$PARAMETER.}
+\item{parameterLabels}{A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
 
-\item{groupNameLabels}{A character vector with the names of the covariate groups as they will appear in the Forest plot. Is by default the same as dfres$GROUPNAME.}
+\item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
+Is by default the same as \code{dfres$GROUPNAME}.}
 
-\item{statisticsLabels}{A character vector with the names of the parameter in the table plots in the Forest plot. Can be \code{plotmath} expressions. Is by default the same as dfres$PARAMETER.}
+\item{statisticsLabels}{A vector of labels for the parameters in the table plots. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+Can be \code{plotmath} expressions. Is by default the same as \code{dfres$PARAMETER}.}
 
 \item{plotRelative}{Should the plot be made on the relative scale (TRUE or FALSE)}
 
