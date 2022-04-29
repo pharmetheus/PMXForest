@@ -226,6 +226,9 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #' the Forest plot (see Details). "data" returns a \code{data.frame} with the actual data used to create the Forest plot.
 #' @param table Logical. Should the table plots be included in the Forest plot or not.
 #' @param rightStrip Should the facet title in the rightmost panel in the Forest plot be displayed? If TRUE (the default) \code{groupNameLabels} will be used as the facets labels.
+#' @param keepYlabs  Logical. Should the labels on the y-axis be kept for all errorbar panels.
+#' @param keepRightStrip Logical. Should the right facet titles be kept for all table plots. Only when \code{rightStrip} is \code{TRUE}.
+#' @param stackedPlots Should the plots for the parameters be stacked instead of being vertical. Useful if there are many parameters to visualize. Works best with \code{keepYlab} and \code{keepRightStrip} set to \code{TRUE}.
 #' @param errbartabwidth A numerical vector of length 2 times the number of parameters included in the Forest plot, specifying the relative width of the errorbar and table plots. Have no effect when \code{table} is FALSE.
 #' @param errbarplotscale Scaling factor for the width of the leftmost errorbar plot to compensate for y-axis labels.
 #' @param tabplotscale Scaling factor for the width of the rightmost column (usually a table plot) to adjust for the size of the right strip.
@@ -236,6 +239,15 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #' If \code{return} is set to "data" then the \code{data.frame} is returned. This makes it possible to to review the data and/or do modifications if necessary. \code{forestPlot} can
 #' be called with \code{plotData} set to the name of the \code{data.frame}, in which case \code{dfres} is not required and the \code{plotData} \code{data.frame} will be used for
 #' creating the Forest plot.
+#'
+#' The Forest plots are created as a combination of separate errorbar plots and plots with the table information. Each panel is a separate plot, which are combined using \code{ggpubr::ggarrange}.
+#' In other words, even if the plot looks like a regular faceted plot it is not. For example, in a one parameter Forest plot with \code{table=TRUE}, the left panel is an errorbar plot with the right
+#' facet labels suppressed and the right plot is a plot with text, and which have the y-axis labels suppressed. In a plot with three parameters the errobar plot for the middle parameter will have both the y-axis labels and
+#' facet labels suppressed. the same is true for that parameter's table plot. The arguments \code{keepYlabs} and \code{keepRightStrip} controls if the y-axis labels and right facet labels for panels "in the middle" should
+#' keep the axis and facet labels or not.
+#'
+#' \code{stackedPlots} switch from the default stacked horizontal orientation used if multiple parameters are included to vertical stacking. For this to provide a nice display it
+#' is necessary to have \code{keepYlabs} set to \code{TRUE} and \code{keepRightStrip=TRUE}. \code{stackedPlots} can be combind with \code{table=FALSE} and  \code{rightStrip=FALSE}.
 #'
 #' The graphical settings use standard \code{ggplot} syntax.
 #' @return A \code{ggpubr::ggarrange} object, a list of plots or a \code{data.frame}.
@@ -257,7 +269,11 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #'
 #' # Specify group name labels, the size of the table text and x-axis label
 #'
-#' forestPlot(dfresCOVscmCombo,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
+#' forestPlot(dfres,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
+#'
+#' # Stack the plots instead of plot them horizontally
+#'
+#' forestPlot(dfres,parameters = c("CL","Frel"),stackedPlots = TRUE,keepYlabs = TRUE,keepRightStrip = TRUE)
 #' }
 forestPlot <- function(dfres,
                        plotData=NULL,
@@ -285,6 +301,8 @@ forestPlot <- function(dfres,
                        point_size=3,
                        tabTextSize=10,
                        keepYlabs = FALSE,
+                       keepRightStrip = FALSE,
+                       stackedPlots   =FALSE,
                        strip_right_size = NULL,
                        strip_top_size = NULL,
                        ref_subj_label = "Reference subject",
@@ -307,7 +325,6 @@ forestPlot <- function(dfres,
   if(onlySignificant) {
      dfres <- droplevels(dfres %>% filter(PARAMETER%in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF==TRUE)))
   }
-
 
   ## Setup the plotting data frame
   if(is.null(plotData)) {
@@ -455,8 +472,13 @@ forestPlot <- function(dfres,
       theme(strip.text.x=element_text(size=strip_top_size))
 
     if(i < length(parameters)) {
+      if(!keepRightStrip || !rightStrip) {
       tabList[[i]] <- tabList[[i]] +
         theme(strip.text.y=element_blank())
+      } else {
+        tabList[[i]] <- tabList[[i]] +
+          theme(strip.text.y=element_text(size=strip_right_size))
+      }
     }
 
     if(i == length(parameters) & rightStrip) {  # Last panel with right strip
@@ -496,18 +518,26 @@ forestPlot <- function(dfres,
     errbartabwidth[1] <- errbartabwidth[1]*errbarplotscale
     errbartabwidth[length(errbartabwidth)] <- errbartabwidth[length(errbartabwidth)]*tabplotscale
 
-    myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=1,widths = errbartabwidth,align="h",common.legend = T)
-
+    if(!stackedPlots) {
+      myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=1,widths = errbartabwidth,align="h",common.legend = T)
+    } else {
+      myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=length(totList)/2,ncol=2,widths = errbartabwidth,align="h",common.legend = T)
+    }
   } else{
     errbartabwidth[1] <- errbartabwidth[1]*errbarplotscale
-    myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=1,widths = errbartabwidth,align="h",common.legend = T)
+
+    if(!stackedPlots) {
+      myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=1,widths = errbartabwidth,align="h",common.legend = T)
+    } else {
+      myPlot <- ggpubr::ggarrange(plotlist=totList,nrow=length(totList),ncol=1,widths = errbartabwidth,align="h",common.legend = T)
+    }
   }
 
   ## Add information about the reference subject if needed
   if(is.null(referenceInfo)) {
     myPlot <- myPlot
   } else if(!is.null(referenceInfo) & referenceInfo != "auto") {
-    myPlot <- annotate_figure(myPlot,bottom=text_grob(referenceInfo,...))
+    myPlot <- ggpubr::annotate_figure(myPlot,bottom=ggpubr::text_grob(referenceInfo,...))
   } else if(referenceInfo=="auto") {
 
     if(dfres[1,"REFROW"]=="NO" && referenceParameters=="final") {
@@ -520,7 +550,7 @@ forestPlot <- function(dfres,
       refText <- "The reference line is based on the average parameter estimates over the posterior parameter distribution and selected covariate values."
     }
 
-    myPlot <- annotate_figure(myPlot,bottom=text_grob(refText,...))
+    myPlot <- ggpubr::annotate_figure(myPlot,bottom=ggpubr::text_grob(refText,...))
   }
 
   ## return either the arranged plot or the list of plot objects

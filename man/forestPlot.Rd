@@ -14,7 +14,8 @@ forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
   ref_line_col = "black", ci_line_type = "solid",
   ci_line_col = "blue", ci_line_size = 1, point_shape = 16,
   point_color = "blue", point_size = 3, tabTextSize = 10,
-  keepYlabs = FALSE, strip_right_size = NULL, strip_top_size = NULL,
+  keepYlabs = FALSE, keepRightStrip = FALSE, stackedPlots = FALSE,
+  strip_right_size = NULL, strip_top_size = NULL,
   ref_subj_label = "Reference subject",
   ref_area_label = "Reference area", point_label = "Point estimate",
   ci_label = "Confidence interval",
@@ -85,6 +86,12 @@ xmin and xmax values for the reference area.}
 
 \item{tabTextSize}{The size (pt) of the text in the table plots.}
 
+\item{keepYlabs}{Logical. Should the labels on the y-axis be kept for all errorbar panels.}
+
+\item{keepRightStrip}{Logical. Should the right facet titles be kept for all table plots. Only when \code{rightStrip} is \code{TRUE}.}
+
+\item{stackedPlots}{Should the plots for the parameters be stacked instead of being vertical. Useful if there are many parameters to visualize. Works best with \code{keepYlab} and \code{keepRightStrip} set to \code{TRUE}.}
+
 \item{strip_right_size}{Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.}
 
 \item{strip_top_size}{Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.}
@@ -128,6 +135,15 @@ If \code{return} is set to "data" then the \code{data.frame} is returned. This m
 be called with \code{plotData} set to the name of the \code{data.frame}, in which case \code{dfres} is not required and the \code{plotData} \code{data.frame} will be used for
 creating the Forest plot.
 
+The Forest plots are created as a combination of separate errorbar plots and plots with the table information. Each panel is a separate plot, which are combined using \code{ggpubr::ggarrange}.
+In other words, even if the plot looks like a regular faceted plot it is not. For example, in a one parameter Forest plot with \code{table=TRUE}, the left panel is an errorbar plot with the right
+facet labels suppressed and the right plot is a plot with text, and which have the y-axis labels suppressed. In a plot with three parameters the errobar plot for the middle parameter will have both the y-axis labels and
+facet labels suppressed. the same is true for that parameter's table plot. The arguments \code{keepYlabs} and \code{keepRightStrip} controls if the y-axis labels and right facet labels for panels "in the middle" should
+keep the axis and facet labels or not.
+
+\code{stackedPlots} switch from the default stacked horizontal orientation used if multiple parameters are included to vertical stacking. For this to provide a nice display it
+is necessary to have \code{keepYlabs} set to \code{TRUE} and \code{keepRightStrip=TRUE}. \code{stackedPlots} can be combind with \code{table=FALSE} and  \code{rightStrip=FALSE}.
+
 The graphical settings use standard \code{ggplot} syntax.
 }
 \examples{
@@ -146,6 +162,10 @@ forestPlot(dfres,parameters="CL")
 
 # Specify group name labels, the size of the table text and x-axis label
 
-forestPlot(dfresCOVscmCombo,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
+forestPlot(dfres,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
+
+# Stack the plots instead of plot them horizontally
+
+forestPlot(dfres,parameters = c("CL","Frel"),stackedPlots = TRUE,keepYlabs = TRUE,keepRightStrip = TRUE)
 }
 }

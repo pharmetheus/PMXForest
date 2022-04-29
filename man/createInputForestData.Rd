@@ -4,13 +4,13 @@
 \alias{createInputForestData}
 \title{createInputForestData}
 \usage{
-createInputForestData(listCovs, iMiss = NA)
+createInputForestData(listCovs, iMiss = -99)
 }
 \arguments{
 \item{listCovs}{a list with covariate names and values of the form; list("AGE"=c(1,2)) etc.
 For multiple covariates (i.e. not univariate) a list of lists should be used, e.g. list("AGEBW"=list("AGE"=c(1,2),"BW"=c(3,4)))}
 
-\item{iMiss}{The value that should be filled for missing, default = NA}
+\item{iMiss}{The value that should be filled for missing, default = -99}
 }
 \value{
 a data frame with a covariate value (univariate) per row or several covariate values per row (multivariate). The data frame also contains a COVARIATEGROUPS column based on the names in the input list.

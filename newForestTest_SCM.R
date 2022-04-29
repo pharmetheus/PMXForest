@@ -126,7 +126,10 @@ dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
 ## Create the plot ##
 #####################
 
-forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,labelfun = label_wrap_gen)
+
+forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
+
+forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL","Frel"),sigdigits = 3,stackedPlots = TRUE,keepYlabs = TRUE,rightStrip = FALSE,keepRightStrip = TRUE,table = FALSE)
 
 #############################################################
 ## Create the same plot based on the bootstrap information ##

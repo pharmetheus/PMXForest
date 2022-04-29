@@ -21,7 +21,7 @@
 #' The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.
 #' @param quiet If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)
 #' @param probs A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-#' as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.025, 0.975)
+#' as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).
 #' @param pointFunction The function used to calculate the point for each covariate in the forest plot. default=median
 #' This function is also used for the reference covariate combination
 #' @param dfRefRow A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
