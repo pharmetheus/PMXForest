@@ -4,7 +4,7 @@ output:
   bookdown::html_document2:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{Creating_Forest_plots_for_R_coded_glm_models}
+  %\VignetteIndexEntry{Creating Forest plots for R coded logistic regression models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

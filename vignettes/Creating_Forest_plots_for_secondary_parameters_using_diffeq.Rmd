@@ -4,7 +4,7 @@ output:
   bookdown::html_document2:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{Creating_Forest_plots_for_scm_and_scmplus_models}
+  %\VignetteIndexEntry{Creating Forest plots for secondary parameters defined using differential equations}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
