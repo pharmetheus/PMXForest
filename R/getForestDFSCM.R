@@ -2,6 +2,10 @@
 #'
 #' @description Get a data frame with Forest border for each univariate or multivariate covariate (and value(s)) in the input data frame. If a list a data frame will be created from the list, see function dfCreateInputForestData
 #'
+#' @import doParallel
+#' @import foreach
+#' @import dplyr
+#'
 #' @param dfCovs A data frame with covariates to include, if a covariate value is set -99 or NA,
 #' they are assumed missing and will not be included in any FFEM transformations. If a dfCovs is
 #' a list an attempt will be made to create the appropriate data frame with the createInputForestData function.
@@ -17,10 +21,10 @@
 #' The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.
 #' @param quiet If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)
 #' @param probs A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-#' as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.025, 0.975)
+#' as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).
 #' @param pointFunction The function used to calculate the point for each covariate in the forest plot. default=median
 #' This function is also used for the reference covariate combination
-#' @param dfRefRow A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
+#' @param dfRefRow A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
 #' @param cGrouping A vector of numbers defining how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 #' If NULL (default) an educated guess of the grouping will be set
 #' @param ncores the number of cores to use for the calculations, default = 1 which means no parallellization
@@ -36,17 +40,15 @@
 #'
 #' @examples
 #' \dontrun{
-#' dfresCOV <- getForestDFSCM(
-#'             dfCovs = dfCovs1,
-#'             cdfCovsNames = covnames,
-#'             functionList = list(paramFunction),
-#'             functionListName = functionListName,
-#'             noBaseThetas = 16,
-#'             dfParameters = dfSamplesCOV,
-#'             probs = c(0.05, 0.95),
-#'             dfRefRow = dfRefRow,
-#'             quiet = TRUE)
-#' }
+#' dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
+#'                               cdfCovsNames     = covnames,
+#'                               functionList     = list(paramFunction),
+#'                               functionListName = functionListName,
+#'                               noBaseThetas     = noBaseThetas,
+#'                               dfParameters     = dfSamplesCOVscm,
+#'                               dfRefRow         = NULL
+#' )
+#'}
 getForestDFSCM <- function(dfCovs,
                            cdfCovsNames = NULL,
                            functionList = list(
@@ -58,7 +60,7 @@ getForestDFSCM <- function(dfCovs,
                            noBaseThetas,
                            dfParameters,
                            quiet = TRUE,
-                           probs = c(0.025, 0.975),
+                           probs = c(0.05, 0.95),
                            pointFunction = median,
                            dfRefRow = NULL,
                            cGrouping = NULL,
@@ -68,6 +70,10 @@ getForestDFSCM <- function(dfCovs,
                            iMiss = -99,
                            ...) {
 
+  if (!is.null(dfRefRow) && nrow(dfRefRow)!=1 && nrow(dfRefRow)!=nrow(dfCovs)) {
+    stop("The number of reference rows (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to dfCovs (change reference for each covariate combination)")
+  }
+
   ## Remove samples with problems. Will use THETA1 == NA as an indicator for a problematic sample
   dfParameters <- dfParameters %>% filter(!is.na(THETA1))
 
@@ -76,6 +82,12 @@ getForestDFSCM <- function(dfCovs,
     dfCovs <- dfCreateInputForestData(dfCovs)
   }
   dfCovs[is.na(dfCovs)] <- iMiss
+
+  groupnames<-NULL #Store the temp groupnames
+  if (any(names(dfCovs)=="COVARIATEGROUPS")) {
+    groupnames<-dfCovs[,"COVARIATEGROUPS"]
+    dfCovs[,"COVARIATEGROUPS"]<-NULL
+  }
 
   ## Define the grouping
   getGroups <- function(df) {
@@ -113,7 +125,8 @@ getForestDFSCM <- function(dfCovs,
       for (j in 1:length(functionList)) {
         val <- functionList[[j]](thetas = thetas, df = dfCovs[i, ], ...)
         if (!is.null(dfRefRow)) {
-          valbase <- functionList[[j]](thetas = thetas, df = dfRefRow, ...)
+          indi<-min(i,nrow(dfRefRow))
+          valbase <- functionList[[j]](thetas = thetas, df = dfRefRow[indi,], ...)
         }
         else {
           dfMissing = dfCovs[1,]
@@ -178,23 +191,27 @@ getForestDFSCM <- function(dfCovs,
       #Calculate reference value based one the pointFunction
       func_base<-pointFunction(dft$VALUEBASE)
       true_base <- dft$VALUEBASE[dft$ITER == 1]
-
+      groupname<-group
+      if (!is.null(groupnames)) groupname<-groupnames[i]
       dfrow <- cbind(dfCovs[i, ], data.frame(
         GROUP = group,
+        GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFFUNC = func_base, REFTRUE = true_base, FUNC=FUNCVAL, FUNC_NOVAR=FUNCNOVAR,
+        REFFUNC = func_base, REFFINAL = true_base, POINT=FUNCVAL, POINT_NOVAR_REL_REFFUNC=FUNCNOVAR,
+        POINT_REL_REFFUNC = FUNCVAL/func_base, POINT_REL_REFFINAL = FUNCVAL/true_base,
         COVEFF = !all(dft$RELINTERNAL==1)))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
-        dfp[[paste0("q", k)]] <- quant[k]
-        dfrow <- cbind(dfrow, dfp[, 2])
-        names(dfrow)[ncol(dfrow)] <- paste0("q", k)
+        dfp[[paste0("Q", k)]] <- quant[k]
+        dfp[[paste0("Q",k,"_REL_REFFUNC")]] <-  quant[k]/func_base
+        dfp[[paste0("Q",k,"_REL_REFFINAL")]] <-  quant[k]/true_base
+        dfrow <- cbind(dfrow, dfp[, 2:4])
       }
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
-        dfp[[paste0("q", k,"_NOVAR")]] <- quantrel[k]
+        dfp[[paste0("Q",k,"_NOVAR_REL_REFFUNC")]] <- quantrel[k]
         dfrow <- cbind(dfrow, dfp[, 2])
-        names(dfrow)[ncol(dfrow)] <- paste0("q", k,"_NOVAR")
+        names(dfrow)[ncol(dfrow)] <- paste0("Q", k,"_NOVAR_REL_REFFUNC")
       }
       dfret <- rbind(dfret, dfrow)
     }
@@ -202,6 +219,15 @@ getForestDFSCM <- function(dfCovs,
 
 
   stopImplicitCluster()
+
+  ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
+  dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
+
+  ## Make sure GROUPNAME, COVNAME, PARAMETER are factors
+  dfret$GROUPNAME <- factor(dfret$GROUPNAME,levels=unique(dfret$GROUPNAME))
+  dfret$COVNAME   <- factor(dfret$COVNAME,levels=unique(dfret$COVNAME))
+  dfret$PARAMETER <- factor(dfret$PARAMETER,levels=unique(dfret$PARAMETER))
+
   return(dfret)
 }
 

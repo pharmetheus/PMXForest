@@ -1,0 +1,1 @@
+/opt/noarch/psn/psn-5.2.6/bin/bootstrap run7bs.mod -stratify_on=GENO -samples=30 -dir bs7n30.dir -nm_version=lp75_mpi -nodes=2 -threads=100

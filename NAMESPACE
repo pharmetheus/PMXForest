@@ -2,12 +2,26 @@
 
 export(addMissingColumns)
 export(createInputForestData)
+export(forestPlot)
 export(getExt)
 export(getForestDFFREM)
 export(getForestDFSCM)
 export(getForestDFemp)
 export(getParamPositions)
+export(getPlotVars)
 export(getSamples)
 export(mvrnorm_vector)
+<<<<<<< HEAD
 export(plotForestDF)
 importFrom(PhRame,add_stamp)
+=======
+export(setupForestPlotData)
+import(doParallel)
+import(dplyr)
+import(foreach)
+import(ggplot2)
+import(ggpubr)
+import(stringr)
+importFrom(dplyr,filter)
+importFrom(stringr,str_match)
+>>>>>>> ForestPrep

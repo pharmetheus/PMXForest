@@ -7,7 +7,11 @@
 getForestDFSCM(dfCovs, cdfCovsNames = NULL,
   functionList = list(function(basethetas, dfrow, ...) {    
   return(basethetas[1]) }), functionListName = "PAR1", noBaseThetas,
+<<<<<<< HEAD
   dfParameters, quiet = TRUE, probs = c(0.025, 0.975),
+=======
+  dfParameters, quiet = TRUE, probs = c(0.05, 0.95),
+>>>>>>> ForestPrep
   pointFunction = median, dfRefRow = NULL, cGrouping = NULL,
   ncores = 1, cstrPackages = NULL, cstrExports = NULL, iMiss = -99,
   ...)
@@ -35,12 +39,12 @@ The column order is assumed the same as in the NONMEM ext file except the ITERAT
 \item{quiet}{If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)}
 
 \item{probs}{A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.025, 0.975)}
+as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}
 
 \item{pointFunction}{The function used to calculate the point for each covariate in the forest plot. default=median
 This function is also used for the reference covariate combination}
 
-\item{dfRefRow}{A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
+\item{dfRefRow}{A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
 
 \item{cGrouping}{A vector of numbers defining how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
 If NULL (default) an educated guess of the grouping will be set}
@@ -63,15 +67,13 @@ Get a data frame with Forest border for each univariate or multivariate covariat
 }
 \examples{
 \dontrun{
-dfresCOV <- getForestDFSCM(
-            dfCovs = dfCovs1,
-            cdfCovsNames = covnames,
-            functionList = list(paramFunction),
-            functionListName = functionListName,
-            noBaseThetas = 16,
-            dfParameters = dfSamplesCOV,
-            probs = c(0.05, 0.95),
-            dfRefRow = dfRefRow,
-            quiet = TRUE)
+dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
+                              cdfCovsNames     = covnames,
+                              functionList     = list(paramFunction),
+                              functionListName = functionListName,
+                              noBaseThetas     = noBaseThetas,
+                              dfParameters     = dfSamplesCOVscm,
+                              dfRefRow         = NULL
+)
 }
 }
