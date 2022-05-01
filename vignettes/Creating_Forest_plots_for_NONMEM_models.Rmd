@@ -209,7 +209,7 @@ dfresBS <- getForestDFSCM(dfCovs           = dfCovs,
                           functionList     = list(paramFunction),
                           functionListName = functionListName,
                           noBaseThetas     = 14,
-                          dfParameters     = dfSamplesCOV
+                          dfParameters     = dfSamplesBS
 )
 ```
 
