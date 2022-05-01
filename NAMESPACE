@@ -11,10 +11,6 @@ export(getParamPositions)
 export(getPlotVars)
 export(getSamples)
 export(mvrnorm_vector)
-<<<<<<< HEAD
-export(plotForestDF)
-importFrom(PhRame,add_stamp)
-=======
 export(setupForestPlotData)
 import(doParallel)
 import(dplyr)
@@ -24,4 +20,3 @@ import(ggpubr)
 import(stringr)
 importFrom(dplyr,filter)
 importFrom(stringr,str_match)
->>>>>>> ForestPrep

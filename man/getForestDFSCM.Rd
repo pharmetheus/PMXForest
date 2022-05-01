@@ -7,11 +7,7 @@
 getForestDFSCM(dfCovs, cdfCovsNames = NULL,
   functionList = list(function(basethetas, dfrow, ...) {    
   return(basethetas[1]) }), functionListName = "PAR1", noBaseThetas,
-<<<<<<< HEAD
-  dfParameters, quiet = TRUE, probs = c(0.025, 0.975),
-=======
   dfParameters, quiet = TRUE, probs = c(0.05, 0.95),
->>>>>>> ForestPrep
   pointFunction = median, dfRefRow = NULL, cGrouping = NULL,
   ncores = 1, cstrPackages = NULL, cstrExports = NULL, iMiss = -99,
   ...)

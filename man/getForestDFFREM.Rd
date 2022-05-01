@@ -10,11 +10,7 @@ getForestDFFREM(dfCovs, cdfCovsNames = NULL,
   functionListName = "PAR1", noBaseThetas, dfParameters, noCovThetas,
   noSigmas, noParCov = noBaseThetas, noSkipOm = 0,
   parNames = paste("Par", 1:noParCov, sep = ""), availCov = covNames,
-<<<<<<< HEAD
-  quiet = FALSE, probs = c(0.025, 0.975), pointFunction = median,
-=======
   quiet = FALSE, probs = c(0.05, 0.95), pointFunction = median,
->>>>>>> ForestPrep
   dfRefRow = NULL, cGrouping = NULL, ncores = 1,
   cstrPackages = NULL, cstrExports = NULL, iMiss = -99, ...)
 }

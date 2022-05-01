@@ -8,11 +8,7 @@ getForestDFemp(dfData, covExpressionsList, noBaseThetas, dfParameters,
   cdfCovsNames = NULL, functionList = list(function(basethetas, dfrow,
   ...) {     return(basethetas[1]) }), functionListName = "PAR1",
   strID = "ID", quiet = TRUE, metricFunction = median,
-<<<<<<< HEAD
-  probs = c(0.025, 0.975), pointFunction = median, dfRefRow = NULL,
-=======
   probs = c(0.05, 0.95), pointFunction = median, dfRefRow = NULL,
->>>>>>> ForestPrep
   cGrouping = NULL, ncores = 1, cstrPackages = NULL,
   cstrExports = NULL, iMiss = -99, ...)
 }
