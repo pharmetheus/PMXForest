@@ -25,10 +25,10 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
   if(!(reference %in% c("func","final"))) {stop("reference needs to be either func or final.")}
 
   if(!plotRelative & noVar & reference == "func") {
-    vars <- c(point="POINT",q1="Q1",q2="Q2",ref="REFFUNC")
+    vars <- c(REF="REFFUNC",point="POINT",q1="Q1",q2="Q2")
 
   } else if(!plotRelative & noVar & reference == "final") {
-    vars <- c(point="POINT",q1="Q1",q2="Q2",ref="REFFINAL")
+    vars <- c(REF="REFFINAL",point="POINT",q1="Q1",q2="Q2")
 
   } else if(!plotRelative & !noVar & reference == "func") {
     stop("The combination of plotRelative=FALSE and noVar=FALSE is not possible\n.")
@@ -37,16 +37,16 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
     stop("The combination of plotRelative=FALSE and noVar=FALSE is not possible\n.")
 
   } else if(plotRelative & noVar & reference == "func") {
-    vars <- c(point="POINT_NOVAR_REL_REFFUNC",q1="Q1_NOVAR_REL_REFFUNC",q2="Q2_NOVAR_REL_REFFUNC",ref="REFFUNC")
+    vars <- c(REF="REFFUNC",point="POINT_NOVAR_REL_REFFUNC",q1="Q1_NOVAR_REL_REFFUNC",q2="Q2_NOVAR_REL_REFFUNC")
 
   } else if(plotRelative & noVar & reference == "final") {
     stop("The combination of plotRelative=TRUE, noVar=TRUE and reference=final is not possible\n.")
 
   } else if(plotRelative & !noVar & reference == "func") {
-    vars <- c(point="POINT_REL_REFFUNC",q1="Q1_REL_REFFUNC",q2="Q2_REL_REFFUNC",ref="REFFUNC")
+    vars <- c(REF="REFFUNC",point="POINT_REL_REFFUNC",q1="Q1_REL_REFFUNC",q2="Q2_REL_REFFUNC")
 
   } else if(plotRelative & !noVar & reference == "final") {
-    vars <- c(point="POINT_REL_REFFINAL",q1="Q1_REL_REFFINAL",q2="Q2_REL_REFFINAL",ref="REFFINAL")
+    vars <- c(REF="REFFINAL",point="POINT_REL_REFFINAL",q1="Q1_REL_REFFINAL",q2="Q2_REL_REFFINAL")
 
   }
   return(vars)
@@ -152,7 +152,11 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 
   ## Name the STATISTICS column
   if(!is.null(statisticsLabels)) {
-    dfres$STATISTICSLABEL <- statisticsLabels
+    if(length(statisticsLabels) == length(parameters)) {
+      dfres$STATISTICSLABEL <- rep(statisticsLabels,nrow(dfres)/length(parameters))
+    } else {
+      dfres$STATISTICSLABEL <- statisticsLabels
+    }
   } else {
     dfres$STATISTICSLABEL <- dfres$PARAMETERLABEL
   }
@@ -164,7 +168,8 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
   vars <- getPlotVars(plotRelative,noVar,reference)
 
   plotData <- dfres %>%
-    select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
+    select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,!!vars) %>%
+    # select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
     mutate(reference=reference) %>%
     group_by(PARAMETER,COVNAME) %>%
     mutate(REF=ifelse(plotRelative,1,REF)) %>%

@@ -264,5 +264,10 @@ getForestDFemp <- function(dfData,
   ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
   dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
 
+  ## Make sure GROUPNAME, COVNAME, PARAMETER are factors
+  dfret$GROUPNAME <- factor(dfret$GROUPNAME,levels=unique(dfret$GROUPNAME))
+  dfret$COVNAME   <- factor(dfret$COVNAME,levels=unique(dfret$COVNAME))
+  dfret$PARAMETER <- factor(dfret$PARAMETER,levels=unique(dfret$PARAMETER))
+
   return(dfret)
 }

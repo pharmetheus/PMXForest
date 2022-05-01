@@ -117,6 +117,17 @@ test_that("Forest plots for SCM works properly", {
   expect_equal_to_reference(plotData4,"test_output/plotData4")
 
 
+  check_graphical_output <- function() {
+    if(getRversion() <= "3.5.3") {
+      skip("R version <= 3.5.3")
+    } else {
+
+      fp5 <- forestPlot(dfresSCM)
+      vdiffr::expect_doppelganger("Basic Forest plot with default options", fp5)
+    }
+  }
+
+  check_graphical_output()
   ## Create a number of Forest plots to test functionality
   # fp5 <- forestPlot(dfresSCM)
   # fp6 <- forestPlot(dfresSCM,plotData=plotData1)
