@@ -1,6 +1,8 @@
 #' Get the correct dfres variables to plot based on user specification
 #'
 #' @description Determine which variables from dfres to base the forest plot on
+#'
+#' @import table1
 #' @keywords internal
 #' @param plotRelative Should the plot be made on the relative scale (TRUE or FALSE)
 #' @param noVar Should the uncertainty in the reference be included (FALSE) or not (TRUE)
