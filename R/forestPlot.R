@@ -2,7 +2,6 @@
 #'
 #' @description Determine which variables from dfres to base the forest plot on
 #'
-#' @import table1
 #' @keywords internal
 #' @param plotRelative Should the plot be made on the relative scale (TRUE or FALSE)
 #' @param noVar Should the uncertainty in the reference be included (FALSE) or not (TRUE)
@@ -192,7 +191,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 
 #'Forest plots
 #'
-#' @import dplyr ggplot2 ggpubr
+#' @import dplyr ggplot2 ggpubr table1
 #'
 #' @description Create Forest plots consisting of alternating columns of errorbar plots and tabulated numerical statistics.
 #' @inheritParams setupForestPlotData
