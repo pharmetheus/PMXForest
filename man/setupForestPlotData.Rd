@@ -7,7 +7,7 @@
 setupForestPlotData(dfres, parameters = unique(dfres$PARAMETER),
   parameterLabels = NULL, groupNameLabels = NULL,
   statisticsLabels = NULL, plotRelative = TRUE, noVar = FALSE,
-  reference = "func", sigdigits = 2)
+  reference = "func", sigdigits = 2, onlySignificant = FALSE)
 }
 \arguments{
 \item{dfres}{A data.frame as output from getForestDFSCM, getForestDFFREM or getForestDFemp.}

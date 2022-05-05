@@ -90,7 +90,7 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #' plotData<- setupForestPlotData(dfres)
 #' }
 setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),parameterLabels=NULL,groupNameLabels=NULL,statisticsLabels=NULL,
-                                plotRelative=TRUE,noVar=FALSE,reference="func",sigdigits=2) {
+                                plotRelative=TRUE,noVar=FALSE,reference="func",sigdigits=2,onlySignificant=FALSE) {
 
   ## Input checks
   if(!is.null(parameterLabels)) {
@@ -168,6 +168,12 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
   ## Determine which statistic to use
   vars <- getPlotVars(plotRelative,noVar,reference)
 
+  ## Remove the non-significant covariates if onlySignificant
+  if(onlySignificant) {
+     dfres <- droplevels(dfres %>% filter(PARAMETER%in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF==TRUE)))
+  }
+
+  ## Create the plot data
   plotData <- dfres %>%
     select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,!!vars) %>%
     # select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
@@ -328,15 +334,15 @@ forestPlot <- function(dfres,
 
 
   ## Check if only significant covariates is to be used
-  if(onlySignificant) {
-     dfres <- droplevels(dfres %>% filter(PARAMETER%in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF==TRUE)))
-  }
+  # if(onlySignificant) {
+  #    dfres <- droplevels(dfres %>% filter(PARAMETER%in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF==TRUE)))
+  # }
 
   ## Setup the plotting data frame
   if(is.null(plotData)) {
     plotData<- setupForestPlotData(dfres,reference=referenceParameters,plotRelative = plotRelative,parameters=parameters,parameterLabels=parameterLabels,groupNameLabels=groupNameLabels,
                                    statisticsLabel=statisticsLabel,
-                                   noVar = noVar,sigdigits = sigdigits)
+                                   noVar = noVar,sigdigits = sigdigits,onlySignificant = onlySignificant)
   } else {
     message("Will use the provided plotData and ignore dfres\n")
   }
