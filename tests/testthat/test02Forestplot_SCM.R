@@ -104,19 +104,36 @@ test_that("Forest plots for SCM works properly", {
                              dfRefRow         = NULL
   )
 
+  dfresSCM2 <- getForestDFSCM(dfCovs           = dfCovs,
+                             cdfCovsNames     = covnames,
+                             functionList     = list(paramFunction),
+                             functionListName = functionListName,
+                             noBaseThetas     = noBaseThetas,
+                             dfParameters     = dfSamplesCOV,
+                             dfRefRow         = dfCovs %>% filter(COVARIATEGROUPS == "GENO") %>% slice(1)
+  )
+
+
   rVersion <- paste0(R.version$major,".",R.version$minor)
   expect_equal_to_reference(dfresSCM,paste0("test_output/dfresSCM",rVersion))
 
-
   ## Tests for setupData
+  expect_error(setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel","Fake")))
+  expect_error(setupForestPlotData(dfresSCM,groupNameLabels=covariates[-1]))
+  expect_error(setupForestPlotData(dfresSCM,statisticsLabels=c("CL (L/h)","V (L)","Frel","Fake")))
+
+
   plotData1 <- setupForestPlotData(dfresSCM)
   plotData2 <- setupForestPlotData(dfresSCM,plotRelative = FALSE,noVar=TRUE)
   plotData4 <- setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel"),
                                    groupNameLabels=covariates,plotRelative=FALSE,noVar=TRUE,
                                    statisticsLabel=c("CL (L/h)","V (L)","Frel"))
+  plotData5 <- setupForestPlotData(dfresSCM,onlySignificant = TRUE)
+
   expect_equal_to_reference(plotData1,"test_output/plotData1")
   expect_equal_to_reference(plotData2,"test_output/plotData2")
   expect_equal_to_reference(plotData4,"test_output/plotData4")
+  expect_equal_to_reference(plotData5,"test_output/plotData5")
 
 
   check_graphical_output <- function() {
@@ -141,6 +158,17 @@ test_that("Forest plots for SCM works properly", {
                          stackedPlots = TRUE,
                          keepYlabs = TRUE,
                          keepRightStrip = TRUE)
+      fp14 <- forestPlot(dfresSCM,parameters = c("CL","Frel"),
+                         stackedPlots = TRUE,
+                         keepYlabs = TRUE,
+                         table     = FALSE,
+                         keepRightStrip = TRUE)
+
+      fp15 <- forestPlot(dfresSCM,referenceInfo=NULL)
+      fp16 <- forestPlot(dfresSCM,referenceInfo = "Tesing of reference info)")
+      fp17 <- forestPlot(dfresSCM,referenceInfo=NULL,referenceParameters = "final",noVar=FALSE)
+
+      fp18 <- forestPlot(dfresSCM2)
 
       dev.off()
       vdiffr::expect_doppelganger("Forest plot with default options", fp5)
@@ -152,6 +180,13 @@ test_that("Forest plots for SCM works properly", {
       vdiffr::expect_doppelganger("Forest plot without rightStrip and no table", fp11)
       vdiffr::expect_doppelganger("Forest plot without table", fp12)
       vdiffr::expect_doppelganger("Forest plot stackedPlots", fp13)
+      vdiffr::expect_doppelganger("Forest plot stackedPlots without table", fp14)
+
+      vdiffr::expect_doppelganger("Forest plot referenceInfo NULL", fp15)
+      vdiffr::expect_doppelganger("Forest plot referenceInfo not NULL", fp16)
+      vdiffr::expect_doppelganger("Forest plot referenceParameters=final", fp17)
+      vdiffr::expect_doppelganger("Forest plot stackedPlots with refRow", fp18)
+
     }
   }
 

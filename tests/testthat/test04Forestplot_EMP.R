@@ -2,7 +2,7 @@ library(testthat)
 
 test_that("Forest plots for EMP works properly", {
 
-  skip("Save run time")
+  # skip("Save run time")
 
   lsExpr<-rev(
     list("SEX" = expression(SEX==2),
@@ -141,6 +141,7 @@ test_that("Forest plots for EMP works properly", {
       skip("R version <= 3.5.3")
     } else {
 
+      svg() # Start a device to make plots cosistent between different ways of running the tests
       fp5 <- forestPlot(dfresEMP)
       fp6 <- forestPlot(dfresEMP,plotData=plotData1)
       fp7 <- forestPlot(dfresEMP,plotData=plotData1 %>%
@@ -153,6 +154,8 @@ test_that("Forest plots for EMP works properly", {
       fp10 <- forestPlot(dfresEMP,rightStrip = FALSE)
       fp11 <- forestPlot(dfresEMP,rightStrip = FALSE,table=FALSE)
       fp12 <- forestPlot(dfresEMP,table=FALSE)
+
+      dev.off()
 
       vdiffr::expect_doppelganger("Forest plot with default options", fp5)
       vdiffr::expect_doppelganger("Forest plot with provided plot data", fp6)

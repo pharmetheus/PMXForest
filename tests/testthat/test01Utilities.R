@@ -9,6 +9,9 @@ test_that("Ext files are read properly", {
 
 test_that("mvrnorm_vector samples correctly", {
 
+  expect_equal(mvrnorm_vector(1,sigma=1,iSampleIndex=0),1)
+  expect_equal(mvrnorm_vector(c(1,2),sigma=matrix(c(0,0,0,1),ncol=2),fixed_mu = c(0,1)),c(1,2))
+
   ## Read the ext-file
   extFile <- getExt(system.file("extdata","SimVal/run7.ext",package="PMXForest"))
 
@@ -23,7 +26,7 @@ test_that("mvrnorm_vector samples correctly", {
   mu      <- as.numeric(finPar[, -(c(1, ncol(finPar)))])
 
   #Get the parameters which are fixed based on the covariance
-  fixedmu = rep(FALSE,1,ncol(sigma))
+  fixedmu <-  rep(FALSE,1,ncol(sigma))
   for (j in 1:ncol(sigma)) {
     fixedmu[j]<-all(sigma[,j]==0)
   }
@@ -82,8 +85,12 @@ test_that("getSamples works correctly for bootstrap .csv input", {
   extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
 
   set.seed("123")
+  expect_error(getSamples(bootFile))
   tmp0 <- getSamples(bootFile,extFile=extFile)
   tmp1 <- getSamples(bootFile,extFile=extFile,n=200)
+
+  tmp2<- getSamples(bootFile,extFile=extFile,indexvec = c(21:34,40,35:39))
+  expect_equal_to_reference(tmp2,"test_output/getSamplesBSOutput2")
 
   ## Test that the output is the same as a saved reference
   expect_equal_to_reference(tmp0,"test_output/getSamplesBSOutput")
@@ -115,6 +122,7 @@ test_that("getSamples works correctly for data frame with bootstrap headings", {
   set.seed("123")
   tmp0 <- getSamples(subset(dft,ofv!=0))
 
+  ## Check that ext-file is provided
   tmp1 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:34,40,35:39))
 
   tmp2 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:34,40,35:39),n=150)
@@ -147,6 +155,7 @@ test_that("getSamples works correctly for a time-to-event model without SIGMA", 
 
 test_that("getPlotVars returns correct values", {
 
+  expect_error(getPlotVars(reference="tmp"))
 
   expect_equal(getPlotVars(plotRelative=FALSE,noVar=TRUE,reference="func"),c(REF="REFFUNC",point="POINT",q1="Q1",q2="Q2"))
   expect_equal(getPlotVars(plotRelative=FALSE,noVar=TRUE,reference="final"),c(REF="REFFINAL",point="POINT",q1="Q1",q2="Q2"))

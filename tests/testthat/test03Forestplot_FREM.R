@@ -1,8 +1,9 @@
 library(testthat)
+library("PMXFrem",lib.loc="~/4.1/library/")
 
 test_that("Forest plots for FREM works properly", {
 
-  if(!any(.packages(all.available = T)=="PMXFrem")) skip("PMXFrem not available")
+#  if(any(.packages(all.available = T,lib.loc="~/4.1/library/")=="PMXFrem")) skip("PMXFrem not available")
 
   dfCovs <- createInputForestData(
     list("NCIL" = c(0,1),
@@ -144,6 +145,7 @@ test_that("Forest plots for FREM works properly", {
       skip("R version <= 3.5.3")
     } else {
 
+      svg() # Start a device to make plots cosistent between different ways of running the tests
       fp5 <- forestPlot(dfresFREM)
       fp6 <- forestPlot(dfresFREM,plotData=plotData1)
       fp7 <- forestPlot(dfresFREM,plotData=plotData1 %>%
@@ -156,6 +158,8 @@ test_that("Forest plots for FREM works properly", {
       fp10 <- forestPlot(dfresFREM,rightStrip = FALSE)
       fp11 <- forestPlot(dfresFREM,rightStrip = FALSE,table=FALSE)
       fp12 <- forestPlot(dfresFREM,table=FALSE)
+
+      dev.off()
 
       vdiffr::expect_doppelganger("Forest plot with default options", fp5)
       vdiffr::expect_doppelganger("Forest plot with provided plot data", fp6)

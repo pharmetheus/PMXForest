@@ -62,6 +62,7 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
   ## Check the extFile argument
   if(!is.null(extFile) && tools::file_ext(extFile) != "ext") stop(paste(extFile, "does not have a .ext extension"))
   if(!is.null(extFile) && !file.exists(extFile)) stop(paste("Can not find",extFile))
+  if(class(input) != "data.frame" && tools::file_ext(input) == "csv" && is.null(extFile)) stop("Need to provide an .ext file when input is a .csv file.")
 
   # A data frame was provided
   if (is.data.frame(input)) {
@@ -143,6 +144,11 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
  # args <- list(...)
 
   if (tools::file_ext(input) == "csv") { # Submitted a bootstrap file, SSE or a SIR file
+
+    ## Read the csv and ext files
+    dfParameters <- read.csv(file = input, header = TRUE,stringsAsFactors = FALSE)
+    dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
+
     ## Figure out the parameter positions in the input file
     if(!is.null(indexvec)) {
       indexvec <- as.numeric(indexvec)
@@ -160,25 +166,22 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
         if (length(res$OMEGA) > 0 && res$OMEGA[2]>0) s3 <- seq(res$OMEGA[1], res$OMEGA[1] + res$OMEGA[2] - 1)
         indexvec <- c(s1, s2, s3) + 1
       }
+
+      ## Add SIGMA and OMEGA last in dfParameters if they are completely missing
+      if (is.null(s2) || is.null(s3)) {
+        if (is.null(s2)) {
+          dfParameters["SIGMA.1.1."]<-0
+          s2<-ncol(dfParameters)-1
+        }
+        if (is.null(s3)) {
+          dfParameters["OMEGA.1.1."]<-0
+          s3<-ncol(dfParameters)-1
+        }
+        indexvec <- c(s1,s2,s3) + 1
+      }
     }
 
-    ## Read the csv and ext files
-    dfParameters <- read.csv(file = input, header = TRUE,stringsAsFactors = FALSE)
 
-    ## Add SIGMA and OMEGA last in dfParameters if they are completely missing
-    if (is.null(s2) || is.null(s3)) {
-      if (is.null(s2)) {
-        dfParameters["SIGMA.1.1."]<-0
-        s2<-ncol(dfParameters)-1
-      }
-      if (is.null(s3)) {
-        dfParameters["OMEGA.1.1."]<-0
-        s3<-ncol(dfParameters)-1
-      }
-      indexvec <- c(s1,s2,s3) + 1
-    }
-
-    dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 
     ## If its a SIR results file
     if ("resamples" %in% names(dfParameters) & "samples_order" %in% names(dfParameters)) {
