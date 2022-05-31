@@ -104,14 +104,16 @@ test_that("Forest plots for SCM works properly", {
                              dfRefRow         = NULL
   )
 
-
-  expect_equal_to_reference(dfresSCM,"test_output/dfresSCM")
+  rVersion <- paste0(R.version$major,".",R.version$minor)
+  expect_equal_to_reference(dfresSCM,paste0("test_output/dfresSCM",rVersion))
 
 
   ## Tests for setupData
   plotData1 <- setupForestPlotData(dfresSCM)
   plotData2 <- setupForestPlotData(dfresSCM,plotRelative = FALSE,noVar=TRUE)
-  plotData4 <- setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel"),groupNameLabels=covariates,plotRelative=FALSE,noVar=TRUE,statisticsLabel=c("CL (L/h)","V (L)","Frel"))
+  plotData4 <- setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel"),
+                                   groupNameLabels=covariates,plotRelative=FALSE,noVar=TRUE,
+                                   statisticsLabel=c("CL (L/h)","V (L)","Frel"))
   expect_equal_to_reference(plotData1,"test_output/plotData1")
   expect_equal_to_reference(plotData2,"test_output/plotData2")
   expect_equal_to_reference(plotData4,"test_output/plotData4")
@@ -122,39 +124,39 @@ test_that("Forest plots for SCM works properly", {
       skip("R version <= 3.5.3")
     } else {
 
+      svg() # Start a device to make plots cosistent between different ways of running the tests
       fp5 <- forestPlot(dfresSCM)
-      vdiffr::expect_doppelganger("Basic Forest plot with default options", fp5)
+      fp6 <- forestPlot(dfresSCM,plotData=plotData1)
+      fp7 <- forestPlot(dfresSCM,plotData=plotData1 %>%
+                          filter(PARAMETER=="CL") %>%
+                          group_by(GROUPNAME) %>%
+                          mutate(COVEFF=ifelse(any(COVEFF==TRUE),TRUE,FALSE)) %>%
+                          filter(COVEFF==TRUE),parameters="CL")
+      fp8 <- forestPlot(dfresSCM,plotRelative = FALSE)
+      fp9 <- forestPlot(dfresSCM,parameters="CL")
+      fp10 <- forestPlot(dfresSCM,rightStrip = FALSE)
+      fp11 <- forestPlot(dfresSCM,rightStrip = FALSE,table=FALSE)
+      fp12 <- forestPlot(dfresSCM,table=FALSE)
+      fp13 <- forestPlot(dfresSCM,parameters = c("CL","Frel"),
+                         stackedPlots = TRUE,
+                         keepYlabs = TRUE,
+                         keepRightStrip = TRUE)
+
+      dev.off()
+      vdiffr::expect_doppelganger("Forest plot with default options", fp5)
+      vdiffr::expect_doppelganger("Forest plot with provided plot data", fp6)
+      vdiffr::expect_doppelganger("Forest plot with subsetting", fp7)
+      vdiffr::expect_doppelganger("Forest plot with plotRelative=FALS", fp8)
+      vdiffr::expect_doppelganger("Forest plot only CL", fp9)
+      vdiffr::expect_doppelganger("Forest plot without rightStrip", fp10)
+      vdiffr::expect_doppelganger("Forest plot without rightStrip and no table", fp11)
+      vdiffr::expect_doppelganger("Forest plot without table", fp12)
+      vdiffr::expect_doppelganger("Forest plot stackedPlots", fp13)
     }
   }
 
   check_graphical_output()
-  ## Create a number of Forest plots to test functionality
-  # fp5 <- forestPlot(dfresSCM)
-  # fp6 <- forestPlot(dfresSCM,plotData=plotData1)
-  # fp7 <- forestPlot(dfresSCM,plotData=plotData1 %>%
-  #                     filter(PARAMETER=="CL") %>%
-  #                     group_by(GROUPNAME) %>%
-  #                     mutate(COVEFF=ifelse(any(COVEFF==TRUE),TRUE,FALSE)) %>%
-  #                     filter(COVEFF==TRUE),parameters="CL")
-  # fp8 <- forestPlot(dfresSCM,plotRelative = FALSE)
-  # fp9 <- forestPlot(dfresSCM,parameters="CL")
-  # fp10 <- forestPlot(dfresSCM,rightStrip = FALSE)
-  # fp11 <- forestPlot(dfresSCM,rightStrip = FALSE,table=FALSE)
-  # fp12 <- forestPlot(dfresSCM,table=FALSE)
-  # fp13 <- forestPlot(dfresSCM,parameters = c("CL","Frel"),
-  #                    stackedPlots = TRUE,
-  #                    keepYlabs = TRUE,
-  #                    keepRightStrip = TRUE)
 
-  # expect_known_value(fp5,"test_output/fp5")
-  # expect_equal_to_reference(fp6,"test_output/fp6")
-  # expect_equal_to_reference(fp7,"test_output/fp7")
-  # expect_equal_to_reference(fp8,"test_output/fp8")
-  # expect_equal_to_reference(fp9,"test_output/fp9")
-  # expect_equal_to_reference(fp10,"test_output/fp10")
-  # expect_equal_to_reference(fp11,"test_output/fp11")
-  # expect_equal_to_reference(fp12,"test_output/fp12")
-  # expect_equal_to_reference(fp13,"test_output/fp13")
 })
 
 

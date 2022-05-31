@@ -1,7 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
-library(PMXFrem)
+library(PMXFrem,lib.loc = "~/4.1/library/")
 
 set.seed(123)
 
@@ -39,8 +39,8 @@ covariates <- c("NCI","Formulation","Food status","2D6 genotype","Race","Weight"
 paramFunction <- function(basethetas, covthetas, dfrow, ...) {
 
   FRELGENO4 <- 1
-  if (dfrow$GENO4!=-99 && dfrow$GENO4 == 0) FRELGENO4 <- 1
-  if (dfrow$GENO4!=-99 && dfrow$GENO4 == 1) FRELGENO4 <- (1 + basethetas[13])
+  if (any(names(dfrow)=="GENO4") && dfrow$GENO4!=-99 && dfrow$GENO4 == 0) FRELGENO4 <- 1
+  if (any(names(dfrow)=="GENO4") && dfrow$GENO4!=-99 && dfrow$GENO4 == 1) FRELGENO4 <- (1 + basethetas[13])
 
   FRELFORM <- 1
   if(any(names(dfrow)=="FORM") && dfrow$FORM!=-99) {
@@ -52,8 +52,8 @@ paramFunction <- function(basethetas, covthetas, dfrow, ...) {
   FRELCOV     <- FRELGENO4
 
   CLFOOD <- 1
-  if (dfrow$FOOD!=-99 && dfrow$FOOD == 1) CLFOOD <- 1
-  if (dfrow$FOOD!=-99 && dfrow$FOOD == 0) CLFOOD <- (1 + basethetas[11])
+  if (any(names(dfrow)=="FOOD") && dfrow$FOOD!=-99 && dfrow$FOOD == 1) CLFOOD <- 1
+  if (any(names(dfrow)=="FOOD") && dfrow$FOOD!=-99 && dfrow$FOOD == 0) CLFOOD <- (1 + basethetas[11])
 
   CLWT <- 1
   if (any(names(dfrow)=="WT") && dfrow$WT!=-99)  CLWT <- (dfrow$WT / 75)**basethetas[2]
@@ -62,9 +62,9 @@ paramFunction <- function(basethetas, covthetas, dfrow, ...) {
   CLGENO2 <- 1
   CLGENO3 <- 1
   CLGENO4 <- 1
-  if (dfrow$GENO1!=-99 && dfrow$GENO1 == 1) CLGENO1 <- (1 + basethetas[8])
-  if (dfrow$GENO3!=-99 && dfrow$GENO3 == 1) CLGENO3 <- (1 + basethetas[9])
-  if (dfrow$GENO4!=-99 && dfrow$GENO4 == 1) CLGENO4 <- (1 + basethetas[10])
+  if (any(names(dfrow)=="GENO1") && dfrow$GENO1!=-99 && dfrow$GENO1 == 1) CLGENO1 <- (1 + basethetas[8])
+  if (any(names(dfrow)=="GENO3") && dfrow$GENO3!=-99 && dfrow$GENO3 == 1) CLGENO3 <- (1 + basethetas[9])
+  if (any(names(dfrow)=="GENO4") && dfrow$GENO4!=-99 && dfrow$GENO4 == 1) CLGENO4 <- (1 + basethetas[10])
 
   CLCOVTIME <- CLFOOD
   CLCOV     <- CLWT*CLGENO1*CLGENO2*CLGENO3*CLGENO4
@@ -152,16 +152,16 @@ covnamesCRCL  <- c("CRCL 30 mL/min(*)","CRCL 50 mL/min","CRCL 80 mL/min","CRCL 1
 ## The print names of the covariates (covariate groups)
 covariatesCRCL <- c("Createnine\nclearance groups","Createnine\nclearance percentiles")
 
-dfresCOVfremCRCL <-getForestDFFREM(dfCovsCRCL,
+dfresCOVfremCRCL <-getForestDFFREM(dfCovs           = dfCovsCRCL,
                                    cdfCovsNames     = covnamesCRCL,
-                                   covNames         = PMXFrem::getCovNames(modFile),
+                                   covNames         = getCovNames(modFile),
                                    functionList     = list(paramFunction),
                                    functionListName = functionListName,
-                                   noBaseThetas     = 13,#noBaseThetas,
+                                   noBaseThetas     = noBaseThetas,
                                    noParCov         = 4,
                                    noSigmas         = 2,
                                    noSkipOm         = 2,
-                                   noCovThetas      = 11,#noCovThetas,
+                                   noCovThetas      = noCovThetas,
                                    dfParameters     = dfSamplesCOVfrem,
                                    probs            = c(0.05, 0.95),
                                    dfRefRow         = NULL,
@@ -179,8 +179,8 @@ forestPlot(dfresCOVfrem,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdi
 ## Create the same plot based on the bootstrap information ##
 #############################################################
 
-bsFile          <- paste0(modDevDir,"bs",runno,".dir/raw_results_run",runno,"bs.csv")
-dfSamplesBSfrem <- getSamples(bsFile,extFile=extFile,n=175)
+bsFile         <- system.file("extdata",paste0(modDir,"/bs",runno,".dir/raw_results_run",runno,"bs.csv"),package="PMXForest")
+dfSamplesBSfrem <- getSamples(bsFile,extFile=extFile)
 
 dfresBSfrem <-getForestDFFREM(dfCovs = dfCovs,
                                cdfCovsNames = covnames,

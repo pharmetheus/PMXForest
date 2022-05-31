@@ -163,7 +163,7 @@ getSamples <- function(input,extFile=NULL,n=NULL,indexvec=NULL,zerosindex=NULL) 
     }
 
     ## Read the csv and ext files
-    dfParameters <- read.csv(file = input, header = TRUE)
+    dfParameters <- read.csv(file = input, header = TRUE,stringsAsFactors = FALSE)
 
     ## Add SIGMA and OMEGA last in dfParameters if they are completely missing
     if (is.null(s2) || is.null(s3)) {

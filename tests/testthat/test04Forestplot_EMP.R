@@ -2,6 +2,8 @@ library(testthat)
 
 test_that("Forest plots for EMP works properly", {
 
+  skip("Save run time")
+
   lsExpr<-rev(
     list("SEX" = expression(SEX==2),
          "SEX" = expression(SEX==1),
@@ -99,7 +101,7 @@ test_that("Forest plots for EMP works properly", {
   dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=175)
 
   dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package="PMXForest")
-  dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE)
+  dfData   <- read.csv(dataFile,stringsAsFactors = FALSE) %>% distinct(ID,.keep_all=TRUE)
 
   noBaseThetas <- 14
 
@@ -134,7 +136,36 @@ test_that("Forest plots for EMP works properly", {
   expect_equal_to_reference(plotData2,"test_output/plotData2emp")
   expect_equal_to_reference(plotData4,"test_output/plotData4emp")
 
+  check_graphical_output <- function() {
+    if(getRversion() <= "3.5.3") {
+      skip("R version <= 3.5.3")
+    } else {
 
+      fp5 <- forestPlot(dfresEMP)
+      fp6 <- forestPlot(dfresEMP,plotData=plotData1)
+      fp7 <- forestPlot(dfresEMP,plotData=plotData1 %>%
+                          filter(PARAMETER=="CL") %>%
+                          group_by(GROUPNAME) %>%
+                          mutate(COVEFF=ifelse(any(COVEFF==TRUE),TRUE,FALSE)) %>%
+                          filter(COVEFF==TRUE),parameters="CL")
+      fp8 <- forestPlot(dfresEMP,plotRelative = FALSE)
+      fp9 <- forestPlot(dfresEMP,parameters="CL")
+      fp10 <- forestPlot(dfresEMP,rightStrip = FALSE)
+      fp11 <- forestPlot(dfresEMP,rightStrip = FALSE,table=FALSE)
+      fp12 <- forestPlot(dfresEMP,table=FALSE)
+
+      vdiffr::expect_doppelganger("Forest plot with default options", fp5)
+      vdiffr::expect_doppelganger("Forest plot with provided plot data", fp6)
+      vdiffr::expect_doppelganger("Forest plot with subsetting", fp7)
+      vdiffr::expect_doppelganger("Forest plot with plotRelative=FALS", fp8)
+      vdiffr::expect_doppelganger("Forest plot only CL", fp9)
+      vdiffr::expect_doppelganger("Forest plot without rightStrip", fp10)
+      vdiffr::expect_doppelganger("Forest plot without rightStrip and no table", fp11)
+      vdiffr::expect_doppelganger("Forest plot without table", fp12)
+    }
+  }
+
+  check_graphical_output()
   ## Create a number of Forest plots to test functionality
   # fp5 <- forestPlot(dfresEMP)
   # fp6 <- forestPlot(dfresEMP,plotData=plotData1)

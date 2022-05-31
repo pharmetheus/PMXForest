@@ -140,6 +140,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
         mutate(GROUPNAMELABEL = groupNameLabels[GROUPNAME[1]]) %>%
         ungroup %>%
         select(-GROUPNAME2)
+
     } else {
       dfres$GROUPNAMELABEL <- groupNameLabels
     }

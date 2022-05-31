@@ -149,3 +149,4 @@ dfresBSscm <- getForestDFSCM(dfCovs           = dfCovs,
 )
 
 forestPlot(dfresBSscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
+

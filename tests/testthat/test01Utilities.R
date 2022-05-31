@@ -110,7 +110,7 @@ test_that("getSamples works correctly for data frame with bootstrap headings", {
   bootFile <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package="PMXForest")
   extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
 
-  dft <- read.csv(bootFile)
+  dft <- read.csv(bootFile,stringsAsFactors = FALSE)
 
   set.seed("123")
   tmp0 <- getSamples(subset(dft,ofv!=0))

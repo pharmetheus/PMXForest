@@ -200,8 +200,6 @@ getForestDFFREM <- function(dfCovs,
           valbase <- functionList[[j]](basethetas = thetas,covthetas = rep(0, length(parNames)), dfrow = dfmissing, ...)
         }
 
-
-
         ## Do it for the parameters
         listcount <- length(val)
         for (l in 1:listcount) {
@@ -216,6 +214,7 @@ getForestDFFREM <- function(dfCovs,
     }
 
     dfrest
+
   }
 
   ## Assemble the return data.frame
