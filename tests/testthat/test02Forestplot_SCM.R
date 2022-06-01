@@ -2,6 +2,8 @@ library(testthat)
 
 test_that("Forest plots for SCM works properly", {
 
+
+
   dfCovs <- createInputForestData(
     list("NCIL" = c(0,1),
          "FORM" = c(0,1),
@@ -84,7 +86,9 @@ test_that("Forest plots for SCM works properly", {
   runno   <- 7
   extFile <- system.file("extdata",paste0("SimVal/run",runno,".ext"),package="PMXForest")
   covFile <- system.file("extdata",paste0("SimVal/run",runno,".cov"),package="PMXForest")
-  dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=175)
+
+  ## Will use only 25 samples for the tests
+  dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)
 
   covnames  <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
                  "African American","Asian and other","WT 65 kg","WT 115 kg",
@@ -104,6 +108,9 @@ test_that("Forest plots for SCM works properly", {
                              dfRefRow         = NULL
   )
 
+  ## Check some variants of getForestDFSCM
+
+  # RefRow
   dfresSCM2 <- getForestDFSCM(dfCovs           = dfCovs,
                              cdfCovsNames     = covnames,
                              functionList     = list(paramFunction),
@@ -113,9 +120,42 @@ test_that("Forest plots for SCM works properly", {
                              dfRefRow         = dfCovs %>% filter(COVARIATEGROUPS == "GENO") %>% slice(1)
   )
 
+  # No covnames
+  dfresSCM3 <- getForestDFSCM(dfCovs          = dfCovs,
+                             # cdfCovsNames     = covnames,
+                             functionList     = list(paramFunction),
+                             functionListName = functionListName,
+                             noBaseThetas     = noBaseThetas,
+                             dfParameters     = dfSamplesCOV,
+                             dfRefRow         = NULL
+  )
+
+  # Covariates as a list instead of data.frame
+  covList <- list("NCIL" = c(0,1),
+       "FORM" = c(0,1),
+       "FOOD" = c(0,1),
+       "GENO"=list("GENO1" = c(1,0,0,0),
+                   "GENO3" = c(0,0,1,0),
+                   "GENO4" = c(0,0,0,1)),
+       "RACEL"= c(1,2,3),
+       "WT"   = c(65,115),
+       "AGE"  = c(27,62),
+       "CRCL" = c(83,150),
+       "SEX"  = c(1,2))
+
+  dfresSCM4 <- getForestDFSCM(dfCovs          = covList,
+                              # cdfCovsNames     = covnames,
+                              functionList     = list(paramFunction),
+                              functionListName = functionListName,
+                              noBaseThetas     = noBaseThetas,
+                              dfParameters     = dfSamplesCOV,
+                              dfRefRow         = NULL
+  )
 
   rVersion <- paste0(R.version$major,".",R.version$minor)
   expect_equal_to_reference(dfresSCM,paste0("test_output/dfresSCM",rVersion))
+  expect_equal_to_reference(dfresSCM3,paste0("test_output/dfresSCM3",rVersion))
+  expect_equal_to_reference(dfresSCM4,paste0("test_output/dfresSCM4",rVersion))
 
   ## Tests for setupData
   expect_error(setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel","Fake")))

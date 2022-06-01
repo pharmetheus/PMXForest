@@ -72,7 +72,12 @@ getForestDFFREM <- function(dfCovs,
   if (!is.null(dfRefRow) && nrow(dfRefRow)!=1 && nrow(dfRefRow)!=nrow(dfCovs)) {
     stop("The number of reference rows (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to dfCovs (change reference for each covariate combination)")
   }
-
+  ## Try to make dfCovs into a data.frame if it isn't that already
+  if (!is.data.frame(dfCovs)) {
+    dfCovs <- createInputForestData(dfCovs)
+  }
+  ## Replace potential NAs in dfCovs with the missing value token
+  dfCovs[is.na(dfCovs)] <- iMiss
 
   #If a needed covariate is not present in dfCovs, set it to missing
   if(!all(covNames$covNames %in% names(dfCovs))) {
@@ -81,12 +86,6 @@ getForestDFFREM <- function(dfCovs,
   }
 
 
-  ## Try to make dfCovs into a data.frame if it isn't that already
-  if (!is.data.frame(dfCovs)) {
-    dfCovs <- dfCreateInputForestData(dfCovs)
-  }
-  ## Replace potential NAs in dfCovs with the missing value token
-  dfCovs[is.na(dfCovs)] <- iMiss
 
   groupnames<-NULL #Store the temp groupnames
   if (any(names(dfCovs)=="COVARIATEGROUPS")) {
@@ -139,18 +138,20 @@ getForestDFFREM <- function(dfCovs,
 
       ## Calculate the ffemObj in case reference covariates have been specified
       if (!is.null(dfRefRow)) {
-          indi<-min(i,nrow(dfRefRow))
+
+          indi <- min(i,nrow(dfRefRow))
+
           ffemObjRef <- PMXFrem::calcFFEM(
-          noBaseThetas = noBaseThetas,
-          noCovThetas  = noCovThetas,
-          noSigmas     = noSigmas,
-          dfext        = dfext,
-          covNames     = covNames$covNames,
-          availCov     = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
-          quiet        = quiet,
-          noSkipOm     = noSkipOm,
-          noParCov     = noParCov
-        )
+            noBaseThetas = noBaseThetas,
+            noCovThetas  = noCovThetas,
+            noSigmas     = noSigmas,
+            dfext        = dfext,
+            covNames     = covNames$covNames,
+            availCov     = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
+            quiet        = quiet,
+            noSkipOm     = noSkipOm,
+            noParCov     = noParCov
+          )
       }
 
       ## Calculate the ffemObj for each set of parameters

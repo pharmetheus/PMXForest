@@ -98,7 +98,9 @@ test_that("Forest plots for EMP works properly", {
   runno   <- 7
   extFile <- system.file("extdata",paste0("SimVal/run",runno,".ext"),package="PMXForest")
   covFile <- system.file("extdata",paste0("SimVal/run",runno,".cov"),package="PMXForest")
-  dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=175)
+
+  ## Will use only 25 samples for the tests
+  dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)
 
   dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package="PMXForest")
   dfData   <- read.csv(dataFile,stringsAsFactors = FALSE) %>% distinct(ID,.keep_all=TRUE)
@@ -110,22 +112,39 @@ test_that("Forest plots for EMP works properly", {
 
   covariates <- c("Formulation","Food status","2D6 genotype","Race","Weight","Age","Createnine\nclearance","Sex","NCI")
 
-  dfresEMP <- getForestDFemp(
-    dfData             = dfData,
-    covExpressionsList = lsExpr,
-    cdfCovsNames       = covnamesEmp,
-    functionList       = list(paramFunction),
-    functionListName   = functionListName,
-    metricFunction     = median,
-    noBaseThetas       = noBaseThetas,
-    dfParameters       = dfSamplesCOV,
-    dfRefRow           = NULL,
-    ncores             = 6,
-    cstrPackages       = "dplyr"
+  dfresEMP <- getForestDFemp(dfData             = dfData,
+                             covExpressionsList = lsExpr,
+                             cdfCovsNames       = covnamesEmp,
+                             functionList       = list(paramFunction),
+                             functionListName   = functionListName,
+                             metricFunction     = median,
+                             noBaseThetas       = noBaseThetas,
+                             dfParameters       = dfSamplesCOV,
+                             dfRefRow           = NULL,
+                             ncores             = 1,
+                             cstrPackages       = "dplyr"
+  )
+
+  lsExprRef<-rev(
+    list("SEX" = expression(SEX==2))
+    )
+
+  dfresEMP2 <- getForestDFemp(dfData             = dfData,
+                              covExpressionsList = lsExpr,
+                              cdfCovsNames       = covnamesEmp,
+                              functionList       = list(paramFunction),
+                              functionListName   = functionListName,
+                              metricFunction     = median,
+                              noBaseThetas       = noBaseThetas,
+                              dfParameters       = dfSamplesCOV,
+                              dfRefRow           = lsExprRef,
+                              ncores             = 1,
+                              cstrPackages       = "dplyr"
   )
 
 
   expect_equal_to_reference(dfresEMP,"test_output/dfresEMP")
+  expect_equal_to_reference(dfresEMP2,"test_output/dfresEMP2")
 
 
   ## Tests for setupData

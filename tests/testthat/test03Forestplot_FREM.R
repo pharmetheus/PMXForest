@@ -102,7 +102,8 @@ test_that("Forest plots for FREM works properly", {
   noBaseThetas <- 13
   noCovThetas  <-  11
 
-  dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=175)
+  ## Will use only 25 samples for the tests
+  dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)
 
   covnames  <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian",
                  "Other","WT 64 kg","WT 116 kg",
@@ -129,7 +130,73 @@ test_that("Forest plots for FREM works properly", {
                                  ncores = 1,
                                  cstrPackages = c("PMXFrem","dplyr"))
 
+  dfresFREM2 <-getForestDFFREM(dfCovs          = dfCovs,
+                               cdfCovsNames     = covnames,
+                               covNames         = PMXFrem::getCovNames(modFile),
+                               functionList     = list(paramFunction),
+                               functionListName = functionListName,
+                               noBaseThetas     = noBaseThetas,
+                               noParCov         = 4,
+                               noSigmas         = 2,
+                               noSkipOm         = 2,
+                               noCovThetas      = noCovThetas,
+                               dfParameters     = dfSamplesCOV,
+                               probs            = c(0.05, 0.95),
+                               dfRefRow         = dfCovs %>% filter(COVARIATEGROUPS == "BMI") %>% select(-COVARIATEGROUPS) %>% slice(1),
+                               quiet            = TRUE,
+                               ncores           = 1,
+                               cstrPackages     = c("PMXFrem","dplyr"))
+
+
+  dfresFREM3 <-getForestDFFREM(dfCovs          = dfCovs,
+                               #cdfCovsNames     = covnames,
+                               covNames         = PMXFrem::getCovNames(modFile),
+                               functionList     = list(paramFunction),
+                               functionListName = functionListName,
+                               noBaseThetas     = noBaseThetas,
+                               noParCov         = 4,
+                               noSigmas         = 2,
+                               noSkipOm         = 2,
+                               noCovThetas      = noCovThetas,
+                               dfParameters     = dfSamplesCOV,
+                               probs            = c(0.05, 0.95),
+                               quiet            = TRUE,
+                               ncores           = 1,
+                               cstrPackages     = c("PMXFrem","dplyr"))
+
+  # Covariates as a list instead of data.frame
+  covList <- list("NCIL" = c(0,1),
+                  "FORM" = c(0,1),
+                  "FOOD" = c(0,1),
+                  "GENO"=list("GENO1" = c(1,0,0,0),
+                              "GENO3" = c(0,0,1,0),
+                              "GENO4" = c(0,0,0,1)),
+                  "RACEL"= c(1,2,3),
+                  "WT"   = c(65,115),
+                  "AGE"  = c(27,62),
+                  "CRCL" = c(83,150),
+                  "SEX"  = c(1,2))
+
+  dfresFREM4 <-getForestDFFREM(dfCovs           = covList,
+                               #cdfCovsNames   = covnames,
+                               covNames         = PMXFrem::getCovNames(modFile),
+                               functionList     = list(paramFunction),
+                               functionListName = functionListName,
+                               noBaseThetas     = noBaseThetas,
+                               noParCov         = 4,
+                               noSigmas         = 2,
+                               noSkipOm         = 2,
+                               noCovThetas      = noCovThetas,
+                               dfParameters     = dfSamplesCOV,
+                               probs            = c(0.05, 0.95),
+                               quiet            = TRUE,
+                               ncores           = 1,
+                               cstrPackages     = c("PMXFrem","dplyr"))
+
   expect_equal_to_reference(dfresFREM,"test_output/dfresFREM")
+  expect_equal_to_reference(dfresFREM2,"test_output/dfresFREM2")
+  expect_equal_to_reference(dfresFREM2,"test_output/dfresFREM3")
+  expect_equal_to_reference(dfresFREM2,"test_output/dfresFREM4")
 
 
   ## Tests for setupData
