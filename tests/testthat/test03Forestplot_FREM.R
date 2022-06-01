@@ -193,10 +193,12 @@ test_that("Forest plots for FREM works properly", {
                                ncores           = 1,
                                cstrPackages     = c("PMXFrem","dplyr"))
 
-  expect_equal_to_reference(dfresFREM,"test_output/dfresFREM")
-  expect_equal_to_reference(dfresFREM2,"test_output/dfresFREM2")
-  expect_equal_to_reference(dfresFREM2,"test_output/dfresFREM3")
-  expect_equal_to_reference(dfresFREM2,"test_output/dfresFREM4")
+  rVersion <- paste0(R.version$major,".",R.version$minor)
+
+  expect_equal_to_reference(dfresFREM, paste0("test_output/dfresFREM",rVersion))
+  expect_equal_to_reference(dfresFREM2,paste0("test_output/dfresFREM2",rVersion))
+  expect_equal_to_reference(dfresFREM3,paste0("test_output/dfresFREM3",rVersion))
+  expect_equal_to_reference(dfresFREM4,paste0("test_output/dfresFREM4",rVersion))
 
 
   ## Tests for setupData

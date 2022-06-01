@@ -142,9 +142,9 @@ test_that("Forest plots for EMP works properly", {
                               cstrPackages       = "dplyr"
   )
 
-
-  expect_equal_to_reference(dfresEMP,"test_output/dfresEMP")
-  expect_equal_to_reference(dfresEMP2,"test_output/dfresEMP2")
+  rVersion <- paste0(R.version$major,".",R.version$minor)
+  expect_equal_to_reference(dfresEMP,paste0("test_output/dfresEMP",rVersion))
+  expect_equal_to_reference(dfresEMP2,paste0("test_output/dfresEMP2",rVersion))
 
 
   ## Tests for setupData
