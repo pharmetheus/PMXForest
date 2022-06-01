@@ -17,6 +17,8 @@ Maintainer: Niclas Jonsson <niclas.jonsson@pharmetheus.com>
 Description: Functions to support the creation of Forest plots.
 License: GNU GPLv3
 Imports:
+    dplyr,
+    ggplot2,
     doParallel,
     foreach,
     ggpubr,
@@ -31,8 +33,8 @@ Suggests:
     PMXFrem,
     rmarkdown,
     testthat
+Depends: R (>= 3.5.0)
 VignetteBuilder: 
     knitr
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 6.1.1
