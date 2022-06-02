@@ -1,8 +1,9 @@
 library(testthat)
 
+packageName <- "PMXForestPAGE2022"
 
 test_that("Ext files are read properly", {
-  extData <- getExt(system.file("extdata","SimVal/run7.ext",package="PMXForest"))
+  extData <- getExt(system.file("extdata","SimVal/run7.ext",package=packageName))
   expect_is(extData,"data.frame")
 })
 
@@ -13,10 +14,10 @@ test_that("mvrnorm_vector samples correctly", {
   expect_equal(mvrnorm_vector(c(1,2),sigma=matrix(c(0,0,0,1),ncol=2),fixed_mu = c(0,1)),c(1,2))
 
   ## Read the ext-file
-  extFile <- getExt(system.file("extdata","SimVal/run7.ext",package="PMXForest"))
+  extFile <- getExt(system.file("extdata","SimVal/run7.ext",package=packageName))
 
   ## Read the cov-file and extract the covmatrix
-  dfcov     <- read.table(system.file("extdata","SimVal/run7.cov",package="PMXForest"),
+  dfcov     <- read.table(system.file("extdata","SimVal/run7.cov",package=packageName),
                           fill = TRUE, header = TRUE, sep = "",
                           skip = 1, stringsAsFactors = FALSE)
   sigma     <- data.matrix(dfcov[, 2:ncol(dfcov)])
@@ -43,8 +44,8 @@ test_that("mvrnorm_vector samples correctly", {
 test_that("getSamples works correctly for .cov input", {
 
   ## .cov file input
-  covFile <- system.file("extdata","SimVal/run7.cov",package="PMXForest")
-  extFile <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
+  covFile <- system.file("extdata","SimVal/run7.cov",package=packageName)
+  extFile <- system.file("extdata","SimVal/run7.ext",package=packageName)
 
   expect_error(getSamples(10),"input needs to be a character string")
   expect_error(getSamples("fileNameWithoutExtension"),"The input file name needs to have an extension")
@@ -68,7 +69,7 @@ test_that("getSamples works correctly for .cov input", {
 
 test_that("getParamPositions works correctly", {
 
-  bootFile  <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package="PMXForest")
+  bootFile  <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package=packageName)
   rr_struct <- file.path(dirname(bootFile), "raw_results_structure")
 
   res <- getParamPositions(rr_struct)
@@ -81,8 +82,8 @@ test_that("getParamPositions works correctly", {
 test_that("getSamples works correctly for bootstrap .csv input", {
 
   ## .csv file input
-  bootFile <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package="PMXForest")
-  extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
+  bootFile <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package=packageName)
+  extFile  <- system.file("extdata","SimVal/run7.ext",package=packageName)
 
   set.seed("123")
   expect_error(getSamples(bootFile))
@@ -100,8 +101,8 @@ test_that("getSamples works correctly for bootstrap .csv input", {
 test_that("getSamples works correctly for SIR .csv input", {
 
   ## .csv file input
-  sirFile  <- system.file("extdata","SimVal/sir7.dir/raw_results_run7.csv",package="PMXForest")
-  extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
+  sirFile  <- system.file("extdata","SimVal/sir7.dir/raw_results_run7.csv",package=packageName)
+  extFile  <- system.file("extdata","SimVal/run7.ext",package=packageName)
 
   set.seed("123")
   tmp0 <- getSamples(sirFile,extFile=extFile)
@@ -114,8 +115,8 @@ test_that("getSamples works correctly for SIR .csv input", {
 test_that("getSamples works correctly for data frame with bootstrap headings", {
 
   ## .csv file input
-  bootFile <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package="PMXForest")
-  extFile  <- system.file("extdata","SimVal/run7.ext",package="PMXForest")
+  bootFile <- system.file("extdata","SimVal/bs7.dir/raw_results_run7bs.csv",package=packageName)
+  extFile  <- system.file("extdata","SimVal/run7.ext",package=packageName)
 
   dft <- read.csv(bootFile,stringsAsFactors = FALSE)
 
@@ -144,8 +145,8 @@ test_that("getSamples works correctly for a time-to-event model without SIGMA", 
 
   ## .csv file input
   runno<-"tte_weibull"
-  bootFile <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("raw_results_",runno,".csv"),package="PMXForest")
-  extFile <- system.file("extdata","tte",paste0(runno,".ext"),package="PMXForest")
+  bootFile <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("raw_results_",runno,".csv"),package=packageName)
+  extFile <- system.file("extdata","tte",paste0(runno,".ext"),package=packageName)
 
   tmp <- getSamples(bootFile,extFile)
 
