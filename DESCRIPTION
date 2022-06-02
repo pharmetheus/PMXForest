@@ -26,7 +26,8 @@ Imports:
     stringr,
     table1,
     tidyverse,
-    deSolve
+    deSolve,
+    mrgsolve
 Suggests: 
     bookdown,
     knitr,

@@ -175,7 +175,7 @@ This approach will sample parameter vectors from a variance-covariance matrix fr
 
 Read the cov file and get the multivariate parameter distribution. Note that since this is a TTE model without random effects, the `OMEGA` and `SIGMA` samples are set to zero.
 ```{r}
-covFile <- system.file("extdata","tte",paste0(runno,".cov"),package="PMXForest") 
+covFile <- system.file("extdata","tte",paste0(runno,".cov"),package=packageName) 
 dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 ```
 

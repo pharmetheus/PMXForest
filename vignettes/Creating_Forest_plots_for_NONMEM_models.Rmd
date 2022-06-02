@@ -270,7 +270,7 @@ The same function definition as for the empirical Forest plots can be used for e
 Same as for parametric Forest plots except that empirical Forest plots also need the data file.
 
 ```{r}
-dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package="PMXForest")
+dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package=packageName)
 dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE)
 ```
 
