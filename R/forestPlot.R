@@ -331,6 +331,7 @@ forestPlot <- function(dfres,
                        errbarplotscale = 1.45,
                        tabplotscale    = 1.1,
                        onlySignificant = FALSE,
+                       onlySignificantErrorBars = FALSE,
                        ...) {
 
 
@@ -365,6 +366,13 @@ forestPlot <- function(dfres,
                             ymin = -Inf, ymax = Inf,
                             GROUPNAMELABEL=ref_value$GROUPNAMELABEL,
                             PARAMETERLABEL=ref_value$PARAMETERLABEL)
+
+    ## Set the limits of the error bars to the point value in case we don't want to have error bars for non-significant covariates.
+    if(onlySignificantErrorBars) {
+      data <- data %>% mutate(q1 = ifelse(COVEFF,q1,point),
+                              q2 = ifelse(COVEFF,q2,point))
+
+    }
 
     p1a <- ggplot(data,aes(x=point,y=COVNAME,xmin=q1,xmax=q2)) +
       geom_blank() +

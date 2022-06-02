@@ -127,6 +127,7 @@ dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
 #####################
 
 forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
+forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,onlySignificantErrorBars = TRUE)
 
 forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,onlySignificant = TRUE)
 
