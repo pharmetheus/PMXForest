@@ -21,7 +21,8 @@ knitr::opts_chunk$set(
 ```{r setup}
 packageName <- "PMXForestPAGE2022"
 suppressPackageStartupMessages(library(packageName,character.only = TRUE))
-suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
 
 theme_set(theme_bw(base_size=18))
 theme_update(plot.title = element_text(hjust = 0.5))
