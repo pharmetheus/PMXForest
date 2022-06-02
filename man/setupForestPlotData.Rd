@@ -4,10 +4,18 @@
 \alias{setupForestPlotData}
 \title{Set up the data.frame for \code{forestPlot} to use}
 \usage{
-setupForestPlotData(dfres, parameters = unique(dfres$PARAMETER),
-  parameterLabels = NULL, groupNameLabels = NULL,
-  statisticsLabels = NULL, plotRelative = TRUE, noVar = FALSE,
-  reference = "func", sigdigits = 2, onlySignificant = FALSE)
+setupForestPlotData(
+  dfres,
+  parameters = unique(dfres$PARAMETER),
+  parameterLabels = NULL,
+  groupNameLabels = NULL,
+  statisticsLabels = NULL,
+  plotRelative = TRUE,
+  noVar = FALSE,
+  reference = "func",
+  sigdigits = 2,
+  onlySignificant = FALSE
+)
 }
 \arguments{
 \item{dfres}{A data.frame as output from getForestDFSCM, getForestDFFREM or getForestDFemp.}
@@ -30,6 +38,8 @@ Can be \code{plotmath} expressions. Is by default the same as \code{dfres$PARAME
 \item{reference}{Which reference should be used, the final parameter estimates (final) or the parameter function (func)}
 
 \item{sigdigits}{An integer number specifying the number of significant digits to use in the statistics tables.}
+
+\item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).}
 }
 \value{
 A processed data.frame to the used for creating the Forest plot. Only the columns used in the actual Forest plot is included:

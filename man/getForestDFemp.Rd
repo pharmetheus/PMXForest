@@ -4,15 +4,35 @@
 \alias{getForestDFemp}
 \title{getForestDFemp}
 \usage{
-getForestDFemp(dfData, covExpressionsList, noBaseThetas, dfParameters,
-  cdfCovsNames = NULL, functionList = list(function(basethetas, dfrow,
-  ...) {     return(basethetas[1]) }), functionListName = "PAR1",
-  strID = "ID", quiet = TRUE, metricFunction = median,
-  probs = c(0.05, 0.95), pointFunction = median, dfRefRow = NULL,
-  cGrouping = NULL, ncores = 1, cstrPackages = NULL,
-  cstrExports = NULL, iMiss = -99, ...)
+getForestDFemp(
+  dfData,
+  covExpressionsList,
+  noBaseThetas,
+  dfParameters,
+  cdfCovsNames = NULL,
+  functionList = list(function(basethetas, dfrow, ...) {
+     return(basethetas[1])
+ }),
+  functionListName = "PAR1",
+  strID = "ID",
+  quiet = TRUE,
+  metricFunction = median,
+  probs = c(0.05, 0.95),
+  pointFunction = median,
+  dfRefRow = NULL,
+  cGrouping = NULL,
+  ncores = 1,
+  cstrPackages = NULL,
+  cstrExports = NULL,
+  iMiss = -99,
+  ...
+)
 }
 \arguments{
+\item{dfData}{A data.frame with the observed data to be used in the empirical Forest plot calculations.}
+
+\item{covExpressionsList}{A list of expressions that define the covariate values to visualize in the Forest plot.}
+
 \item{noBaseThetas}{the number of structural thetas in the model}
 
 \item{dfParameters}{A data frame with parameter samples from the uncertainty distribution.
@@ -28,7 +48,11 @@ but functionListName must contain the names with a length of all return for all 
 
 \item{functionListName}{A vector of strings (names) of the parameters for each function in the functionList}
 
+\item{strID}{The label of the subject identifier column in dfData. Default is ID.}
+
 \item{quiet}{If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)}
+
+\item{metricFunction}{The function to use to summarise the parameter values in each covariate category. Default is median.}
 
 \item{probs}{A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
 as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}
@@ -49,10 +73,6 @@ This function is also used for the reference covariate combination}
 \item{iMiss}{The missing value number. -99 by default.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
-
-\item{covExpressionList}{A list of expressions that define the covariate values to visualize in the Forest plot.}
-
-\item{metricfunction}{The function to use to summarise the parameter values in each covariate category. Default is median.}
 }
 \value{
 A data frame

@@ -4,27 +4,53 @@
 \alias{forestPlot}
 \title{Forest plots}
 \usage{
-forestPlot(dfres, plotData = NULL, plotRelative = TRUE, noVar = TRUE,
-  referenceParameters = "func", sigdigits = 2,
-  parameters = unique(dfres$PARAMETER), parameterLabels = parameters,
-  groupNameLabels = NULL, referenceInfo = "auto",
-  labelfun = label_value, groupname_labelfun = label_value,
-  ref_area = c(0.8, 1.2), ref_fill_col = "gray",
-  ref_fill_alpha = 0.5, ref_line_size = 1, ref_line_type = "dotted",
-  ref_line_col = "black", ci_line_type = "solid",
-  ci_line_col = "blue", ci_line_size = 1, point_shape = 16,
-  point_color = "blue", point_size = 3, tabTextSize = 10,
-  keepYlabs = FALSE, keepRightStrip = FALSE, stackedPlots = FALSE,
-  strip_right_size = NULL, strip_top_size = NULL,
+forestPlot(
+  dfres,
+  plotData = NULL,
+  plotRelative = TRUE,
+  noVar = TRUE,
+  referenceParameters = "func",
+  sigdigits = 2,
+  parameters = unique(dfres$PARAMETER),
+  parameterLabels = parameters,
+  groupNameLabels = NULL,
+  referenceInfo = "auto",
+  labelfun = label_value,
+  groupname_labelfun = label_value,
+  ref_area = c(0.8, 1.2),
+  ref_fill_col = "gray",
+  ref_fill_alpha = 0.5,
+  ref_line_size = 1,
+  ref_line_type = "dotted",
+  ref_line_col = "black",
+  ci_line_type = "solid",
+  ci_line_col = "blue",
+  ci_line_size = 1,
+  point_shape = 16,
+  point_color = "blue",
+  point_size = 3,
+  tabTextSize = 10,
+  keepYlabs = FALSE,
+  keepRightStrip = FALSE,
+  stackedPlots = FALSE,
+  strip_right_size = NULL,
+  strip_top_size = NULL,
   ref_subj_label = "Reference subject",
-  ref_area_label = "Reference area", point_label = "Point estimate",
+  ref_area_label = "Reference area",
+  point_label = "Point estimate",
   ci_label = "Confidence interval",
   statisticsLabel = paste("Statistics:", parameterLabels),
-  xlb = ifelse(plotRelative, "Relative parameter value",
-  "Parameter value"), return = "plot", table = TRUE,
-  rightStrip = TRUE, errbartabwidth = rep(c(2, 1), length(parameters)),
-  errbarplotscale = 1.45, tabplotscale = 1.1,
-  onlySignificant = FALSE, ...)
+  xlb = ifelse(plotRelative, "Relative parameter value", "Parameter value"),
+  return = "plot",
+  table = TRUE,
+  rightStrip = TRUE,
+  errbartabwidth = rep(c(2, 1), length(parameters)),
+  errbarplotscale = 1.45,
+  tabplotscale = 1.1,
+  onlySignificant = FALSE,
+  onlySignificantErrorBars = FALSE,
+  ...
+)
 }
 \arguments{
 \item{dfres}{A data.frame as output from getForestDFSCM, getForestDFFREM or getForestDFemp.}
@@ -120,6 +146,10 @@ the Forest plot (see Details). "data" returns a \code{data.frame} with the actua
 \item{errbarplotscale}{Scaling factor for the width of the leftmost errorbar plot to compensate for y-axis labels.}
 
 \item{tabplotscale}{Scaling factor for the width of the rightmost column (usually a table plot) to adjust for the size of the right strip.}
+
+\item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).}
+
+\item{onlySignificantErrorBars}{Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).}
 
 \item{...}{Arguments passed on to \code{ggpubr::text_grob}.}
 }

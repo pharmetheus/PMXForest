@@ -4,13 +4,26 @@
 \alias{getForestDFSCM}
 \title{getForestDFSCM}
 \usage{
-getForestDFSCM(dfCovs, cdfCovsNames = NULL,
-  functionList = list(function(basethetas, dfrow, ...) {    
-  return(basethetas[1]) }), functionListName = "PAR1", noBaseThetas,
-  dfParameters, quiet = TRUE, probs = c(0.05, 0.95),
-  pointFunction = median, dfRefRow = NULL, cGrouping = NULL,
-  ncores = 1, cstrPackages = NULL, cstrExports = NULL, iMiss = -99,
-  ...)
+getForestDFSCM(
+  dfCovs,
+  cdfCovsNames = NULL,
+  functionList = list(function(basethetas, dfrow, ...) {
+     return(basethetas[1])
+ }),
+  functionListName = "PAR1",
+  noBaseThetas,
+  dfParameters,
+  quiet = TRUE,
+  probs = c(0.05, 0.95),
+  pointFunction = median,
+  dfRefRow = NULL,
+  cGrouping = NULL,
+  ncores = 1,
+  cstrPackages = NULL,
+  cstrExports = NULL,
+  iMiss = -99,
+  ...
+)
 }
 \arguments{
 \item{dfCovs}{A data frame with covariates to include, if a covariate value is set -99 or NA,

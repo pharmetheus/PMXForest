@@ -75,6 +75,7 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #' @param statisticsLabels A vector of labels for the parameters in the table plots. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
 #'  Can be \code{plotmath} expressions. Is by default the same as \code{dfres$PARAMETER}.
 #' @param sigdigits An integer number specifying the number of significant digits to use in the statistics tables.
+#' @param onlySignificant Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).
 #'
 #' @return A processed data.frame to the used for creating the Forest plot. Only the columns used in the actual Forest plot is included:
 #' \describe{
@@ -255,6 +256,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
 #' @param errbartabwidth A numerical vector of length 2 times the number of parameters included in the Forest plot, specifying the relative width of the errorbar and table plots. Have no effect when \code{table} is FALSE.
 #' @param errbarplotscale Scaling factor for the width of the leftmost errorbar plot to compensate for y-axis labels.
 #' @param tabplotscale Scaling factor for the width of the rightmost column (usually a table plot) to adjust for the size of the right strip.
+#' @param onlySignificantErrorBars Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).
 #' @param ... Arguments passed on to \code{ggpubr::text_grob}.
 #'
 #' @details

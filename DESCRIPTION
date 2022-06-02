@@ -15,12 +15,11 @@ Authors@R:
 Author: Niclas Jonsson and Joakim Nyberg
 Maintainer: Niclas Jonsson <niclas.jonsson@pharmetheus.com>
 Description: Functions to support the creation of Forest plots.
-License: GPLv3
+License: GPL (>= 2)
 Imports:
     dplyr,
     ggplot2,
     stringr,
-    tidyr,
     doParallel,
     foreach,
     ggpubr,
@@ -41,4 +40,4 @@ Depends: R (>= 3.5.0)
 VignetteBuilder: 
     knitr
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+RoxygenNote: 7.2.0
