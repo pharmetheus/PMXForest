@@ -28,6 +28,7 @@ suppressPackageStartupMessages(library(deSolve))
 # Used to enter diff eq with e.g. multiple dosing
 suppressPackageStartupMessages(library(mrgsolve))
 
+packageName <- "PMXForestPAGE2022"
 
 theme_set(theme_bw(base_size = 18))
 theme_update(plot.title = element_text(hjust = 0.5))
@@ -239,9 +240,9 @@ First the ext file is read in with the final parameter estimates, these are used
 
 ```{r TypicalPlotdeSolve,fig.width=12,fig.asp=0.6,out.width="100%"}
 runno <- 1
-extFile <- system.file("extdata/oldExample", paste0("run", runno, ".ext"), package = "PMXForest")
+extFile <- system.file("extdata/oldExample", paste0("run", runno, ".ext"), package = packageName)
 
-dfExt <- subset(PMXForest::getExt(extFile = extFile), ITERATION == "-1000000000")
+dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 
 # Call the concentration time-profile function using a Ref covariate setting
 sol <- as.data.frame(paramFunctionDeSolve(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, times = seq(0, 72, 0.1)))
@@ -273,8 +274,8 @@ This approach obtain the confidence interval limits non-parametrically from a bo
 
 
 ```{r}
-bootFile <- system.file("extdata/oldExample", "bs1_n100.dir", paste0("raw_results_run", runno, ".csv"), package = "PMXForest")
-dfSamplesBS <- PMXForest::getSamples(bootFile, extFile = extFile)
+bootFile <- system.file("extdata/oldExample", "bs1_n100.dir", paste0("raw_results_run", runno, ".csv"), package = packageName)
+dfSamplesBS <- getSamples(bootFile, extFile = extFile)
 ```
 
 ## Set up the data for the Forest plot {#sec:setUpDataPar}

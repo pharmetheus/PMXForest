@@ -25,7 +25,8 @@ Imports:
     MASS,
     stringr,
     table1,
-    tidyverse
+    tidyverse,
+    deSolve
 Suggests: 
     bookdown,
     knitr,
