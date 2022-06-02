@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 <!-- output: rmarkdown::html_vignette -->
 
 ```{r setup,}
-suppressPackageStartupMessages(library(PMXForest))
+suppressPackageStartupMessages(library(PMXForestPAGE2022))
 library(tools)
 library(ggplot2)
 library(stats)
