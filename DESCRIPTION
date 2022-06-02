@@ -28,6 +28,9 @@ Imports:
     utils
 Suggests:
     vdiffr,
+    tibble,
+    scales,
+    boot,
     deSolve,
     mrgsolve,
     bookdown,

@@ -273,7 +273,7 @@ Same as for parametric Forest plots except that empirical Forest plots also need
 
 ```{r}
 dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package=packageName)
-dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE)
+dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE) %>% slice(1:300) # Will only use 300 to save time
 ```
 
 
@@ -289,7 +289,7 @@ dfresCOVemp <- getForestDFemp( dfData             = dfData,
                                functionListName   = functionListName,
                                noBaseThetas       = 14,
                                dfParameters       = dfSamplesCOV,
-                               ncores             = 6,
+                               ncores             = 1,
                                cstrPackages       = "dplyr"
 )
 

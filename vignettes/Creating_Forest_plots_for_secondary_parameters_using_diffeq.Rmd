@@ -294,7 +294,7 @@ dfres <- getForestDFSCM(
   dfParameters = dfSamplesBS,
   dfRefRow = dfRefRow,
   cstrPackages = c("deSolve","dplyr"),
-  ncores = 4,
+  ncores = 1,
   interval = c(0, 24)
 )
 ```
