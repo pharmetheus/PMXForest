@@ -24,6 +24,8 @@ library(tools)
 library(ggplot2)
 library(stats)
 
+packageName <- "PMXForestPAGE2022"
+
 theme_set(theme_bw(base_size=18))
 theme_update(plot.title = element_text(hjust = 0.5))
 
@@ -166,7 +168,7 @@ The `getForestDFSCM` package supports several methods for obtaining the uncertai
 ```{r}
 runno   <- "tte_weibull"
 
-extFile <- system.file("extdata","tte",paste0(runno,".ext"),package="PMXForest")
+extFile <- system.file("extdata","tte",paste0(runno,".ext"),package=packageName)
 ```
 
 #### Use the output from the $COV step in NONMEM
@@ -185,7 +187,7 @@ dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 This approach obtain the confidence interval limits non-parametrically from a (n=500) bootstrap. 
 
 ```{r}
-bootFile    <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("raw_results_",runno,".csv"),package="PMXForest")
+bootFile    <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("raw_results_",runno,".csv"),package=packageName)
 dfSamplesBS <- getSamples(bootFile,extFile=extFile)
 ```
 
