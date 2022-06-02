@@ -162,10 +162,12 @@ forestPlot(dfres,parameters="CL")
 
 # Specify group name labels, the size of the table text and x-axis label
 
-forestPlot(dfres,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
+forestPlot(dfres,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),
+           tabTextSize = 20,xlb="Relative parameter value")
 
 # Stack the plots instead of plot them horizontally
 
-forestPlot(dfres,parameters = c("CL","Frel"),stackedPlots = TRUE,keepYlabs = TRUE,keepRightStrip = TRUE)
+forestPlot(dfres,parameters = c("CL","Frel"),stackedPlots = TRUE,
+           keepYlabs = TRUE,keepRightStrip = TRUE)
 }
 }

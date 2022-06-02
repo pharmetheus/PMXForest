@@ -19,7 +19,8 @@ knitr::opts_chunk$set(
 <!-- output: rmarkdown::html_vignette -->
 
 ```{r setup,cache=F}
-#suppressPackageStartupMessages(library(PMXForest))
+packageName <- "PMXForestPAGE2022"
+suppressPackageStartupMessages(library(packageName,character.only = TRUE))
 library(tools)
 library(ggplot2)
 library(stats)
@@ -110,7 +111,7 @@ This specification has one required and two optional components.
 
 The required specification is the list of covariate values to predict the parameter for. It is created using a helper function (`createInputForestData`). Note that missing is this case is the most common category (the ref category which is -99) and this is manually set to the reference for each category.
 ```{r}
-dfCovs <- PMXForestPAGE2022::createInputForestData(
+dfCovs <- createInputForestData(
   list( "Class" = c("1st","2nd","3rd","Crew"),
         "Sex" = c("Male","Female"),
         "Age" = c("Child","Adult")),
@@ -183,7 +184,7 @@ dfres$COVEFF=F
 The Forest plots below displays the data on an absolute scale which is probabilities of survival. The reference line represent the median survival in the observed data. The model is centered around the most common combination of covariates, i.e. a boy in 3rd class.
 
 ```{r ForestSurvival,fig.width=10,fig.asp=.5,out.width="100%",cache=F}
-PMXForestPAGE2022::forestPlot(dfres,plotRelative = F,referenceInfo=NULL,xlb = "Reference subject is a boy in 3rd class",errbartabwidth = c(1,1))
+forestPlot(dfres,plotRelative = F,referenceInfo=NULL,xlb = "Reference subject is a boy in 3rd class",errbartabwidth = c(1,1))
 
 ```
 

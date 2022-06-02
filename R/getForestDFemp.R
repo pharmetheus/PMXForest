@@ -38,9 +38,11 @@
 #')
 #'
 #'## The names associated with the entries in lsExpr
-#'covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM",
+#'covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed",
+#'                  "2D6 UM","2D6 EM","2D6 IM","2D6 PM",
 #'                 "Caucasian","Other","WT<70 kg","WT>104 kg",
-#'                 "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min","Male","Female")
+#'                 "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min",
+#'                 "Male","Female")
 #'
 #'dfresEmp <- getForestDFemp(
 #'  dfData             = dfData,

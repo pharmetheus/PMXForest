@@ -18,14 +18,15 @@ knitr::opts_chunk$set(
 
 <!-- output: rmarkdown::html_vignette -->
 
-```{r setup,}
-suppressPackageStartupMessages(library(PMXForestPAGE2022))
+```{r setup}
+packageName <- "PMXForestPAGE2022"
+suppressPackageStartupMessages(library(packageName,character.only = TRUE))
 suppressPackageStartupMessages(library(tidyverse))
 
 theme_set(theme_bw(base_size=18))
 theme_update(plot.title = element_text(hjust = 0.5))
 
-packageName <- "PMXForestPAGE2022"
+
 
 set.seed(865765)
 ```

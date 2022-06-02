@@ -1,5 +1,7 @@
 library(testthat)
 
+packageName <- "PMXForestPAGE2022"
+
 test_that("Forest plots for EMP works properly", {
 
   # skip("Save run time")
@@ -96,13 +98,13 @@ test_that("Forest plots for EMP works properly", {
 
   set.seed(123)
   runno   <- 7
-  extFile <- system.file("extdata",paste0("SimVal/run",runno,".ext"),package="PMXForest")
-  covFile <- system.file("extdata",paste0("SimVal/run",runno,".cov"),package="PMXForest")
+  extFile <- system.file("extdata",paste0("SimVal/run",runno,".ext"),package=packageName)
+  covFile <- system.file("extdata",paste0("SimVal/run",runno,".cov"),package=packageName)
 
   ## Will use only 25 samples for the tests
   dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)
 
-  dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package="PMXForest")
+  dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package=packageName)
   dfData   <- read.csv(dataFile,stringsAsFactors = FALSE) %>% distinct(ID,.keep_all=TRUE)
 
   noBaseThetas <- 14

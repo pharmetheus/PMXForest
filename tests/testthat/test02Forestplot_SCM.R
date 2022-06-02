@@ -1,5 +1,7 @@
 library(testthat)
 
+packageName <- "PMXForestPAGE2022"
+
 test_that("Forest plots for SCM works properly", {
 
 
@@ -84,8 +86,8 @@ test_that("Forest plots for SCM works properly", {
 
   set.seed(123)
   runno   <- 7
-  extFile <- system.file("extdata",paste0("SimVal/run",runno,".ext"),package="PMXForest")
-  covFile <- system.file("extdata",paste0("SimVal/run",runno,".cov"),package="PMXForest")
+  extFile <- system.file("extdata",paste0("SimVal/run",runno,".ext"),package=packageName)
+  covFile <- system.file("extdata",paste0("SimVal/run",runno,".cov"),package=packageName)
 
   ## Will use only 25 samples for the tests
   dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)

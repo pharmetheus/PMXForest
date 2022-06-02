@@ -1,7 +1,14 @@
+utils::globalVariables(c("COVEFF","COVNAME","COVNUM","GROUPNAME","GROUPNAME2","GROUPNAMELABEL","ITER",
+                         "ITERATION","NAME","PARAMETER","PARAMETERLABEL","REF","STATISTIC","STATISTICSLABEL",
+                         "SUBJ","THETA1","lowcilabel","upcilabel","meanlabel","ofv","point","q1","q2","resamples",
+                         "xmax","xmin","ymax","ymin"))
+
 #' Get the correct dfres variables to plot based on user specification
 #'
 #' @description Determine which variables from dfres to base the forest plot on
 #'
+#' @importFrom stats cov median quantile
+#' @importFrom utils read.csv read.table
 #' @keywords internal
 #' @param plotRelative Should the plot be made on the relative scale (TRUE or FALSE)
 #' @param noVar Should the uncertainty in the reference be included (FALSE) or not (TRUE)
@@ -12,12 +19,12 @@
 #'
 #' @examples
 #' # Get the relative variables with uncertainty in the reference:
-#' # "POINT_REL_REFFUNC"    "Q1_REL_REFFUNC"    "Q2_REL_REFFUNC"           "REFFUNC"
+#' # "POINT_REL_REFFUNC" "Q1_REL_REFFUNC" "Q2_REL_REFFUNC" "REFFUNC"
 #'
 #' getPlotVars()
 #'
 #' # Get the relative variables without uncertainty in the reference:
-#' # "POINT_NOVAR_REL_REFFUNC"    "Q1_NOVAR_REL_REFFUNC"    "Q2_NOVAR_REL_REFFUNC"                 "REFFUNC"
+#' # "POINT_NOVAR_REL_REFFUNC" "Q1_NOVAR_REL_REFFUNC" "Q2_NOVAR_REL_REFFUNC" "REFFUNC"
 #'
 #' getPlotVars(noVar=TRUE)
 #'
@@ -89,8 +96,11 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #' \dontrun{
 #' plotData<- setupForestPlotData(dfres)
 #' }
-setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),parameterLabels=NULL,groupNameLabels=NULL,statisticsLabels=NULL,
-                                plotRelative=TRUE,noVar=FALSE,reference="func",sigdigits=2,onlySignificant=FALSE) {
+setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
+                                parameterLabels=NULL,groupNameLabels=NULL,
+                                statisticsLabels=NULL,
+                                plotRelative=TRUE,noVar=FALSE,reference="func",
+                                sigdigits=2,onlySignificant=FALSE) {
 
   ## Input checks
   if(!is.null(parameterLabels)) {
@@ -282,11 +292,13 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),paramet
 #'
 #' # Specify group name labels, the size of the table text and x-axis label
 #'
-#' forestPlot(dfres,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),tabTextSize = 20,xlb="Relative parameter value")
+#' forestPlot(dfres,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),
+#'            tabTextSize = 20,xlb="Relative parameter value")
 #'
 #' # Stack the plots instead of plot them horizontally
 #'
-#' forestPlot(dfres,parameters = c("CL","Frel"),stackedPlots = TRUE,keepYlabs = TRUE,keepRightStrip = TRUE)
+#' forestPlot(dfres,parameters = c("CL","Frel"),stackedPlots = TRUE,
+#'            keepYlabs = TRUE,keepRightStrip = TRUE)
 #' }
 forestPlot <- function(dfres,
                        plotData=NULL,

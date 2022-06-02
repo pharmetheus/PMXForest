@@ -1,4 +1,4 @@
 library(testthat)
 library(PMXForest)
 
-test_check("PMXForest")
+test_check("PMXForestPAGE2022")

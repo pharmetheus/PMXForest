@@ -19,12 +19,13 @@ knitr::opts_chunk$set(
 <!-- output: rmarkdown::html_vignette -->
 
 ```{r setup,}
-suppressPackageStartupMessages(library(PMXForestPAGE2022))
+packageName <- "PMXForestPAGE2022"
+suppressPackageStartupMessages(library(packageName,character.only = TRUE))
 library(tools)
 library(ggplot2)
 library(stats)
 
-packageName <- "PMXForestPAGE2022"
+
 
 theme_set(theme_bw(base_size=18))
 theme_update(plot.title = element_text(hjust = 0.5))
