@@ -534,7 +534,7 @@ dfresmrgsolveAuc <- getForestDFSCM(
   dfParameters = dfSamplesBS,
   dfRefRow = dfRefRow,
   cstrPackages = c("mrgsolve", "dplyr"),
-  ncores = 56,
+  ncores = 1,
   interval = c(0, 72),
   tau = 24,
   model = mymodel
