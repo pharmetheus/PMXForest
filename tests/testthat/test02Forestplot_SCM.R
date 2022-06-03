@@ -1,6 +1,6 @@
 library(testthat)
 
-packageName <- "PMXForestPAGE2022"
+packageName <- "PMXForest"
 
 test_that("Forest plots for SCM works properly", {
 
