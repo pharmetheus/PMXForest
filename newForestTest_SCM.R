@@ -119,7 +119,8 @@ dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
                               functionListName = functionListName,
                               noBaseThetas     = noBaseThetas,
                               dfParameters     = dfSamplesCOVscm,
-                              dfRefRow         = NULL
+                              dfRefRow         = NULL,
+                              cstrPackage      = c("dplyr")
 )
 
 #####################
@@ -146,7 +147,8 @@ dfresBSscm <- getForestDFSCM(dfCovs           = dfCovs,
                               functionListName = functionListName,
                               noBaseThetas     = noBaseThetas,
                               dfParameters     = dfSamplesBSscm,
-                              dfRefRow         = NULL
+                              dfRefRow         = NULL,
+                             cstrPackage      = c("dplyr")
 )
 
 forestPlot(dfresBSscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
