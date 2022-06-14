@@ -18,23 +18,23 @@
   </clipPath>
 </defs>
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw1NzYuMDA=)'>
-<rect x='144.78' y='-0.00000000000011' width='94.96' height='28.24' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='144.78' y='-0.00000000000011' width='213.70' height='28.24' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
 <rect x='155.74' y='5.48' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #F2F2F2;' />
-<circle cx='164.38' cy='14.12' r='3.56' style='stroke-width: 0.71; stroke: none; fill: #0000FF;' />
-<text x='178.50' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='55.77px' lengthAdjust='spacingAndGlyphs'>Point estimate</text>
-<rect x='250.70' y='-0.00000000000011' width='99.86' height='28.24' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='261.66' y='5.48' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #F2F2F2;' />
-<rect x='262.37' y='6.19' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #BEBEBE; fill-opacity: 0.50;' />
-<text x='284.42' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='60.67px' lengthAdjust='spacingAndGlyphs'>Reference area</text>
-<rect x='361.52' y='-0.00000000000011' width='213.70' height='28.24' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='372.48' y='5.48' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #F2F2F2;' />
-<line x1='374.20' y1='14.12' x2='388.03' y2='14.12' style='stroke-width: 2.13; stroke-dasharray: 2.85,8.54; stroke-linecap: butt;' />
-<line x1='374.20' y1='14.12' x2='388.03' y2='14.12' style='stroke-width: 2.13; stroke-dasharray: 2.85,8.54; stroke-linecap: butt;' />
-<rect x='476.05' y='5.48' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #F2F2F2;' />
-<line x1='477.78' y1='14.12' x2='491.60' y2='14.12' style='stroke-width: 2.13; stroke: #0000FF; stroke-linecap: butt;' />
-<line x1='477.78' y1='14.12' x2='491.60' y2='14.12' style='stroke-width: 2.13; stroke: #0000FF; stroke-linecap: butt;' />
-<text x='395.24' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='75.34px' lengthAdjust='spacingAndGlyphs'>Confidence interval</text>
-<text x='498.81' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='70.94px' lengthAdjust='spacingAndGlyphs'>Reference subject</text>
+<line x1='157.47' y1='14.12' x2='171.30' y2='14.12' style='stroke-width: 2.13; stroke-dasharray: 2.85,8.54; stroke-linecap: butt;' />
+<line x1='157.47' y1='14.12' x2='171.30' y2='14.12' style='stroke-width: 2.13; stroke-dasharray: 2.85,8.54; stroke-linecap: butt;' />
+<rect x='259.32' y='5.48' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #F2F2F2;' />
+<line x1='261.04' y1='14.12' x2='274.87' y2='14.12' style='stroke-width: 2.13; stroke: #0000FF; stroke-linecap: butt;' />
+<line x1='261.04' y1='14.12' x2='274.87' y2='14.12' style='stroke-width: 2.13; stroke: #0000FF; stroke-linecap: butt;' />
+<text x='178.50' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='75.34px' lengthAdjust='spacingAndGlyphs'>Confidence interval</text>
+<text x='282.07' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='70.94px' lengthAdjust='spacingAndGlyphs'>Reference subject</text>
+<rect x='369.44' y='-0.00000000000011' width='99.86' height='28.24' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='380.40' y='5.48' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #F2F2F2;' />
+<rect x='381.11' y='6.19' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: square; stroke-linejoin: miter; fill: #BEBEBE; fill-opacity: 0.50;' />
+<text x='403.16' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='60.67px' lengthAdjust='spacingAndGlyphs'>Reference area</text>
+<rect x='480.26' y='-0.00000000000011' width='94.96' height='28.24' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='491.22' y='5.48' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #F2F2F2;' />
+<circle cx='499.86' cy='14.12' r='3.56' style='stroke-width: 0.71; stroke: none; fill: #0000FF;' />
+<text x='513.98' y='17.15' style='font-size: 8.80px; font-family: sans;' textLength='55.77px' lengthAdjust='spacingAndGlyphs'>Point estimate</text>
 </g>
 <defs>
   <clipPath id='cpMC4wMHw3MjAuMDB8MjguMjR8NTc2LjAw'>
