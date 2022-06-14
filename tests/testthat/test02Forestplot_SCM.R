@@ -107,7 +107,8 @@ test_that("Forest plots for SCM works properly", {
                              functionListName = functionListName,
                              noBaseThetas     = noBaseThetas,
                              dfParameters     = dfSamplesCOV,
-                             dfRefRow         = NULL
+                             dfRefRow         = NULL,
+                             cstrPackage      = c("dplyr")
   )
 
   ## Check some variants of getForestDFSCM
@@ -119,7 +120,8 @@ test_that("Forest plots for SCM works properly", {
                              functionListName = functionListName,
                              noBaseThetas     = noBaseThetas,
                              dfParameters     = dfSamplesCOV,
-                             dfRefRow         = dfCovs %>% filter(COVARIATEGROUPS == "GENO") %>% slice(1)
+                             dfRefRow         = dfCovs %>% filter(COVARIATEGROUPS == "GENO") %>% slice(1),
+                             cstrPackage      = c("dplyr")
   )
 
   # No covnames
@@ -129,7 +131,8 @@ test_that("Forest plots for SCM works properly", {
                              functionListName = functionListName,
                              noBaseThetas     = noBaseThetas,
                              dfParameters     = dfSamplesCOV,
-                             dfRefRow         = NULL
+                             dfRefRow         = NULL,
+                             cstrPackage      = c("dplyr")
   )
 
   # Covariates as a list instead of data.frame
@@ -151,7 +154,8 @@ test_that("Forest plots for SCM works properly", {
                               functionListName = functionListName,
                               noBaseThetas     = noBaseThetas,
                               dfParameters     = dfSamplesCOV,
-                              dfRefRow         = NULL
+                              dfRefRow         = NULL,
+                              cstrPackage      = c("dplyr")
   )
 
   rVersion <- paste0(R.version$major,".",R.version$minor)
