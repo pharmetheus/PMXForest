@@ -134,6 +134,23 @@ forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdig
 
 forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL","Frel"),sigdigits = 3,stackedPlots = TRUE,keepYlabs = TRUE,rightStrip = FALSE,keepRightStrip = TRUE,table = FALSE)
 
+lsTrue <- list(
+  c("CL","FOOD"),
+  c("CL","GENO"),
+  # c("CL","WT"),
+  c("Frel","FORM"),
+  c("Frel","GENO"),
+  c("Frel","SEX"),
+  c("AUC","FORM"),
+  c("AUC","FOOD"),
+  c("AUC","GENO"),
+  c("AUC","WT"),
+  c("AUC","SEX"),
+  c("V","WT")
+)
+
+forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,onlySignificant = TRUE,setSignEff=lsTrue)
+
 #############################################################
 ## Create the same plot based on the bootstrap information ##
 #############################################################

@@ -348,6 +348,23 @@ test_that("Forest plots for SCM works properly", {
 
       fp19 <- forestPlot(dfresSCM2,onlySignificantErrorBars = TRUE)
 
+      lsTrue <- list(
+        c("CL","FOOD"),
+        c("CL","GENO"),
+        # c("CL","WT"),
+        c("Frel","FORM"),
+        c("Frel","GENO"),
+        c("Frel","SEX"),
+        c("AUC","FORM"),
+        c("AUC","FOOD"),
+        c("AUC","GENO"),
+        c("AUC","WT"),
+        c("AUC","SEX"),
+        c("V","WT")
+      )
+
+      fp20 <- forestPlot(dfresSCM2,onlySignificantErrorBars = TRUE,setSignEff = lsTrue)
+
       dev.off()
       vdiffr::expect_doppelganger("Forest plot with default options", fp5)
       vdiffr::expect_doppelganger("Forest plot with provided plot data", fp6)
@@ -365,6 +382,7 @@ test_that("Forest plots for SCM works properly", {
       vdiffr::expect_doppelganger("Forest plot referenceParameters=final", fp17)
       vdiffr::expect_doppelganger("Forest plot stackedPlots with refRow", fp18)
       vdiffr::expect_doppelganger("Forest plot wthout error bars for non-significant covariates", fp19)
+      vdiffr::expect_doppelganger("Forest plot wthout error bars for non-significant covariates and setSignEff", fp20)
 
     }
   }

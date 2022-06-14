@@ -101,7 +101,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
                                 parameterLabels=NULL,groupNameLabels=NULL,
                                 statisticsLabels=NULL,
                                 plotRelative=TRUE,noVar=FALSE,reference="func",
-                                sigdigits=2,onlySignificant=FALSE) {
+                                sigdigits=2,onlySignificant=FALSE,setSignEff=NULL) {
 
   ## Input checks
   if(!is.null(parameterLabels)) {
@@ -124,7 +124,6 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
       stop("The number of statistics labels must either be the same as the number of parameters or have the same length as the number of rows in dfres.")
     }
   }
- # if(!is.null(statisticsLabels) & length(statisticsLabels) != length(unique(parameters))) stop("The number of statistics labels must be the same as the number of parameters.")
 
   ## Filter the parameters to use
   dfres <- dfres %>% filter(PARAMETER %in% parameters)
@@ -179,6 +178,11 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
 
   ## Determine which statistic to use
   vars <- getPlotVars(plotRelative,noVar,reference)
+
+  ## Set COVEFF if setSignEff is non-null
+  if(!is.null(setSignEff)) {
+    dfres <- setCOVEFF(dfres,setSignEff)
+  }
 
   ## Remove the non-significant covariates if onlySignificant
   if(onlySignificant) {
@@ -346,6 +350,7 @@ forestPlot <- function(dfres,
                        tabplotscale    = 1.1,
                        onlySignificant = FALSE,
                        onlySignificantErrorBars = FALSE,
+                       setSignEff = NULL,
                        ...) {
 
 
@@ -358,7 +363,7 @@ forestPlot <- function(dfres,
   if(is.null(plotData)) {
     plotData<- setupForestPlotData(dfres,reference=referenceParameters,plotRelative = plotRelative,parameters=parameters,parameterLabels=parameterLabels,groupNameLabels=groupNameLabels,
                                    statisticsLabel=statisticsLabel,
-                                   noVar = noVar,sigdigits = sigdigits,onlySignificant = onlySignificant)
+                                   noVar = noVar,sigdigits = sigdigits,onlySignificant = onlySignificant,setSignEff=setSignEff)
   } else {
     message("Will use the provided plotData and ignore dfres\n")
   }
