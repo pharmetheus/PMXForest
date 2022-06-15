@@ -49,6 +49,7 @@ forestPlot(
   tabplotscale = 1.1,
   onlySignificant = FALSE,
   onlySignificantErrorBars = FALSE,
+  setSignEff = NULL,
   ...
 )
 }

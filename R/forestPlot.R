@@ -90,6 +90,9 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #' \item{reference}{A character string indicating what was used as the reference, either \code{func} or \code{true}, for the parameter function or the first row in \code{dfParameters}}
 #' \item{STATISTIC}{A character variable with the numerical summary for each \code{COVNAME} to be used in the statistics table.}
 #' \item{STATISTICSLABEL}{Similar to \code{PARAMETERLABEL}. Is the label used for \code{PARAMETER} in the table plots. Used for faceting the table panels in the Forest plot in the x-direction (columns).}
+#' \item{onlySignificant}{Logical. Should only GROUPNAME with with TRUE in the COVEFF column be included in the Forest plot?}
+#' \item{setSignEff}{NULL of a list. If a list, it should be a list ov vectors with a string for PARAMETER as the forst element and a string for GROUPNAME as the second element. If they match PARAMETER and GROUPNAME in dfres then
+#' COVEFF will be set to TRUE else be set to FALSE. This will override the existing values in COVEFF.}
 #' }
 #' @export
 #'

@@ -139,4 +139,19 @@ dfresEmp <- getForestDFemp(
 #####################
 ## Create the plot ##
 #####################
-forestPlot(dfresEmp,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
+
+lsTrue <- list(
+  c("CL","FOOD"),
+  c("CL","GENO"),
+  c("CL","WT"),
+  c("Frel","FORM"),
+  c("Frel","GENO"),
+  c("Frel","SEX"),
+  c("AUC","FORM"),
+  c("AUC","FOOD"),
+  c("AUC","GENO"),
+  c("AUC","WT"),
+  c("AUC","SEX"),
+  c("V","WT")
+)
+forestPlot(dfresEmp,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,onlySignificantErrorBars = TRUE,setSignEff = lsTrue)
