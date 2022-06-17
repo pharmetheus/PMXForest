@@ -1,28 +1,46 @@
-Package: PMXForest
 Type: Package
+Package: PMXForest
 Title: Create Forest plots based on NONMEM output
-Version: 0.2.2
-Authors@R: c(
-    person("Niclas", "Jonsson", email = "niclas.jonsson@pharmetheus.com", role = c("aut", "cre")),
-    person("Joakim", "Nyberg", email = "joakim.nyberg@pharmetheus.com", role = c("aut"))
-  )
+Version: 0.10.0
+Authors@R: 
+    c(person(given = "Niclas",
+             family = "Jonsson",
+             role = c("aut", "cre"),
+             email = "niclas.jonsson@pharmetheus.com"),
+      person(given = "Joakim",
+             family = "Nyberg",
+             role = c("aut"),
+             email = "joakim.nyberg@pharmetheus.com"),
+             person("Pharmetheus AB", role = c("cph", "fnd")))
 Author: Niclas Jonsson and Joakim Nyberg
 Maintainer: Niclas Jonsson <niclas.jonsson@pharmetheus.com>
 Description: Functions to support the creation of Forest plots.
-License: What license is it under?
-Encoding: UTF-8
-LazyData: true
-Suggests: 
-    knitr,
-    rmarkdown,
-    testthat,
-    PMXFrem,
-    bookdown
-Depends:
-    tidyverse,
-    foreach, 
-    doParallel
+License: GPL (>= 2)
 Imports:
-    MASS
-VignetteBuilder: knitr
-RoxygenNote: 6.1.1
+    dplyr,
+    ggplot2,
+    stringr,
+    doParallel,
+    foreach,
+    ggpubr,
+    MASS,
+    table1,
+    utils
+Suggests:
+    vdiffr,
+    tibble,
+    scales,
+    boot,
+    deSolve,
+    mrgsolve,
+    bookdown,
+    knitr,
+    PhRame,
+    PMXFrem,
+    rmarkdown,
+    testthat
+Depends: R (>= 3.5.0)
+VignetteBuilder: 
+    knitr
+Encoding: UTF-8
+RoxygenNote: 7.2.0

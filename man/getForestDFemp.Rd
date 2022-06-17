@@ -4,15 +4,35 @@
 \alias{getForestDFemp}
 \title{getForestDFemp}
 \usage{
-getForestDFemp(dfData, covExpressionsList, noBaseThetas, dfParameters,
-  cdfCovsNames = NULL, functionList = list(function(basethetas, dfrow,
-  ...) {     return(basethetas[1]) }), functionListName = "PAR1",
-  strID = "ID", quiet = TRUE, metricFunction = median,
-  probs = c(0.025, 0.975), pointFunction = median, dfRefRow = NULL,
-  cGrouping = NULL, ncores = 1, cstrPackages = NULL,
-  cstrExports = NULL, iMiss = -99, ...)
+getForestDFemp(
+  dfData,
+  covExpressionsList,
+  noBaseThetas,
+  dfParameters,
+  cdfCovsNames = NULL,
+  functionList = list(function(basethetas, dfrow, ...) {
+     return(basethetas[1])
+ }),
+  functionListName = "PAR1",
+  strID = "ID",
+  quiet = TRUE,
+  metricFunction = median,
+  probs = c(0.05, 0.95),
+  pointFunction = median,
+  dfRefRow = NULL,
+  cGrouping = NULL,
+  ncores = 1,
+  cstrPackages = NULL,
+  cstrExports = NULL,
+  iMiss = -99,
+  ...
+)
 }
 \arguments{
+\item{dfData}{A data.frame with the observed data to be used in the empirical Forest plot calculations.}
+
+\item{covExpressionsList}{A list of expressions that define the covariate values to visualize in the Forest plot.}
+
 \item{noBaseThetas}{the number of structural thetas in the model}
 
 \item{dfParameters}{A data frame with parameter samples from the uncertainty distribution.
@@ -28,15 +48,19 @@ but functionListName must contain the names with a length of all return for all 
 
 \item{functionListName}{A vector of strings (names) of the parameters for each function in the functionList}
 
+\item{strID}{The label of the subject identifier column in dfData. Default is ID.}
+
 \item{quiet}{If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)}
 
+\item{metricFunction}{The function to use to summarise the parameter values in each covariate category. Default is median.}
+
 \item{probs}{A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.025, 0.975)}
+as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}
 
 \item{pointFunction}{The function used to calculate the point for each covariate in the forest plot. default=median
 This function is also used for the reference covariate combination}
 
-\item{dfRefRow}{A data frame (one row) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
+\item{dfRefRow}{A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
 
 \item{cGrouping}{A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.}
 
@@ -49,10 +73,6 @@ This function is also used for the reference covariate combination}
 \item{iMiss}{The missing value number. -99 by default.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
-
-\item{covExpressionList}{A list of expressions that define the covariate values to visualize in the Forest plot.}
-
-\item{metricfunction}{The function to use to summarise the parameter values in each covariate category. Default is median.}
 }
 \value{
 A data frame
@@ -62,43 +82,47 @@ getForestDFemp
 }
 \examples{
 \dontrun{
-lsExpr<-rev(list(expression(SEX==2),
-expression(SEX==1),
-expression(CRCL>=146),
-expression(CRCL<94),
-expression(AGE>=57),
-expression(AGE<35),
-expression(WT>104),
-expression(WT<70),
-expression(RACEL==3),
-expression(RACEL==2),
-expression(RACEL==1),
-expression(GENO==4),
-expression(GENO==3),
-expression(GENO==2),
-expression(GENO==1),
-expression(FOOD==1),
-expression(FOOD==0),
-expression(FORM==1),
-expression(FORM==0)))
+lsExpr<-list("NCI" = expression(NCIL==0),
+            "NCI" = expression(NCIL==1),
+            "FORM"= expression(FORM==0),
+            "FORM"= expression(FORM==1),
+            "FOOD"= expression(FOOD==0),
+            "FOOD"= expression(FOOD==1),
+            "GENO"= expression(GENO==1),
+            "GENO"= expression(GENO==2),
+            "GENO"= expression(GENO==3),
+            "GENO"= expression(GENO==4),
+            "RACE"= expression(RACEL2==0),
+            "RACE"= expression(RACEL2==1),
+            "WT"  = expression(WT<70),
+            "WT"  = expression(WT>104),
+            "AGE" = expression(AGE<35),
+            "AGE" = expression(AGE>=57),
+            "CRCL"= expression(CRCL<94),
+            "CRCL"= expression(CRCL>=146),
+            "SEX" = expression(SEX==1),
+            "SEX" = expression(SEX==2)
+)
 
-cGrouping = c(1,1,2,2,3,3,3,3,4,4,4,5,5,6,6,7,7,8,8,9,9)
+## The names associated with the entries in lsExpr
+covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed",
+                 "2D6 UM","2D6 EM","2D6 IM","2D6 PM",
+                "Caucasian","Other","WT<70 kg","WT>104 kg",
+                "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min",
+                "Male","Female")
 
-covnamesEmp <- c("Oral tablets","FDC","Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM","Caucasian","African American","Asian and other","WT<70 kg","WT>104 kg",
-               "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min","Male","Female")
-
-
-
-dfresCOVemp<-getForestDFemp(
-  metricFunction     = median,
-  cGrouping          = cGrouping,
-  dfData             = dfData,
-  covExpressionsList = lsExpr,
-  cdfCovsNames       = covnamesEmp,
-  functionList       = list(paramFunction),
-  functionListName   = functionListName,
-  noBaseThetas       = 16,
-  dfParameters       = dfSamplesCOV,
-  ncores             = 6)
+dfresEmp <- getForestDFemp(
+ dfData             = dfData,
+ covExpressionsList = lsExpr,
+ cdfCovsNames       = covnamesEmp,
+ functionList       = list(paramFunction),
+ functionListName   = functionListName,
+ metricFunction     = median,
+ noBaseThetas       = 14,
+ dfParameters       = dfSamplesCOV,
+ dfRefRow           = NULL,
+ ncores             = 6,
+ cstrPackages       = "dplyr"
+)
 }
 }

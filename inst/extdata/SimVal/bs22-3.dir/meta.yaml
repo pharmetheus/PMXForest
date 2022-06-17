@@ -1,0 +1,88 @@
+---
+NONMEM_directory: /usr/local/arch/nonmem/nonmem-7.5.0g75om31/run/nmfe75_mpi
+NONMEM_version: '7.5'
+PsN_version: 5.2.6
+command_line: /opt/noarch/psn/psn-5.2.6/bin/bootstrap run22-3bs.mod -stratify_on=GENO
+  -samples=175 -dir bs22-3.dir -nm_version=lp75_mpi -nodes=4 -threads=100
+common_options:
+  abort_on_fail: 0
+  accepted_ofv_difference: 0.5
+  add_retries: 0
+  always_datafile_in_nmrun: 0
+  check_nmtran: 0
+  clean: '2'
+  compress: 0
+  condition_number_limit: 1000
+  correlation_limit: 0.85
+  crash_restarts: 4
+  debug_rmd: 0
+  degree: 0.1
+  directory: /share/Projects/Pharmetheus/PMX-REP-PMX-2/Analysis/Model/SimVal/bs22-3.dir/
+  display_iterations: 0
+  handle_crashes: 1
+  handle_msfo: 0
+  html: 0
+  large_omega_cv_limit: 0.8
+  large_sigma_cv_limit: 0.8
+  large_theta_cv_limit: 0.5
+  last_est_complete: 0
+  lsf_sleep: 3
+  min_retries: 0
+  missing_data_token: '-99'
+  model_subdir: 0
+  near_bound_sign_digits: 2
+  near_zero_boundary_limit: 0.01
+  nice: 19
+  nm_output: ext,cov,coi,cor,phi,shk
+  nm_version: lp75_mpi
+  nmfe: '1'
+  nmfe_options: -tprdefault [sbatchargs=-p__pmxlowprio]
+  nmqual: 0
+  nodes: 4
+  parafile: /usr/local/arch/nonmem/nonmem-7.5.0g75om31/run/mpilinux8.pnm
+  pdf: 1
+  picky: 0
+  prepend_model_file_name: 1
+  quick_summarize: 0
+  retries: 0
+  rmarkdown: 1
+  rplots: 0
+  run_on_lsf: 0
+  run_on_sge: 0
+  run_on_slurm: '0'
+  run_on_torque: 0
+  run_on_ud: 0
+  run_on_zink: 0
+  seed: 918842
+  send_email: 0
+  shrinkage: 0
+  sign_digits_off_diagonals: 2
+  significant_digits_accept: 0
+  so: 0
+  template_directory_rplots: /opt/noarch/psn/psn-5.2.6/PsN_5_2_6/R-scripts
+  template_file_rplots: bootstrap_default.Rmd
+  threads: 100
+  tweak_inits: 1
+  verbose: 0
+  zip: 0
+finish_time: 2022-04-13 13:19:42
+model_files:
+- /share/Projects/Pharmetheus/PMX-REP-PMX-2/Analysis/Model/SimVal/run22-3bs.mod
+start_time: 2022-04-13 12:12:01
+tool_name: bootstrap
+tool_options:
+  allow_ignore_id: 0
+  copy_data: 1
+  dofv: 0
+  keep_covariance: 0
+  keep_tables: 0
+  mceta: 0
+  run_base_model: 1
+  samples: 175
+  skip_covariance_step_terminated: '0'
+  skip_estimate_near_boundary: '1'
+  skip_minimization_terminated: '1'
+  skip_with_covstep_warnings: '0'
+  stratify_on: GENO
+  type: bootstrap
+  update_inits: 1

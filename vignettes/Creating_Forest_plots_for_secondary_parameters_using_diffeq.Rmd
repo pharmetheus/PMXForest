@@ -4,7 +4,7 @@ output:
   bookdown::html_document2:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{Creating_Forest_plots_for_scm_and_scmplus_models}
+  %\VignetteIndexEntry{Creating Forest plots for secondary parameters defined using differential equations}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,7 +19,9 @@ knitr::opts_chunk$set(
 <!-- output: rmarkdown::html_vignette -->
 
 ```{r setup,}
-suppressPackageStartupMessages(library(PMXForest))
+
+packageName <- "PMXForest"
+suppressPackageStartupMessages(library(packageName,character.only = TRUE))
 suppressPackageStartupMessages(library(tools))
 suppressPackageStartupMessages(library(ggplot2))
 
@@ -27,6 +29,7 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(deSolve))
 # Used to enter diff eq with e.g. multiple dosing
 suppressPackageStartupMessages(library(mrgsolve))
+
 
 
 theme_set(theme_bw(base_size = 18))
@@ -239,9 +242,9 @@ First the ext file is read in with the final parameter estimates, these are used
 
 ```{r TypicalPlotdeSolve,fig.width=12,fig.asp=0.6,out.width="100%"}
 runno <- 1
-extFile <- system.file("extdata", paste0("run", runno, ".ext"), package = "PMXForest")
+extFile <- system.file("extdata/oldExample", paste0("run", runno, ".ext"), package = packageName)
 
-dfExt <- subset(PMXForest::getExt(extFile = extFile), ITERATION == "-1000000000")
+dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 
 # Call the concentration time-profile function using a Ref covariate setting
 sol <- as.data.frame(paramFunctionDeSolve(thetas = as.numeric(dfExt[2:17]), df = dfRefRow, times = seq(0, 72, 0.1)))
@@ -273,8 +276,8 @@ This approach obtain the confidence interval limits non-parametrically from a bo
 
 
 ```{r}
-bootFile <- system.file("extdata", "bs1_n100.dir", paste0("raw_results_run", runno, ".csv"), package = "PMXForest")
-dfSamplesBS <- PMXForest::getSamples(bootFile, extFile = extFile)
+bootFile <- system.file("extdata/oldExample", "bs1_n100.dir", paste0("raw_results_run", runno, ".csv"), package = packageName)
+dfSamplesBS <- getSamples(bootFile, extFile = extFile)
 ```
 
 ## Set up the data for the Forest plot {#sec:setUpDataPar}
@@ -290,8 +293,8 @@ dfres <- getForestDFSCM(
   noBaseThetas = 16,
   dfParameters = dfSamplesBS,
   dfRefRow = dfRefRow,
-  cstrPackages = c("deSolve"),
-  ncores = 4,
+  cstrPackages = c("deSolve","dplyr"),
+  ncores = 1,
   interval = c(0, 24)
 )
 ```
@@ -301,13 +304,18 @@ dfres <- getForestDFSCM(
 
 The Forest plots below displays the data on a relative scale, with the reference being defined in the `dfRefRow` data.frame. Included are also dashed vertical lines at 0.8 and 1.25 to visualize a(n imagined) region of clinical irrelevance. The plotForestDF function returns a ggplot object so additions like this can easily be made.
 ```{r ForestCOV,fig.width=12,fig.asp=0.6,out.width="100%"}
-plotForestDF(dfres,
-  log10x = TRUE,
-  addTable = TRUE,
-  percentscalexmax = 7,
-  useRefUncertainty = FALSE
-) +
-  geom_vline(xintercept = c(0.8, 1.25), linetype = "dashed")
+plotList<-forestPlot(dfres,plotRelative = TRUE,keepYlabs = T,rightStrip = F,return="plotList")
+#Add the log10 x-axis
+plotList[[1]]<-plotList[[1]]+scale_x_continuous(trans='log10')
+
+ggpubr::ggarrange(plotlist      = plotList,
+                  ncol          = 2,
+                  nrow          = 2,
+                  widths        = c(1,0.5,
+                                    1,0.5),
+                  align         ="h",
+                  common.legend = T)
+
 ```
 
 
@@ -508,7 +516,7 @@ dfresmrgsolveCmax <- getForestDFSCM(
   dfParameters = dfSamplesBS,
   dfRefRow = dfRefRow,
   cstrPackages = c("mrgsolve", "dplyr"),
-  ncores = 56,
+  ncores = 1,
   interval = c(0, 72),
   tau = 24,
   model = mymodel
@@ -526,7 +534,7 @@ dfresmrgsolveAuc <- getForestDFSCM(
   dfParameters = dfSamplesBS,
   dfRefRow = dfRefRow,
   cstrPackages = c("mrgsolve", "dplyr"),
-  ncores = 56,
+  ncores = 1,
   interval = c(0, 72),
   tau = 24,
   model = mymodel
@@ -536,16 +544,59 @@ dfresmrgsolveAuc <- getForestDFSCM(
 
 The Forest plots below displays the data on a relative scale, with the reference being defined in the `dfRefRow` data.frame. Included are also dashed vertical lines at 0.8 and 1.25 to visualize a(n imagined) region of clinical irrelevance. The plotForestDF function returns a ggplot object so additions like this can easily be made. Since the Forest results data frame is available in two separate data frames, these are binded together to make a facet_wrap type of figure over the two secondary parameters.
 
-```{r ForestCOVMRGSOLVE,fig.width=12,fig.asp=0.6,out.width="100%"}
-plotForestDF(rbind(dfresmrgsolveCmax, dfresmrgsolveAuc),
-  log10x = TRUE,
-  addTable = TRUE,
-  percentscalexmax = 7,
-  useRefUncertainty = FALSE
-) +
-  geom_vline(xintercept = c(0.8, 1.25), linetype = "dashed")
+```{r ForestCOVMRGSOLVE,fig.width=12,fig.height=30}
+plotList<-forestPlot(rbind(dfresmrgsolveCmax, dfresmrgsolveAuc),plotRelative = TRUE,keepYlabs = T,rightStrip = F,return="plotList",
+                     parameterLabels = rep(c("CMAX","AUC"),each=nrow(dfresmrgsolveCmax)))
+#Add the log10 x-axis
+plotList[[1]]<-plotList[[1]]+scale_x_continuous(trans='log10')
+plotList[[3]]<-plotList[[3]]+scale_x_continuous(trans='log10')
+
+ggpubr::ggarrange(plotlist      = plotList,
+                  ncol          = 2,
+                  nrow          = 2,
+                  widths        = c(1,0.5,
+                                    1,0.5),
+                  align         ="h",
+                  common.legend = T)
 ```
 
-# References
+<!-- An alternative implementation  -->
 
-Please see the vignette and reference material for the `PMXForest`, `deSolve` and `mrgsolve` packages for more information.
+<!-- ```{r Cmaxmrgsolve2, cache=TRUE} -->
+<!-- # Cmax -->
+<!-- dfresmrgsolveCmaxAUC <- getForestDFSCM( -->
+<!--   dfCovs = dfCovs, -->
+<!--   cdfCovsNames = covnames, -->
+<!--   functionList = list(Cmax,AUC), -->
+<!--   functionListName = c("CMAX","AUC"), -->
+<!--   noBaseThetas = 16, -->
+<!--   dfParameters = dfSamplesBS, -->
+<!--   dfRefRow = dfRefRow, -->
+<!--   cstrPackages = c("mrgsolve", "dplyr"), -->
+<!--   ncores = 56, -->
+<!--   interval = c(0, 72), -->
+<!--   tau = 24, -->
+<!--   model = mymodel -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ```{r ForestCOVMRGSOLVE2,fig.width=12,fig.asp=0.6,out.width="100%"} -->
+<!-- plotList <- forestPlot(dfresmrgsolveCmaxAUC,plotRelative = TRUE,keepYlabs = T,rightStrip = F,return="plotList") -->
+
+<!-- #Add the log10 x-axis -->
+<!-- plotList[[1]]<-plotList[[1]]+scale_x_continuous(trans='log10') -->
+<!-- plotList[[3]]<-plotList[[3]]+scale_x_continuous(trans='log10') -->
+
+<!-- ggpubr::ggarrange(plotlist      = plotList, -->
+<!--                   ncol          = 2, -->
+<!--                   nrow          = 2, -->
+<!--                   widths        = c(1,0.5, -->
+<!--                                     1,0.5), -->
+<!--                   align         ="h", -->
+<!--                   common.legend = T) -->
+<!-- ``` -->
+
+
+<!-- # References -->
+
+<!-- Please see the vignette and reference material for the `PMXForest`, `deSolve` and `mrgsolve` packages for more information. -->

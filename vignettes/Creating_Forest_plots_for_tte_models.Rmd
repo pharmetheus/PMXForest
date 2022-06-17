@@ -4,7 +4,7 @@ output:
   bookdown::html_document2:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{Creating_Forest_plots_for_scm_and_scmplus_models}
+  %\VignetteIndexEntry{Creating Forest plots for tte models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,10 +19,13 @@ knitr::opts_chunk$set(
 <!-- output: rmarkdown::html_vignette -->
 
 ```{r setup,}
-suppressPackageStartupMessages(library(PMXForest))
+packageName <- "PMXForest"
+suppressPackageStartupMessages(library(packageName,character.only = TRUE))
 library(tools)
 library(ggplot2)
 library(stats)
+
+
 
 theme_set(theme_bw(base_size=18))
 theme_update(plot.title = element_text(hjust = 0.5))
@@ -166,7 +169,7 @@ The `getForestDFSCM` package supports several methods for obtaining the uncertai
 ```{r}
 runno   <- "tte_weibull"
 
-extFile <- system.file("extdata","tte",paste0(runno,".ext"),package="PMXForest")
+extFile <- system.file("extdata","tte",paste0(runno,".ext"),package=packageName)
 ```
 
 #### Use the output from the $COV step in NONMEM
@@ -175,7 +178,7 @@ This approach will sample parameter vectors from a variance-covariance matrix fr
 
 Read the cov file and get the multivariate parameter distribution. Note that since this is a TTE model without random effects, the `OMEGA` and `SIGMA` samples are set to zero.
 ```{r}
-covFile <- system.file("extdata","tte",paste0(runno,".cov"),package="PMXForest") 
+covFile <- system.file("extdata","tte",paste0(runno,".cov"),package=packageName) 
 dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 ```
 
@@ -185,7 +188,7 @@ dfSamplesCOV <- getSamples(covFile,extFile=extFile,n=200)
 This approach obtain the confidence interval limits non-parametrically from a (n=500) bootstrap. 
 
 ```{r}
-bootFile    <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("raw_results_",runno,".csv"),package="PMXForest")
+bootFile    <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("raw_results_",runno,".csv"),package=packageName)
 dfSamplesBS <- getSamples(bootFile,extFile=extFile)
 ```
 
@@ -228,9 +231,18 @@ Below is the call to calculate the forest plot data using the samples from the b
 
 The Forest plots below displays the data on an absolute scale which is similar to the relative scale since it's hazard ratios, with the reference being defined in the `dfRefRow` data.frame. The `plotForestDF` function returns a ggplot object so any regular ggplot additions can easily be made. The x-axis is also logged (log10) so that the distance between the reference and half the effect (HR=0.5) or the double effect (HR=2) is similar.
 
-```{r ForestHR,fig.width=25,fig.asp=.5,out.width="100%"}
-plotForestDF(dfresHR,log10x = TRUE,plotRelative = FALSE,strxlab = "Hazard Ratio")
+```{r ForestHR,fig.width=12,fig.asp=.5,out.width="100%"}
 
+plotList<-forestPlot(dfresHR,plotRelative = FALSE,xlb = "Hazard Ratio",return="plotList")
+#Add the log10 x-axis
+plotList[[1]]<-plotList[[1]]+scale_x_continuous(trans='log10')
+
+ggpubr::ggarrange(plotlist      = plotList,
+                  ncol          = 2,
+                  nrow          = 1,
+                  widths        = c(2,0.7),
+                  align         ="h",
+                  common.legend = T)
 ```
 
 #### Forest plot over probability of event within a year
@@ -239,7 +251,19 @@ The Forest plots below displays the data on the absolute scale (probabilities) w
 
 
 ```{r ForestCDF,fig.width=12,fig.asp=0.6,out.width="100%"}
-plotForestDF(dfresCDF,plotRelative = FALSE,strxlab = "Probability of event")+scale_x_continuous(labels = scales::percent)
+
+
+plotList<-forestPlot(dfresCDF,plotRelative = FALSE,xlb = "Probability of event",return="plotList")
+#Add the Percent x-axis
+plotList[[1]]<-plotList[[1]]+scale_x_continuous(labels = scales::percent)
+
+
+ggpubr::ggarrange(plotlist      = plotList,
+                  ncol          = 2,
+                  nrow          = 1,
+                  widths        = c(1,0.7),
+                  align         ="h",
+                  common.legend = T)
 
 ```
 
