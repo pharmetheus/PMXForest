@@ -1,6 +1,7 @@
 library(testthat)
 
-packageName <- "PMXForest"
+packageName     <- "PMXForest"
+dontCheckGraphs <- TRUE
 
 test_that("Forest plots for EMP works properly", {
 
@@ -105,7 +106,7 @@ test_that("Forest plots for EMP works properly", {
   dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)
 
   dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package=packageName)
-  dfData   <- read.csv(dataFile,stringsAsFactors = FALSE) %>% distinct(ID,.keep_all=TRUE)
+  dfData   <- read.csv(dataFile,stringsAsFactors = FALSE) %>% distinct(ID,.keep_all=TRUE) %>% slice(1:20,500:600)
 
   noBaseThetas <- 14
 
@@ -162,6 +163,10 @@ test_that("Forest plots for EMP works properly", {
       skip("R version <= 3.5.3")
     } else {
 
+      if(dontCheckGraphs) {
+        skip("Don't check plots")
+      }
+
       svg() # Start a device to make plots cosistent between different ways of running the tests
       fp5 <- forestPlot(dfresEMP)
       fp6 <- forestPlot(dfresEMP,plotData=plotData1)
@@ -190,28 +195,7 @@ test_that("Forest plots for EMP works properly", {
   }
 
   check_graphical_output()
-  ## Create a number of Forest plots to test functionality
-  # fp5 <- forestPlot(dfresEMP)
-  # fp6 <- forestPlot(dfresEMP,plotData=plotData1)
-  # fp7 <- forestPlot(dfresEMP,plotData=plotData1 %>%
-  #                     filter(PARAMETER=="CL") %>%
-  #                     group_by(GROUPNAME) %>%
-  #                     mutate(COVEFF=ifelse(any(COVEFF==TRUE),TRUE,FALSE)) %>%
-  #                     filter(COVEFF==TRUE),parameters="CL")
-  # fp8 <- forestPlot(dfresEMP,plotRelative = FALSE)
-  # fp9 <- forestPlot(dfresEMP,parameters="CL")
-  # fp10 <- forestPlot(dfresEMP,rightStrip = FALSE)
-  # fp11 <- forestPlot(dfresEMP,rightStrip = FALSE,table=FALSE)
-  # fp12 <- forestPlot(dfresEMP,table=FALSE)
-  #
-  # expect_equal_to_reference(fp5,"test_output/fp5emp")
-  # expect_equal_to_reference(fp6,"test_output/fp6emp")
-  # expect_equal_to_reference(fp7,"test_output/fp7emp")
-  # expect_equal_to_reference(fp8,"test_output/fp8emp")
-  # expect_equal_to_reference(fp9,"test_output/fp9emp")
-  # expect_equal_to_reference(fp10,"test_output/fp10emp")
-  # expect_equal_to_reference(fp11,"test_output/fp11emp")
-  # expect_equal_to_reference(fp12,"test_output/fp12emp")
+
 })
 
 

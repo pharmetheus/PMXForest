@@ -1,6 +1,7 @@
 library(testthat)
 
-packageName <- "PMXForest"
+packageName     <- "PMXForest"
+dontCheckGraphs <- TRUE
 
 test_that("setCOVEFF works properly", {
 
@@ -285,7 +286,7 @@ test_that("Forest plots for SCM works properly", {
                               noBaseThetas     = noBaseThetas,
                               dfParameters     = dfSamplesCOV,
                               dfRefRow         = NULL,
-                              cstrPackage      = c("dplyr")
+                              cstrPackages     = c("dplyr")
   )
 
   rVersion <- paste0(R.version$major,".",R.version$minor)
@@ -316,6 +317,10 @@ test_that("Forest plots for SCM works properly", {
     if(getRversion() <= "3.5.3") {
       skip("R version <= 3.5.3")
     } else {
+
+      if(dontCheckGraphs) {
+        skip("Don't check plots")
+      }
 
       svg() # Start a device to make plots cosistent between different ways of running the tests
       fp5 <- forestPlot(dfresSCM)
