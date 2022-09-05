@@ -111,7 +111,7 @@ getForestDFemp <- function(dfData,
   dfres <- foreach(
     k = 1:nrow(dfParameters), .packages = cstrPackages,
     .export = cstrExports, .verbose = !quiet, .combine = bind_rows
-  ) %dopar% {
+  ) %do% {
     thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
     dftmp <- data.frame()
 

@@ -322,16 +322,16 @@ forestPlot <- function(dfres,
                        labelfun=label_value,
                        groupname_labelfun=label_value,
                        ref_area=c(0.8,1.2),
-                       ref_fill_col="gray",
-                       ref_fill_alpha=0.5,
+                       ref_fill_col="#508791",
+                       ref_fill_alpha=0.4,
                        ref_line_size=1,
                        ref_line_type="dotted",
                        ref_line_col="black",
                        ci_line_type="solid",
-                       ci_line_col="blue",
-                       ci_line_size=1,
+                       ci_line_col="#323c46",
+                       ci_line_size=0.7,
                        point_shape=16,
-                       point_color="blue",
+                       point_color="#323c46",
                        point_size=3,
                        tabTextSize=10,
                        keepYlabs = FALSE,
@@ -414,14 +414,15 @@ forestPlot <- function(dfres,
       geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0,size=ci_line_size) +
       geom_point(aes(shape="Point estimate"),color=point_color,size=point_size) +
 
-      scale_fill_manual(name     = NULL, values = c("Reference area"    = ref_fill_col),
-                        labels=c(ref_area_label)) +
+      #browser()
+      scale_fill_manual(name     = NULL, values = c("Reference area" = ref_fill_col),
+                        labels=c("Reference area" = ref_area_label)) +
       scale_color_manual(name    = NULL, values = c("Reference subject" = ref_line_col,"CI"=ci_line_col),
-                         labels=c(ci_label,ref_subj_label)) +
+                         labels=c("Reference subject" =ref_subj_label,"CI"=ci_label)) +
       scale_linetype_manual(name = NULL, values = c("Reference subject" = ref_line_type,"CI"=ci_line_type),
-                            labels=c(ci_label,ref_subj_label)) +
+                            labels=c("Reference subject" =ref_subj_label,"CI"=ci_label)) +
       scale_shape_manual(name    = NULL, values = c("Point estimate"    = point_shape),
-                         labels=c(point_label)) +
+                         labels=c("Point estimate" = point_label)) +
 
       guides(linetype=guide_legend(override.aes=list(size=1))) +
       facet_grid(GROUPNAMELABEL~PARAMETERLABEL,scales = "free",

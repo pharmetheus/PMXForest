@@ -1,7 +1,7 @@
 library(testthat)
 
 packageName     <- "PMXForest"
-dontCheckGraphs <- TRUE
+dontCheckGraphs <- FALSE
 
 test_that("Forest plots for EMP works properly", {
 

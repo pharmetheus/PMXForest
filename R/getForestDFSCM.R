@@ -117,7 +117,6 @@ getForestDFSCM <- function(dfCovs,
     k = 1:nrow(dfParameters), .packages = cstrPackages,
     .export = cstrExports, .verbose = !quiet, .combine = bind_rows
   ) %do% {
-
     thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
     dfrest <- data.frame()
 

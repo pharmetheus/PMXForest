@@ -2,8 +2,10 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 
-
+packageName <- "PMXForestPAGE2022"
 set.seed(865765)
+
+ggplot2::theme_set(ggplot2::theme_bw(base_size=20))
 
 ################################
 ## Define the covariate input ##
@@ -103,8 +105,8 @@ functionListName <- c("CL","Frel","AUC","V","MAT")
 ####################################################
 runno   <- "7"
 modDir <- "SimVal"
-extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package="PMXForest")
-covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package="PMXForest")
+extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package=packageName)
+covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package=packageName)
 
 dfSamplesCOVscm <- getSamples(covFile,extFile=extFile,n=175)
 
@@ -128,6 +130,10 @@ dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
 #####################
 
 forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3)
+
+
+
+
 forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,onlySignificantErrorBars = TRUE)
 
 forestPlot(dfresCOVscm,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,onlySignificant = TRUE)
