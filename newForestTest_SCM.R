@@ -2,7 +2,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 
-packageName <- "PMXForestPAGE2022"
+packageName <- "PMXForest"
 set.seed(865765)
 
 ggplot2::theme_set(ggplot2::theme_bw(base_size=20))
