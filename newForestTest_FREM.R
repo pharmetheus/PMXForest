@@ -3,6 +3,7 @@ library(ggplot2)
 library(ggpubr)
 library(PMXFrem,lib.loc = "~/4.1/library/")
 
+packageName <- "PMXForest"
 set.seed(123)
 
 ################################
@@ -109,12 +110,12 @@ functionListName <- c("CL","Frel","AUC","V","MAT")
 runno  <- "22-3"
 modDir <- "SimVal"
 
-extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package="PMXForest")
-covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package="PMXForest")
+extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package=packageName)
+covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package=packageName)
 
 dfSamplesCOVfrem  <- getSamples(covFile,extFile=extFile,n=175)
 
-modFile      <- system.file("extdata",paste0(modDir,"/run",runno,".mod"),package="PMXForest")
+modFile      <- system.file("extdata",paste0(modDir,"/run",runno,".mod"),package=packageName)
 noBaseThetas <- 13
 noCovThetas  <- 11
 
@@ -179,7 +180,7 @@ forestPlot(dfresCOVfrem,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdi
 ## Create the same plot based on the bootstrap information ##
 #############################################################
 
-bsFile         <- system.file("extdata",paste0(modDir,"/bs",runno,".dir/raw_results_run",runno,"bs.csv"),package="PMXForest")
+bsFile         <- system.file("extdata",paste0(modDir,"/bs",runno,".dir/raw_results_run",runno,"bs.csv"),package=packageName)
 dfSamplesBSfrem <- getSamples(bsFile,extFile=extFile)
 
 dfresBSfrem <-getForestDFFREM(dfCovs = dfCovs,
