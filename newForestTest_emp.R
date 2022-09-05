@@ -2,6 +2,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 
+packageName <- "PMXForest"
 set.seed(865765)
 
 ################################
@@ -109,12 +110,13 @@ functionListName <- c("CL","Frel","AUC","V","MAT")
 ####################################################
 runno   <- "7"
 modDir  <- "SimVal"
-extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package="PMXForest")
-covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package="PMXForest")
+
+extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package=packageName)
+covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package=packageName)
 
 dfSamplesCOVscm <- getSamples(covFile,extFile=extFile,n=175)
 
-dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package="PMXForest")
+dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package=packageName)
 dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE)
 
 noBaseThetas <- 14
@@ -155,3 +157,4 @@ lsTrue <- list(
   c("V","WT")
 )
 forestPlot(dfresEmp,plotRelative=TRUE,noVar=FALSE,parameters = c("CL"),sigdigits = 3,onlySignificantErrorBars = TRUE,setSignEff = lsTrue)
+
