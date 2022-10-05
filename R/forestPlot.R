@@ -147,12 +147,11 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
     if(length(groupNameLabels) == length(unique(dfres$GROUPNAME))) {
       names(groupNameLabels) <- unique(dfres$GROUPNAME)
 
-      dfres <- dfres %>%
-        mutate(GROUPNAME2 = GROUPNAME) %>%
-        group_by(GROUPNAME2) %>%
-        mutate(GROUPNAMELABEL = groupNameLabels[GROUPNAME[1]]) %>%
-        ungroup %>%
-        select(-GROUPNAME2)
+      dfres$GROUPNAMELABEL <- dfres$GROUPNAME
+
+      for (gName in unique(dfres$GROUPNAME)) {
+        dfres$GROUPNAMELABEL <- ifelse(dfres$GROUPNAME == gName,groupNameLabels[gName],dfres$GROUPNAMELABEL)
+      }
 
     } else {
       dfres$GROUPNAMELABEL <- groupNameLabels
