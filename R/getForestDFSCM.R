@@ -109,14 +109,11 @@ getForestDFSCM <- function(dfCovs,
   }
   if (is.null(cGrouping)) cGrouping <- getGroups(dfCovs)
 
-  ## Register to allow for parallell computing
-  registerDoParallel(cores = ncores)
+  ## Register to allow for paralell computing
+  if (ncores>1) registerDoParallel(cores = ncores)
 
   ## Calculate the parameters
-  dfres <- foreach(
-    k = 1:nrow(dfParameters), .packages = cstrPackages,
-    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
-  ) %do% {
+  internalCalc<-function(k) {
     thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
     dfrest <- data.frame()
 
@@ -145,7 +142,19 @@ getForestDFSCM <- function(dfCovs,
         }
       }
     }
-    dfrest
+    return(dfrest)
+  }
+
+  if (ncores>1) {
+  dfres <- foreach(
+    k = 1:nrow(dfParameters), .packages = cstrPackages,
+    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
+  ) %dopar% {
+    internalCalc(k)
+    }
+  } else {
+    dfres<-data.frame()
+    for (k in 1:nrow(dfParameters)) dfres<-bind_rows(dfres,internalCalc(k))
   }
 
   getCovNameString <- function(dfrow) {
@@ -218,7 +227,7 @@ getForestDFSCM <- function(dfCovs,
   }
 
 
-  stopImplicitCluster()
+  if (ncores>1) stopImplicitCluster()
 
   ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
   dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))

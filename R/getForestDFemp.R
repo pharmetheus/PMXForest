@@ -104,14 +104,11 @@ getForestDFemp <- function(dfData,
 
   groupnames<-names(covExpressionsList)
 
-  ## Register to allow for parallell computing
-  registerDoParallel(cores = ncores)
+  ## Register to allow for paralell computing
+  if (ncores>1) registerDoParallel(cores = ncores)
 
-
-  dfres <- foreach(
-    k = 1:nrow(dfParameters), .packages = cstrPackages,
-    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
-  ) %do% {
+  ## Calculate the parameters
+  internalCalc<-function(k) {
     thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
     dftmp <- data.frame()
 
@@ -207,7 +204,19 @@ getForestDFemp <- function(dfData,
         ))
       }
     }
-    dfrest
+    return(dfrest)
+  }
+
+  if (ncores>1) {
+    dfres <- foreach(
+    k = 1:nrow(dfParameters), .packages = cstrPackages,
+    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
+  ) %dopar% {
+      internalCalc(k)
+    }
+  } else {
+    dfres<-data.frame()
+    for (k in 1:nrow(dfParameters)) dfres<-bind_rows(dfres,internalCalc(k))
   }
 
   dfret <- data.frame()
@@ -264,7 +273,7 @@ getForestDFemp <- function(dfData,
     }
   }
 
-  stopImplicitCluster()
+  if (ncores>1) stopImplicitCluster()
 
   ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
   dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
