@@ -117,14 +117,11 @@ getForestDFFREM <- function(dfCovs,
   }
 
 
-  ## Register to allow for parallell computing
-  registerDoParallel(cores = ncores)
+  ## Register to allow for paralell computing
+  if (ncores>1) registerDoParallel(cores = ncores)
 
   ## Calculate the parameters
-  dfres <- foreach( k = 1:nrow(dfParameters), .packages = cstrPackages,
-                    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
-  ) %dopar% {
-
+  internalCalc<-function(k) {
     dfext  <- cbind(first = 0, dfParameters[k, ])
     thetas <- as.numeric(dfext[2:(noBaseThetas + 1)])
     dfrest <- data.frame()
@@ -139,19 +136,19 @@ getForestDFFREM <- function(dfCovs,
       ## Calculate the ffemObj in case reference covariates have been specified
       if (!is.null(dfRefRow)) {
 
-          indi <- min(i,nrow(dfRefRow))
+        indi <- min(i,nrow(dfRefRow))
 
-          ffemObjRef <- PMXFrem::calcFFEM(
-            noBaseThetas = noBaseThetas,
-            noCovThetas  = noCovThetas,
-            noSigmas     = noSigmas,
-            dfext        = dfext,
-            covNames     = covNames$covNames,
-            availCov     = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
-            quiet        = quiet,
-            noSkipOm     = noSkipOm,
-            noParCov     = noParCov
-          )
+        ffemObjRef <- PMXFrem::calcFFEM(
+          noBaseThetas = noBaseThetas,
+          noCovThetas  = noCovThetas,
+          noSigmas     = noSigmas,
+          dfext        = dfext,
+          covNames     = covNames$covNames,
+          availCov     = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
+          quiet        = quiet,
+          noSkipOm     = noSkipOm,
+          noParCov     = noParCov
+        )
       }
 
       ## Calculate the ffemObj for each set of parameters
@@ -214,9 +211,20 @@ getForestDFFREM <- function(dfCovs,
       }
     }
 
-    dfrest
-
+    return(dfrest)
   }
+
+  if (ncores>1) {
+  dfres <- foreach( k = 1:nrow(dfParameters), .packages = cstrPackages,
+                    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
+  ) %dopar% {
+      internalCalc(k)
+    }
+  }  else {
+    dfres<-data.frame()
+    for (k in 1:nrow(dfParameters)) dfres<-bind_rows(dfres,internalCalc(k))
+  }
+
 
   ## Assemble the return data.frame
   getCovNameString <- function(dfrow) {
@@ -292,7 +300,7 @@ getForestDFFREM <- function(dfCovs,
     }
   }
 
-  stopImplicitCluster()
+  if (ncores>1) stopImplicitCluster()
 
   ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
   dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
