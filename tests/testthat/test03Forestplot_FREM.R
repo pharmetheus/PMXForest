@@ -99,9 +99,6 @@ test_that("Forest plots for FREM works properly", {
   covFile <- system.file("extdata",paste0("SimVal/run",runno,".cov"),package="PMXForest")
   modFile <- system.file("extdata",paste0("SimVal/run",runno,".mod"),package="PMXForest")
 
-  noBaseThetas <- 13
-  noCovThetas  <-  11
-
   ## Will use only 25 samples for the tests
   dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)
 
@@ -113,33 +110,40 @@ test_that("Forest plots for FREM works properly", {
 
   covariates <- c("NCI","Formulation","Food status","2D6 genotype","Race","Weight","BMI","Age","Createnine\nclearance","AST","ALT","Bilirubin","Sex")
 
+  numNonFREMThetas <- 13
+  numSkipOm <- 2
+
   dfresFREM <-getForestDFFREM(dfCovs = dfCovs,
-                                 cdfCovsNames = covnames,
-                                 covNames=PMXFrem::getCovNames(modFile),
-                                 functionList = list(paramFunction),
-                                 functionListName = functionListName,
-                                 noBaseThetas = noBaseThetas,
-                                 noParCov = 4,
-                                 noSigmas = 2,
-                                 noSkipOm = 2,
-                                 noCovThetas = noCovThetas,
-                                 dfParameters = dfSamplesCOV,
-                                 probs = c(0.05, 0.95),
-                                 dfRefRow = NULL,
-                                 quiet = TRUE,
-                                 ncores = 1,
-                                 cstrPackages = c("PMXFrem","dplyr"))
+                              cdfCovsNames = covnames,
+                              covNames=PMXFrem::getCovNames(modFile),
+                              functionList = list(paramFunction),
+                              functionListName = functionListName,
+                              numSkipOm =numSkipOm,
+                              numNonFREMThetas =numNonFREMThetas,
+                              # noBaseThetas = noBaseThetas,
+                              # noParCov = 4,
+                              # noSigmas = 2,
+                              # noSkipOm = 2,
+                              # noCovThetas = noCovThetas,
+                              dfParameters = dfSamplesCOV,
+                              probs = c(0.05, 0.95),
+                              dfRefRow = NULL,
+                              quiet = TRUE,
+                              ncores = 1,
+                              cstrPackages = c("PMXFrem","dplyr"))
 
   dfresFREM2 <-getForestDFFREM(dfCovs          = dfCovs,
                                cdfCovsNames     = covnames,
                                covNames         = PMXFrem::getCovNames(modFile),
                                functionList     = list(paramFunction),
                                functionListName = functionListName,
-                               noBaseThetas     = noBaseThetas,
-                               noParCov         = 4,
-                               noSigmas         = 2,
-                               noSkipOm         = 2,
-                               noCovThetas      = noCovThetas,
+                               numSkipOm =numSkipOm,
+                               numNonFREMThetas =numNonFREMThetas,
+                               # noBaseThetas     = noBaseThetas,
+                               # noParCov         = 4,
+                               # noSigmas         = 2,
+                               # noSkipOm         = 2,
+                               # noCovThetas      = noCovThetas,
                                dfParameters     = dfSamplesCOV,
                                probs            = c(0.05, 0.95),
                                dfRefRow         = dfCovs %>% filter(COVARIATEGROUPS == "BMI") %>% select(-COVARIATEGROUPS) %>% slice(1),
@@ -153,11 +157,13 @@ test_that("Forest plots for FREM works properly", {
                                covNames         = PMXFrem::getCovNames(modFile),
                                functionList     = list(paramFunction),
                                functionListName = functionListName,
-                               noBaseThetas     = noBaseThetas,
-                               noParCov         = 4,
-                               noSigmas         = 2,
-                               noSkipOm         = 2,
-                               noCovThetas      = noCovThetas,
+                               numSkipOm =numSkipOm,
+                               numNonFREMThetas =numNonFREMThetas,
+                               # noBaseThetas     = noBaseThetas,
+                               # noParCov         = 4,
+                               # noSigmas         = 2,
+                               # noSkipOm         = 2,
+                               # noCovThetas      = noCovThetas,
                                dfParameters     = dfSamplesCOV,
                                probs            = c(0.05, 0.95),
                                quiet            = TRUE,
@@ -182,11 +188,13 @@ test_that("Forest plots for FREM works properly", {
                                covNames         = PMXFrem::getCovNames(modFile),
                                functionList     = list(paramFunction),
                                functionListName = functionListName,
-                               noBaseThetas     = noBaseThetas,
-                               noParCov         = 4,
-                               noSigmas         = 2,
-                               noSkipOm         = 2,
-                               noCovThetas      = noCovThetas,
+                               numSkipOm =numSkipOm,
+                               numNonFREMThetas =numNonFREMThetas,
+                               # noBaseThetas     = noBaseThetas,
+                               # noParCov         = 4,
+                               # noSigmas         = 2,
+                               # noSkipOm         = 2,
+                               # noCovThetas      = noCovThetas,
                                dfParameters     = dfSamplesCOV,
                                probs            = c(0.05, 0.95),
                                quiet            = TRUE,

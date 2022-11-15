@@ -40,6 +40,12 @@
 #'                               cstrPackages     = c("PMXFrem","dplyr"))
 #' }
 
+# noBaseThetas = noBaseThetas,
+# noParCov = 4,
+# noSigmas = 2,
+# noSkipOm = 2,
+# noCovThetas = noCovThetas,
+
 getForestDFFREM <- function(dfCovs,
                             cdfCovsNames = NULL,
                             functionList = list(function(basethetas,covthetas, dfrow, ...) {
@@ -47,13 +53,15 @@ getForestDFFREM <- function(dfCovs,
                             }),
                             covNames,
                             functionListName = "PAR1",
-                            noBaseThetas,
+                            numSkipOm,
+                            numNonFREMThetas,
+                            #noBaseThetas,
                             dfParameters,
-                            noCovThetas,
-                            noSigmas,
-                            noParCov = noBaseThetas,
-                            noSkipOm = 0,
-                            parNames = paste("Par",1:noParCov,sep = ""),
+                            # noCovThetas,
+                            #noSigmas,
+                            #noParCov = noBaseThetas,
+                            # noSkipOm = 0,
+                            parNames = paste("Par",1:numParCov,sep = ""),
                             availCov = covNames,
                             quiet = FALSE,
                             probs = c(0.05, 0.95),
@@ -119,6 +127,7 @@ getForestDFFREM <- function(dfCovs,
 
   ## Register to allow for paralell computing
   if (ncores>1) registerDoParallel(cores = ncores)
+  numParCov <- PMXFrem::calcNumParCov(cbind(first = 0, dfParameters),numNonFREMThetas, numSkipOm)
 
   ## Calculate the parameters
   internalCalc<-function(k) {
@@ -139,30 +148,35 @@ getForestDFFREM <- function(dfCovs,
         indi <- min(i,nrow(dfRefRow))
 
         ffemObjRef <- PMXFrem::calcFFEM(
-          noBaseThetas = noBaseThetas,
-          noCovThetas  = noCovThetas,
-          noSigmas     = noSigmas,
-          dfext        = dfext,
-          covNames     = covNames$covNames,
-          availCov     = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
-          quiet        = quiet,
-          noSkipOm     = noSkipOm,
-          noParCov     = noParCov
+          numSkipOm        = numSkipOm,
+          numNonFREMThetas = numNonFREMThetas,
+          # noBaseThetas   = noBaseThetas,
+          # noCovThetas    = noCovThetas,
+          # noSigmas       = noSigmas,
+          dfext            = dfext,
+          covNames         = covNames$covNames,
+          availCov         = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
+          quiet            = quiet
+          # noSkipOm       = noSkipOm,
+          # noParCov       = noParCov
         )
       }
 
       ## Calculate the ffemObj for each set of parameters
       ffemObj <- PMXFrem::calcFFEM(
-        noBaseThetas = noBaseThetas,
-        noCovThetas  = noCovThetas,
-        noSigmas     = noSigmas,
+        numSkipOm        = numSkipOm,
+        numNonFREMThetas = numNonFREMThetas,
+        # noBaseThetas = noBaseThetas,
+        # noCovThetas  = noCovThetas,
+        # noSigmas     = noSigmas,
         dfext        = dfext,
         covNames     = covNames$covNames,
         availCov     = names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss][names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss] %in% covNames$covNames],
-        quiet        = quiet,
-        noSkipOm     = noSkipOm,
-        noParCov     = noParCov
+        quiet        = quiet
+        # noSkipOm     = noSkipOm,
+        # noParCov     = noParCov
       )
+
 
       coveffects      <- rep(0, length(parNames))
       coveffects_base <- rep(0, length(parNames))
