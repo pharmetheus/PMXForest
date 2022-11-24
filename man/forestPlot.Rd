@@ -17,7 +17,7 @@ forestPlot(
   referenceInfo = "auto",
   labelfun = label_value,
   groupname_labelfun = label_value,
-  ref_area = c(0.8, 1.2),
+  ref_area = c(0.8, 1.25),
   ref_fill_col = "#508791",
   ref_fill_alpha = 0.4,
   ref_line_size = 1,

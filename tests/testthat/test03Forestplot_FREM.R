@@ -1,5 +1,5 @@
 library(testthat)
-library("PMXFrem",lib.loc="~/4.1/library/")
+library("PMXFrem")
 
 test_that("Forest plots for FREM works properly", {
 
@@ -113,37 +113,27 @@ test_that("Forest plots for FREM works properly", {
   numNonFREMThetas <- 13
   numSkipOm <- 2
 
-  dfresFREM <-getForestDFFREM(dfCovs = dfCovs,
-                              cdfCovsNames = covnames,
-                              covNames=PMXFrem::getCovNames(modFile),
-                              functionList = list(paramFunction),
+  dfresFREM <-getForestDFFREM(dfCovs           = dfCovs,
+                              cdfCovsNames     = covnames,
+                              covNames         = PMXFrem::getCovNames(modFile),
+                              functionList     = list(paramFunction),
                               functionListName = functionListName,
-                              numSkipOm =numSkipOm,
-                              numNonFREMThetas =numNonFREMThetas,
-                              # noBaseThetas = noBaseThetas,
-                              # noParCov = 4,
-                              # noSigmas = 2,
-                              # noSkipOm = 2,
-                              # noCovThetas = noCovThetas,
-                              dfParameters = dfSamplesCOV,
-                              probs = c(0.05, 0.95),
-                              dfRefRow = NULL,
-                              quiet = TRUE,
-                              ncores = 1,
-                              cstrPackages = c("PMXFrem","dplyr"))
+                              numSkipOm        = numSkipOm,
+                              numNonFREMThetas = numNonFREMThetas,
+                              dfParameters     = dfSamplesCOV,
+                              probs            = c(0.05, 0.95),
+                              dfRefRow         = NULL,
+                              quiet            = TRUE,
+                              ncores           = 1,
+                              cstrPackages     = c("PMXFrem","dplyr"))
 
-  dfresFREM2 <-getForestDFFREM(dfCovs          = dfCovs,
+  dfresFREM2 <-getForestDFFREM(dfCovs           = dfCovs,
                                cdfCovsNames     = covnames,
                                covNames         = PMXFrem::getCovNames(modFile),
                                functionList     = list(paramFunction),
                                functionListName = functionListName,
-                               numSkipOm =numSkipOm,
-                               numNonFREMThetas =numNonFREMThetas,
-                               # noBaseThetas     = noBaseThetas,
-                               # noParCov         = 4,
-                               # noSigmas         = 2,
-                               # noSkipOm         = 2,
-                               # noCovThetas      = noCovThetas,
+                               numSkipOm        = numSkipOm,
+                               numNonFREMThetas = numNonFREMThetas,
                                dfParameters     = dfSamplesCOV,
                                probs            = c(0.05, 0.95),
                                dfRefRow         = dfCovs %>% filter(COVARIATEGROUPS == "BMI") %>% select(-COVARIATEGROUPS) %>% slice(1),
@@ -152,18 +142,12 @@ test_that("Forest plots for FREM works properly", {
                                cstrPackages     = c("PMXFrem","dplyr"))
 
 
-  dfresFREM3 <-getForestDFFREM(dfCovs          = dfCovs,
-                               #cdfCovsNames     = covnames,
+  dfresFREM3 <-getForestDFFREM(dfCovs           = dfCovs,
                                covNames         = PMXFrem::getCovNames(modFile),
                                functionList     = list(paramFunction),
                                functionListName = functionListName,
-                               numSkipOm =numSkipOm,
-                               numNonFREMThetas =numNonFREMThetas,
-                               # noBaseThetas     = noBaseThetas,
-                               # noParCov         = 4,
-                               # noSigmas         = 2,
-                               # noSkipOm         = 2,
-                               # noCovThetas      = noCovThetas,
+                               numSkipOm        = numSkipOm,
+                               numNonFREMThetas = numNonFREMThetas,
                                dfParameters     = dfSamplesCOV,
                                probs            = c(0.05, 0.95),
                                quiet            = TRUE,
@@ -184,17 +168,11 @@ test_that("Forest plots for FREM works properly", {
                   "SEX"  = c(1,2))
 
   dfresFREM4 <-getForestDFFREM(dfCovs           = covList,
-                               #cdfCovsNames   = covnames,
                                covNames         = PMXFrem::getCovNames(modFile),
                                functionList     = list(paramFunction),
                                functionListName = functionListName,
-                               numSkipOm =numSkipOm,
-                               numNonFREMThetas =numNonFREMThetas,
-                               # noBaseThetas     = noBaseThetas,
-                               # noParCov         = 4,
-                               # noSigmas         = 2,
-                               # noSkipOm         = 2,
-                               # noCovThetas      = noCovThetas,
+                               numSkipOm        = numSkipOm,
+                               numNonFREMThetas = numNonFREMThetas,
                                dfParameters     = dfSamplesCOV,
                                probs            = c(0.05, 0.95),
                                quiet            = TRUE,
