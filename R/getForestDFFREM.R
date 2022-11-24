@@ -7,9 +7,8 @@
 #' @import dplyr
 #' @import stringr
 #'
-#' @param noSigmas  Number of sigma (epsilon) parameters in the model.
-#' @param noParCov Number of parameters for which covariate relations are sought (often the same as noBaseThetas).
-#' @param noSkipOm Nof diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.
+#' @param numNonFREMThetas Number of thetas that are not FREM covariates. These need to come before the FREM covariate thetas.
+#' @param numSkipOm Number of diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.
 #' @param parNames Names of the parameters
 #' @param covNames Names of the covariates
 #' @param availCov Names of the covariates to use in the calculation of the FFEM model.
@@ -22,56 +21,42 @@
 #'
 #' @examples
 #' \dontrun{
-#'dfresCOVfrem <-getForestDFFREM(dfCovs           = dfCovs,
-#'                               cdfCovsNames     = covnames,
-#'                               covNames         = getCovNames(modFile),
-#'                               functionList     = list(paramFunction),
-#'                               functionListName = functionListName,
-#'                               noBaseThetas     = noBaseThetas,
-#'                               noParCov         = 4,
-#'                               noSigmas         = 2,
-#'                               noSkipOm         = 2,
-#'                               noCovThetas      = noCovThetas,
-#'                               dfParameters     = dfSamplesCOVfrem,
-#'                               probs            = c(0.05, 0.95),
-#'                               dfRefRow         = NULL,
-#'                               quiet            = TRUE,
-#'                               ncores           = 1,
-#'                               cstrPackages     = c("PMXFrem","dplyr"))
+#' dfresFREM <-getForestDFFREM(dfCovs           = dfCovs,
+#'                             cdfCovsNames     = covnames,
+#'                             covNames         = PMXFrem::getCovNames(modFile),
+#'                             functionList     = list(paramFunction),
+#'                             functionListName = functionListName,
+#'                             numSkipOm        = numSkipOm,
+#'                             numNonFREMThetas = numNonFREMThetas,
+#'                             dfParameters     = dfSamplesCOV,
+#'                             probs            = c(0.05, 0.95),
+#'                             dfRefRow         = NULL,
+#'                             quiet            = TRUE,
+#'                             ncores           = 1,
+#'                             cstrPackages     = c("PMXFrem","dplyr"))
 #' }
 
-# noBaseThetas = noBaseThetas,
-# noParCov = 4,
-# noSigmas = 2,
-# noSkipOm = 2,
-# noCovThetas = noCovThetas,
-
 getForestDFFREM <- function(dfCovs,
-                            cdfCovsNames = NULL,
-                            functionList = list(function(basethetas,covthetas, dfrow, ...) {
+                            cdfCovsNames     = NULL,
+                            functionList     = list(function(basethetas,covthetas, dfrow, ...) {
                               return(basethetas[1] * exp(covthetas[1]))
                             }),
                             covNames,
                             functionListName = "PAR1",
-                            numSkipOm,
+                            numSkipOm        = 0,
                             numNonFREMThetas,
-                            #noBaseThetas,
                             dfParameters,
-                            # noCovThetas,
-                            #noSigmas,
-                            #noParCov = noBaseThetas,
-                            # noSkipOm = 0,
-                            parNames = paste("Par",1:numParCov,sep = ""),
-                            availCov = covNames,
-                            quiet = FALSE,
-                            probs = c(0.05, 0.95),
-                            pointFunction = median,
-                            dfRefRow = NULL,
-                            cGrouping = NULL,
-                            ncores = 1,
-                            cstrPackages = NULL,
-                            cstrExports = NULL,
-                            iMiss = -99,
+                            parNames         = paste("Par",1:numParCov,sep = ""),
+                            availCov         = covNames,
+                            quiet            = FALSE,
+                            probs            = c(0.05, 0.95),
+                            pointFunction    = median,
+                            dfRefRow         = NULL,
+                            cGrouping        = NULL,
+                            ncores           = 1,
+                            cstrPackages     = NULL,
+                            cstrExports      = NULL,
+                            iMiss            = -99,
                             ...) {
 
 
@@ -132,7 +117,7 @@ getForestDFFREM <- function(dfCovs,
   ## Calculate the parameters
   internalCalc<-function(k) {
     dfext  <- cbind(first = 0, dfParameters[k, ])
-    thetas <- as.numeric(dfext[2:(noBaseThetas + 1)])
+    thetas <- as.numeric(dfext[2:(numNonFREMThetas + 1)])
     dfrest <- data.frame()
 
     for (i in 1:nrow(dfCovs)) {

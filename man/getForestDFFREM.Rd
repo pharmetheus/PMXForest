@@ -13,13 +13,10 @@ getForestDFFREM(
  }),
   covNames,
   functionListName = "PAR1",
-  noBaseThetas,
+  numSkipOm = 0,
+  numNonFREMThetas,
   dfParameters,
-  noCovThetas,
-  noSigmas,
-  noParCov = noBaseThetas,
-  noSkipOm = 0,
-  parNames = paste("Par", 1:noParCov, sep = ""),
+  parNames = paste("Par", 1:numParCov, sep = ""),
   availCov = covNames,
   quiet = FALSE,
   probs = c(0.05, 0.95),
@@ -49,17 +46,13 @@ but functionListName must contain the names with a length of all return for all 
 
 \item{functionListName}{A vector of strings (names) of the parameters for each function in the functionList}
 
-\item{noBaseThetas}{the number of structural thetas in the model}
+\item{numSkipOm}{Number of diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.}
+
+\item{numNonFREMThetas}{Number of thetas that are not FREM covariates. These need to come before the FREM covariate thetas.}
 
 \item{dfParameters}{A data frame with parameter samples from the uncertainty distribution.
 The vector of final parameter estimates is assumed to be in the first row.
 The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.}
-
-\item{noSigmas}{Number of sigma (epsilon) parameters in the model.}
-
-\item{noParCov}{Number of parameters for which covariate relations are sought (often the same as noBaseThetas).}
-
-\item{noSkipOm}{Nof diag omegas (variances) that should not be part of the FREM calculations. Such omegas has to come before the large FREM omega block.}
 
 \item{parNames}{Names of the parameters}
 
