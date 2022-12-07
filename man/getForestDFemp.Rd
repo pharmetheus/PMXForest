@@ -16,7 +16,7 @@ getForestDFemp(
   functionListName = "PAR1",
   strID = "ID",
   quiet = TRUE,
-  metricFunction = median,
+  metricFunction = mean,
   probs = c(0.05, 0.95),
   pointFunction = median,
   dfRefRow = NULL,
@@ -52,7 +52,7 @@ but functionListName must contain the names with a length of all return for all 
 
 \item{quiet}{If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)}
 
-\item{metricFunction}{The function to use to summarise the parameter values in each covariate category. Default is median.}
+\item{metricFunction}{The function to use to summarize the parameter values in each covariate category. Default is mean.}
 
 \item{probs}{A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
 as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}

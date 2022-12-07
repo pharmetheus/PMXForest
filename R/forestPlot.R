@@ -271,6 +271,19 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
 #' be called with \code{plotData} set to the name of the \code{data.frame}, in which case \code{dfres} is not required and the \code{plotData} \code{data.frame} will be used for
 #' creating the Forest plot.
 #'
+#' If \code{referenceInfo} is set to \code{auto} (the default) then generic information based on \code{referenceParameters} and the \code{REFROW} column in \code{dfres} will be included at the bottom of the plot.
+#' The \code{REFROW} column in \code{dfres} will be \code{NO} if \code{dfRefRow} is \code{NULL} in the call to \code{getForestDFSCM}, \code{getForestDFemp} and \code{getForestDFFREM} and \code{YES} if it is not.
+#'
+#' If \code{REFROW} is \code{NO}   and \code{referenceParameters} is \code{final} then the reference information text will be: "The reference line is based on the final parameter estimates and the reference covariate values in the model.".
+#'
+#' If \code{REFROW} is \code{NO}   and \code{referenceParameters} is \code{func} then the reference information text will be: "The reference line is based on the average parameter estimates over the posterior parameter distribution and the reference covariate values in the model.".
+#'
+#' If \code{REFROW} is \code{YES}  and \code{referenceParameters} is \code{final} then the reference information text will be: "The reference line is based on the final parameter estimates and selected covariate values.".
+#'
+#' If \code{REFROW} is \code{YES}  and \code{referenceParameters} is \code{func}  then the reference information text will be: "The reference line is based on the average parameter estimates over the posterior parameter distribution and selected covariate values.".
+#'
+#'If \code{referenceInfo} is not \code{NULL} and not \code{auto} then the reference information text will be \code{referenceInfo}.
+#'
 #' The Forest plots are created as a combination of separate errorbar plots and plots with the table information. Each panel is a separate plot, which are combined using \code{ggpubr::ggarrange}.
 #' In other words, even if the plot looks like a regular faceted plot it is not. For example, in a one parameter Forest plot with \code{table=TRUE}, the left panel is an errorbar plot with the right
 #' facet labels suppressed and the right plot is a plot with text, and which have the y-axis labels suppressed. In a plot with three parameters the errobar plot for the middle parameter will have both the y-axis labels and
