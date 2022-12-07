@@ -1,7 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
-library(PMXFrem,lib.loc = "~/4.1/library/")
+library(PMXFrem)#,lib.loc = "~/4.1/library/")
 
 packageName <- "PMXForest"
 set.seed(123)

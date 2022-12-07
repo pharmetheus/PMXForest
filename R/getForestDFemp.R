@@ -6,7 +6,7 @@
 #' @import dplyr
 #'
 #' @param covExpressionsList A list of expressions that define the covariate values to visualize in the Forest plot.
-#' @param metricFunction The function to use to summarise the parameter values in each covariate category. Default is median.
+#' @param metricFunction The function to use to summarize the parameter values in each covariate category. Default is mean.
 #' @param cGrouping A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.
 #' @param dfData A data.frame with the observed data to be used in the empirical Forest plot calculations.
 #' @param strID The label of the subject identifier column in dfData. Default is ID.
@@ -72,7 +72,7 @@ getForestDFemp <- function(dfData,
                           functionListName = "PAR1",
                           strID = "ID",
                           quiet = TRUE,
-                          metricFunction = median,
+                          metricFunction = mean,
                           probs = c(0.05, 0.95),
                           pointFunction = median,
                           dfRefRow = NULL,
