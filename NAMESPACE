@@ -3,6 +3,7 @@
 export(addMissingColumns)
 export(createInputForestData)
 export(forestPlot)
+export(getCovStats)
 export(getExt)
 export(getForestDFFREM)
 export(getForestDFSCM)

@@ -24,7 +24,7 @@ test_that("Forest plots for FREM works properly", {
     iMiss=-99)
 
 
-  expect_equal_to_reference(dfCovs,"test_output/dfCovsOutputFREM")
+  expect_snapshot(dfCovs)
 
   paramFunction <- function(basethetas, covthetas, dfrow, ...) {
 
@@ -181,19 +181,19 @@ test_that("Forest plots for FREM works properly", {
 
   rVersion <- paste0(R.version$major,".",R.version$minor)
 
-  expect_equal_to_reference(dfresFREM, paste0("test_output/dfresFREM",rVersion))
-  expect_equal_to_reference(dfresFREM2,paste0("test_output/dfresFREM2",rVersion))
-  expect_equal_to_reference(dfresFREM3,paste0("test_output/dfresFREM3",rVersion))
-  expect_equal_to_reference(dfresFREM4,paste0("test_output/dfresFREM4",rVersion))
+  expect_snapshot(dfresFREM )
+  expect_snapshot(dfresFREM2)
+  expect_snapshot(dfresFREM3)
+  expect_snapshot(dfresFREM4)
 
 
   ## Tests for setupData
   plotData1 <- setupForestPlotData(dfresFREM)
   plotData2 <- setupForestPlotData(dfresFREM,plotRelative = FALSE,noVar=TRUE)
   plotData4 <- setupForestPlotData(dfresFREM,parameterLabels=c("CL (L/h)","V (L)","Frel"),groupNameLabels=covariates,plotRelative=FALSE,noVar=TRUE,statisticsLabel=c("CL (L/h)","V (L)","Frel"))
-  expect_equal_to_reference(plotData1,"test_output/plotData1frem")
-  expect_equal_to_reference(plotData2,"test_output/plotData2frem")
-  expect_equal_to_reference(plotData4,"test_output/plotData4frem")
+  expect_snapshot(plotData1)
+  expect_snapshot(plotData2)
+  expect_snapshot(plotData4)
 
   check_graphical_output <- function() {
     if(getRversion() <= "3.5.3") {

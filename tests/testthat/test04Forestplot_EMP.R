@@ -33,7 +33,7 @@ test_that("Forest plots for EMP works properly", {
   )
 
 
-  expect_equal_to_reference(lsExpr,"test_output/dfCovsOutputEMP")
+  expect_snapshot(lsExpr)
 
   paramFunction <- function(thetas, df, ...) {
 
@@ -146,17 +146,17 @@ test_that("Forest plots for EMP works properly", {
   )
 
   rVersion <- paste0(R.version$major,".",R.version$minor)
-  expect_equal_to_reference(dfresEMP,paste0("test_output/dfresEMP",rVersion))
-  expect_equal_to_reference(dfresEMP2,paste0("test_output/dfresEMP2",rVersion))
+  expect_snapshot(dfresEMP  )
+  expect_snapshot(dfresEMP2 )
 
 
   ## Tests for setupData
   plotData1 <- setupForestPlotData(dfresEMP)
   plotData2 <- setupForestPlotData(dfresEMP,plotRelative = FALSE,noVar=TRUE)
   plotData4 <- setupForestPlotData(dfresEMP,parameterLabels=c("CL (L/h)","V (L)","Frel"),groupNameLabels=covariates,plotRelative=FALSE,noVar=TRUE,statisticsLabel=c("CL (L/h)","V (L)","Frel"))
-  expect_equal_to_reference(plotData1,"test_output/plotData1emp")
-  expect_equal_to_reference(plotData2,"test_output/plotData2emp")
-  expect_equal_to_reference(plotData4,"test_output/plotData4emp")
+  expect_snapshot(plotData1)
+  expect_snapshot(plotData2)
+  expect_snapshot(plotData4)
 
   check_graphical_output <- function() {
     if(getRversion() <= "3.5.3") {

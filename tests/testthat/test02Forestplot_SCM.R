@@ -152,7 +152,7 @@ test_that("Forest plots for SCM works properly", {
     iMiss=-99)
 
 
-  expect_equal_to_reference(dfCovs,"test_output/dfCovsOutput")
+  expect_snapshot(dfCovs)
 
   paramFunction <- function(thetas, df, ...) {
 
@@ -290,9 +290,9 @@ test_that("Forest plots for SCM works properly", {
   )
 
   rVersion <- paste0(R.version$major,".",R.version$minor)
-  expect_equal_to_reference(dfresSCM,paste0("test_output/dfresSCM",rVersion))
-  expect_equal_to_reference(dfresSCM3,paste0("test_output/dfresSCM3",rVersion))
-  expect_equal_to_reference(dfresSCM4,paste0("test_output/dfresSCM4",rVersion))
+  expect_snapshot(dfresSCM )
+  expect_snapshot(dfresSCM3)
+  expect_snapshot(dfresSCM4)
 
   ## Tests for setupData
   expect_error(setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel","Fake")))
@@ -307,10 +307,10 @@ test_that("Forest plots for SCM works properly", {
                                    statisticsLabel=c("CL (L/h)","V (L)","Frel"))
   plotData5 <- setupForestPlotData(dfresSCM,onlySignificant = TRUE)
 
-  expect_equal_to_reference(plotData1,"test_output/plotData1")
-  expect_equal_to_reference(plotData2,"test_output/plotData2")
-  expect_equal_to_reference(plotData4,"test_output/plotData4")
-  expect_equal_to_reference(plotData5,"test_output/plotData5")
+  expect_snapshot(plotData1)
+  expect_snapshot(plotData2)
+  expect_snapshot(plotData4)
+  expect_snapshot(plotData5)
 
 
   check_graphical_output <- function() {

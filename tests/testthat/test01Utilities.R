@@ -4,7 +4,7 @@ packageName <- "PMXForest"
 
 test_that("Ext files are read properly", {
   extData <- getExt(system.file("extdata","SimVal/run7.ext",package=packageName))
-  expect_is(extData,"data.frame")
+  expect_type(extData,"list")
 })
 
 
@@ -37,7 +37,7 @@ test_that("mvrnorm_vector samples correctly", {
   expect_equal(nrow(dfParameters),10)
 
   dfParameters <- mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 1,fixed_mu = fixedmu)
-  expect_is(dfParameters,"numeric")
+  expect_type(dfParameters,"double")
 
 })
 
@@ -60,11 +60,11 @@ test_that("getSamples works correctly for .cov input", {
 
   set.seed("123")
   tmp <- getSamples(covFile,extFile=extFile,n=20)
-  expect_is(tmp,"data.frame")
+  expect_type(tmp,"list")
   expect_equal(nrow(tmp),21)
 
   ## Test that the output is the same as a saved reference
-  expect_equal_to_reference(tmp,"test_output/getSamplesCovOutput")
+  expect_snapshot(tmp)
 })
 
 test_that("getParamPositions works correctly", {
@@ -75,7 +75,7 @@ test_that("getParamPositions works correctly", {
   res <- getParamPositions(rr_struct)
 
   # ## Test that the output is the same as a saved reference
-  expect_equal_to_reference(res,"test_output/getParamPositionBSOutput")
+  expect_snapshot(res)
 })
 
 
@@ -91,11 +91,11 @@ test_that("getSamples works correctly for bootstrap .csv input", {
   tmp1 <- getSamples(bootFile,extFile=extFile,n=200)
 
   tmp2<- getSamples(bootFile,extFile=extFile,indexvec = c(21:34,40,35:39))
-  expect_equal_to_reference(tmp2,"test_output/getSamplesBSOutput2")
+  expect_snapshot(tmp2)
 
   ## Test that the output is the same as a saved reference
-  expect_equal_to_reference(tmp0,"test_output/getSamplesBSOutput")
-  expect_equal_to_reference(tmp1,"test_output/getSamplesBSN200Output")
+  expect_snapshot(tmp0)
+  expect_snapshot(tmp1)
 })
 
 test_that("getSamples works correctly for SIR .csv input", {
@@ -108,7 +108,7 @@ test_that("getSamples works correctly for SIR .csv input", {
   tmp0 <- getSamples(sirFile,extFile=extFile)
 
   ## Test that the output is the same as a saved reference
-  expect_equal_to_reference(tmp0,"test_output/getSamplesSIROutput")
+  expect_snapshot(tmp0)
 })
 
 
@@ -133,11 +133,11 @@ test_that("getSamples works correctly for data frame with bootstrap headings", {
   tmp4 <- getSamples(subset(dft,ofv!=0),indexvec = c(21:34,40,35:39),extFile = extFile,n=170)
 
   ## Test that the output is the same as a saved reference
-  expect_equal_to_reference(tmp0,"test_output/dfSample0")
-  expect_equal_to_reference(tmp1,"test_output/dfSample1")
-  expect_equal_to_reference(tmp2,"test_output/dfSample2")
-  expect_equal_to_reference(tmp3,"test_output/dfSample3")
-  expect_equal_to_reference(tmp4,"test_output/dfSample4")
+  expect_snapshot(tmp0)
+  expect_snapshot(tmp1)
+  expect_snapshot(tmp2)
+  expect_snapshot(tmp3)
+  expect_snapshot(tmp4)
 })
 
 
@@ -151,7 +151,7 @@ test_that("getSamples works correctly for a time-to-event model without SIGMA", 
   tmp <- getSamples(bootFile,extFile)
 
   ## Test that the output is the same as a saved reference
-  expect_equal_to_reference(tmp,"test_output/dfSampleTTE")
+  expect_snapshot(tmp)
 })
 
 test_that("getPlotVars returns correct values", {
