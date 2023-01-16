@@ -126,8 +126,8 @@ getForestDFSCM <- function(dfCovs,
           valbase <- functionList[[j]](thetas = thetas, df = dfRefRow[indi,], ...)
         }
         else {
-          dfMissing = dfCovs[1,]
-          dfMissing[,] = iMiss
+          dfMissing <- as.data.frame(dfCovs[1,])
+          dfMissing[,] <- iMiss
           valbase <- functionList[[j]](thetas = thetas, df = dfMissing, ...)
         }
         listcount <- length(val)
