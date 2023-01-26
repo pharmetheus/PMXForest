@@ -6,7 +6,6 @@
 #' @param fileName The name of a PsN raw_results_structure file.
 #'
 #' @return A list of parameter positions THETA for thetas, SIGMA for sigmas and OMEGA for omegas.
-#' @export
 #'
 getParamPositions <- function(fileName) {
 

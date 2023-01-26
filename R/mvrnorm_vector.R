@@ -9,7 +9,6 @@
 #' @param dSeed The seed number
 #' @param iSampleIndex Number of samples to draw
 #' @return A vector if iSampleIndex==1 otherwise a matrix with iSampleIndex rows
-#' @export
 #'
 #' @examples
 #' \dontrun{

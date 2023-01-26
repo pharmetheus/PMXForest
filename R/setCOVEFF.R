@@ -1,3 +1,30 @@
+#' setCOVEFF
+#'
+#' @description Set the COEFF column in dfes to TRUE based on user input. Used to specify which covariates that are significant in an SCM.
+#' @inheritParams setupForestPlotData
+#'
+#' @param lsTrue List of two element vectors that specify parameter and covariate combination to set to TRUE.
+#'
+#' @return A data frame similar to \code{dfres} except that the COVEFF column has been modified.
+#'
+#' @examples
+#' \dontrun{
+#' lsTrue <- list(
+#'   c("CL","FOOD"),
+#'   c("CL","GENO"),
+#'   c("CL","WT"),
+#'   c("Frel","FORM"),
+#'   c("Frel","GENO"),
+#'   c("Frel","SEX"),
+#'   c("AUC","FORM"),
+#'   c("AUC","FOOD"),
+#'   c("AUC","GENO"),
+#'   c("AUC","WT"),
+#'   c("AUC","SEX"),
+#'   c("V","WT")
+#' )
+#' newDfres <- setCOVEFF(dfresCOVscm,lsTrue)
+#' }
 setCOVEFF <- function(dfres,lsTrue) {
 
   if(!class(lsTrue)=="list") strop("lsTrue must be a list")
@@ -13,21 +40,3 @@ setCOVEFF <- function(dfres,lsTrue) {
 }
 
 
-# lsTrue <- list(
-#   c("CL","FOOD"),
-#   c("CL","GENO"),
-#   c("CL","WT"),
-#   c("Frel","FORM"),
-#   c("Frel","GENO"),
-#   c("Frel","SEX"),
-#   c("AUC","FORM"),
-#   c("AUC","FOOD"),
-#   c("AUC","GENO"),
-#   c("AUC","WT"),
-#   c("AUC","SEX"),
-#   c("V","WT")
-#
-# )
-#
-# nrow(setCOVEFF(dfresEMP,list()) %>% filter(COVEFF) %>% distinct(PARAMETER,GROUPNAME) %>% arrange(PARAMETER))
-# setCOVEFF(dfresCOVscm,lsTrue) %>% filter(COVEFF) %>% distinct(PARAMETER,GROUPNAME) %>% arrange(PARAMETER)

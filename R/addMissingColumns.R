@@ -8,7 +8,6 @@
 #' @param zerosindex A vector with indicies that indicates which parameters that are fixed to zero.
 #'
 #' @return A data frame with a structure similar to a NONMEM ext file.
-#' @export
 #'
 #' @examples
 #' \dontrun{

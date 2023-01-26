@@ -15,7 +15,6 @@ utils::globalVariables(c("COVEFF","COVNAME","COVNUM","GROUPNAME","GROUPNAME2","G
 #' @param reference Which reference should be used, the final parameter estimates (final) or the parameter function (func)
 #'
 #' @return A vector with the names from dfres to use for POINT, q1, q2 and ref
-#' @export
 #'
 #' @examples
 #' # Get the relative variables with uncertainty in the reference:
