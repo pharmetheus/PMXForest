@@ -333,16 +333,16 @@ forestPlot <- function(dfres,
                        labelfun=label_value,
                        groupname_labelfun=label_value,
                        ref_area=c(0.8,1.25),
-                       ref_fill_col="#508791",
+                       ref_fill_col  = "lightgrey",
                        ref_fill_alpha=0.4,
                        ref_line_size=1,
                        ref_line_type="dotted",
                        ref_line_col="black",
                        ci_line_type="solid",
-                       ci_line_col="#323c46",
+                       ci_line_col="black",
                        ci_line_size=0.7,
                        point_shape=16,
-                       point_color="#323c46",
+                       point_color="black",
                        point_size=3,
                        tabTextSize=10,
                        keepYlabs = FALSE,
@@ -470,7 +470,7 @@ forestPlot <- function(dfres,
   ## The errorbar plots
   for(i in 1:length(parameters)) {
 
-    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==parameters[i]),parameters,parameterLabels,
+    plotList[[i]] <- parPlot(subset(plotData,PARAMETER==as.character(parameters[i])),parameters,parameterLabels,
                              label_fun = labelfun,
                              group_name_label_fun = groupname_labelfun) +
       theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt")) +
@@ -519,7 +519,7 @@ forestPlot <- function(dfres,
   ## The table plots
   for(i in 1:length(parameters)) {
 
-    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==parameters[i]),parameters,
+    tabList[[i]] <- tablePlot(subset(plotData,PARAMETER==as.character(parameters[i])),parameters,
                               label_fun = labelfun,
                               group_name_label_fun = groupname_labelfun,
                               tabTextSize = tabTextSize) +
