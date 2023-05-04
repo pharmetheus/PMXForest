@@ -251,6 +251,8 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
 #' @param ci_label A character string indicating the label to be used for the confidence interval in the figure legend. Default is "Confidence interval".
 #' @param statisticsLabel A vector of character string of the same length as \code{parameters} to be used as facet labels for the table plots.
 #' @param xlb x-axis label for the errorbar plots
+#' @param commonXlab Logical. Should a common x-axis title be used or should each panel have its own. Default is FALSE.
+#' @param size.legend.text The font size used in the legend in points or relative size to the theme base font. Default is rel(0.8).
 #' @param return Either "plot" (default), "plotList" or "data". "plot" returns the \code{ggpubr::ggarrange} object. "plotList" returns a list of the different plots that make up
 #' the Forest plot (see Details). "data" returns a \code{data.frame} with the actual data used to create the Forest plot.
 #' @param table Logical. Should the table plots be included in the Forest plot or not.
@@ -258,7 +260,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
 #' @param keepYlabs  Logical. Should the labels on the y-axis be kept for all errorbar panels.
 #' @param keepRightStrip Logical. Should the right facet titles be kept for all table plots. Only when \code{rightStrip} is \code{TRUE}.
 #' @param stackedPlots Should the plots for the parameters be stacked instead of being vertical. Useful if there are many parameters to visualize. Works best with \code{keepYlab} and \code{keepRightStrip} set to \code{TRUE}.
-#' @param errbartabwidth A numerical vector of length 2 times the number of parameters included in the Forest plot, specifying the relative width of the errorbar and table plots. Have no effect when \code{table} is FALSE.
+#' @param errbartabwidth A numerical vector of the same length as the number of panels in the plot (eror bar panels + table panels). Specifies the relative width of the panels.
 #' @param errbarplotscale Scaling factor for the width of the leftmost errorbar plot to compensate for y-axis labels.
 #' @param tabplotscale Scaling factor for the width of the rightmost column (usually a table plot) to adjust for the size of the right strip.
 #' @param onlySignificantErrorBars Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).
@@ -343,7 +345,7 @@ forestPlot <- function(dfres,
                        ci_line_size=0.7,
                        point_shape=16,
                        point_color="black",
-                       point_size=3,
+                       point_size=2.5,
                        tabTextSize=10,
                        keepYlabs = FALSE,
                        keepRightStrip = FALSE,
@@ -356,6 +358,8 @@ forestPlot <- function(dfres,
                        ci_label       = "Confidence interval",
                        statisticsLabel = paste("Statistics:",parameterLabels),
                        xlb = ifelse(plotRelative,"Relative parameter value","Parameter value"),
+                       commonXlab = FALSE,
+                       size.legend.text = rel(0.8),
                        return = "plot",
                        table=TRUE,
                        rightStrip=TRUE,
@@ -365,6 +369,7 @@ forestPlot <- function(dfres,
                        onlySignificant = FALSE,
                        onlySignificantErrorBars = FALSE,
                        setSignEff = NULL,
+                       size=theme_get()$text$size*0.8,
                        ...) {
 
 
@@ -567,6 +572,16 @@ forestPlot <- function(dfres,
     totList <- plotList
   }
 
+  ## Remove all xlabs. Will add a common one later
+  if(commonXlab) {
+    for(i in 1:length(totList)) {
+      totList[[i]] <- totList[[i]] + rremove("xlab")
+    }
+  }
+
+  ## Set the font size of the legend
+  totList[[1]] <- totList[[1]] + theme(legend.text = element_text(size=size.legend.text))
+
   if(table) {
 
     ## Figure out the widths of the plot components
@@ -588,11 +603,16 @@ forestPlot <- function(dfres,
     }
   }
 
+  ## Add common x-axis label
+  if(commonXlab) {
+    myPlot <- ggpubr::annotate_figure(myPlot,bottom=ggpubr::text_grob(xlb,...))
+  }
+
   ## Add information about the reference subject if needed
   if(is.null(referenceInfo)) {
     myPlot <- myPlot
   } else if(!is.null(referenceInfo) & referenceInfo != "auto") {
-    myPlot <- ggpubr::annotate_figure(myPlot,bottom=ggpubr::text_grob(referenceInfo,...))
+    myPlot <- ggpubr::annotate_figure(myPlot,bottom=ggpubr::text_grob(referenceInfo,size=size,...))
   } else if(referenceInfo=="auto") {
 
     if(dfres[1,"REFROW"]=="NO" && referenceParameters=="final") {
