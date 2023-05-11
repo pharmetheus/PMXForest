@@ -16,7 +16,7 @@ utils::globalVariables(c("COVEFF","COVNAME","COVNUM","GROUPNAME","GROUPNAME2","G
 #'
 #' @return A vector with the names from dfres to use for POINT, q1, q2 and ref
 #'
-#' @importFrom PhRame save.script
+#' @importFrom PhRame save_script
 #' @importFrom rlang peek_option
 #' @importFrom withr local_options
 #'
