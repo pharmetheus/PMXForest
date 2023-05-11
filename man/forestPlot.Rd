@@ -18,17 +18,17 @@ forestPlot(
   labelfun = label_value,
   groupname_labelfun = label_value,
   ref_area = c(0.8, 1.25),
-  ref_fill_col = "#508791",
+  ref_fill_col = "lightgrey",
   ref_fill_alpha = 0.4,
   ref_line_size = 1,
   ref_line_type = "dotted",
   ref_line_col = "black",
   ci_line_type = "solid",
-  ci_line_col = "#323c46",
+  ci_line_col = "black",
   ci_line_size = 0.7,
   point_shape = 16,
-  point_color = "#323c46",
-  point_size = 3,
+  point_color = "black",
+  point_size = 2.5,
   tabTextSize = 10,
   keepYlabs = FALSE,
   keepRightStrip = FALSE,
@@ -41,6 +41,8 @@ forestPlot(
   ci_label = "Confidence interval",
   statisticsLabel = paste("Statistics:", parameterLabels),
   xlb = ifelse(plotRelative, "Relative parameter value", "Parameter value"),
+  commonXlab = FALSE,
+  size.legend.text = rel(0.8),
   return = "plot",
   table = TRUE,
   rightStrip = TRUE,
@@ -50,6 +52,7 @@ forestPlot(
   onlySignificant = FALSE,
   onlySignificantErrorBars = FALSE,
   setSignEff = NULL,
+  size = theme_get()$text$size * 0.8,
   ...
 )
 }
@@ -135,6 +138,10 @@ xmin and xmax values for the reference area.}
 
 \item{xlb}{x-axis label for the errorbar plots}
 
+\item{commonXlab}{Logical. Should a common x-axis title be used or should each panel have its own. Default is FALSE.}
+
+\item{size.legend.text}{The font size used in the legend in points or relative size to the theme base font. Default is rel(0.8).}
+
 \item{return}{Either "plot" (default), "plotList" or "data". "plot" returns the \code{ggpubr::ggarrange} object. "plotList" returns a list of the different plots that make up
 the Forest plot (see Details). "data" returns a \code{data.frame} with the actual data used to create the Forest plot.}
 
@@ -142,7 +149,7 @@ the Forest plot (see Details). "data" returns a \code{data.frame} with the actua
 
 \item{rightStrip}{Should the facet title in the rightmost panel in the Forest plot be displayed? If TRUE (the default) \code{groupNameLabels} will be used as the facets labels.}
 
-\item{errbartabwidth}{A numerical vector of length 2 times the number of parameters included in the Forest plot, specifying the relative width of the errorbar and table plots. Have no effect when \code{table} is FALSE.}
+\item{errbartabwidth}{A numerical vector of the same length as the number of panels in the plot (eror bar panels + table panels). Specifies the relative width of the panels.}
 
 \item{errbarplotscale}{Scaling factor for the width of the leftmost errorbar plot to compensate for y-axis labels.}
 
