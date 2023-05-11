@@ -16,6 +16,10 @@ utils::globalVariables(c("COVEFF","COVNAME","COVNUM","GROUPNAME","GROUPNAME2","G
 #'
 #' @return A vector with the names from dfres to use for POINT, q1, q2 and ref
 #'
+#' @importFrom PhRame save.script
+#' @importFrom rlang peek_option
+#' @importFrom withr local_options
+#'
 #' @examples
 #' # Get the relative variables with uncertainty in the reference:
 #' # "POINT_REL_REFFUNC" "Q1_REL_REFFUNC" "Q2_REL_REFFUNC" "REFFUNC"
@@ -28,6 +32,24 @@ utils::globalVariables(c("COVEFF","COVNAME","COVNUM","GROUPNAME","GROUPNAME2","G
 #' getPlotVars(noVar=TRUE)
 #'
 getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
+
+  #### REMOVE FROM PUBLIC RELEASE ####
+  # save.script functionality
+  if((!is.null(peek_option("save.script")) &&
+      peek_option("save.script") == TRUE) &&
+     !str_detect(as.character(match.call()[1]), "_script")){
+
+    argsList <- c(list(funcName = match.call()[1] %>%
+                         as.character() %>%
+                         str_remove(".+:+") %>%
+                         str_c("PMXForest:::", .) %>%
+                         str_remove("\\(\\)")),
+                  as.list(environment()))
+    return(do.call("save_script", argsList))
+  }
+  #### REMOVE FROM PUBLIC RELEASE end
+
+
 
   if(!(reference %in% c("func","final"))) {stop("reference needs to be either func or final.")}
 
@@ -104,6 +126,22 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
                                 statisticsLabels=NULL,
                                 plotRelative=TRUE,noVar=FALSE,reference="func",
                                 sigdigits=2,onlySignificant=FALSE,setSignEff=NULL) {
+
+  #### REMOVE FROM PUBLIC RELEASE ####
+  # save.script functionality
+  if((!is.null(peek_option("save.script")) &&
+      peek_option("save.script") == TRUE) &&
+     !str_detect(as.character(match.call()[1]), "_script")){
+
+    argsList <- c(list(funcName = match.call()[1] %>%
+                         as.character() %>%
+                         str_remove(".+:+") %>%
+                         str_c("PMXForest:::", .) %>%
+                         str_remove("\\(\\)")),
+                  as.list(environment()))
+    return(do.call("save_script", argsList))
+  }
+  #### REMOVE FROM PUBLIC RELEASE end
 
   ## Input checks
   if(!is.null(parameterLabels)) {
@@ -372,6 +410,21 @@ forestPlot <- function(dfres,
                        size=theme_get()$text$size*0.8,
                        ...) {
 
+  #### REMOVE FROM PUBLIC RELEASE ####
+  # save.script functionality
+  if((!is.null(peek_option("save.script")) &&
+      peek_option("save.script") == TRUE) &&
+     !str_detect(as.character(match.call()[1]), "_script")){
+
+    argsList <- c(list(funcName = match.call()[1] %>%
+                         as.character() %>%
+                         str_remove(".+:+") %>%
+                         str_c("PMXForest:::", .) %>%
+                         str_remove("\\(\\)")),
+                  as.list(environment()), list(...))
+    return(do.call("save_script", argsList))
+  }
+  #### REMOVE FROM PUBLIC RELEASE end
 
   ## Check if only significant covariates is to be used
   # if(onlySignificant) {
