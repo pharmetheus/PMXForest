@@ -1,1 +1,0 @@
-/opt/psn/psn-4.8.1/bin/sir -samples=1000,1000,2000 -resamples=200,500,1000 run1.mod

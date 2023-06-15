@@ -1,1 +1,0 @@
-/opt/psn/psn-4.8.1/bin/bootstrap run1.mod -stratify=STUDYID -samples=100 -nm_version=lp73_mpi -nodes=2 -threads=34 -dir=bs1_n100.dir
