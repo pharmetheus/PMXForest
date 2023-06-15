@@ -127,4 +127,8 @@ forestPlot(dfres,groupNameLabels = covariateGroupNames,size=10)
 
 The above is a simple use case of PMXForest for a straight forward PK model. However, PMXForest is quite capable of handling most problems and complexities. Both the "standard" use for NONMEM based problems as well as more tailored solutions to other types of problems are described in the package vignettes.
 
+Once the package is installed you can issue the command: `browseVignettes("PMXForest")`
+
+
+
 

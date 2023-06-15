@@ -141,3 +141,6 @@ model. However, PMXForest is quite capable of handling most problems and
 complexities. Both the “standard” use for NONMEM based problems as well
 as more tailored solutions to other types of problems are described in
 the package vignettes.
+
+Once the package is installed you can issue the command:
+`browseVignettes("PMXForest")`
