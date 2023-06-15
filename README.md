@@ -22,7 +22,7 @@ You can install the development version of PMXForest from
 devtools::install_github("pharmetheus/PMXForest")
 ```
 
-or download and install the source package.
+or download and install the source package directly.
 
 ## Example
 
@@ -102,6 +102,13 @@ functionListName <- c("CL (L/h)","AUC (mgh/L)")
 
 ### Generate the data for the plot
 
+PMXForest takes care of the simulations/predicitons needed for the plot,
+including the generation of uncertainty. In the example below, the
+uncertainty is taken from the variance-covariance information from
+NONMEM (\$COV). The sampling is done by the getSamples function and the
+actual calculations are done by getForestDFSCM. The calculations can be
+parallelized if needed.
+
 ``` r
 covFile      <- "inst/extdata/SimVal/run7.cov"
 extFile      <- "inst/extdata/SimVal/run7.ext"
@@ -119,8 +126,18 @@ dfres <- getForestDFSCM(dfCovs           = dfCovs,
 
 ### Create the Forest plot
 
+With the above information is an easy task to generate the Forest plot.
+
 ``` r
 forestPlot(dfres,groupNameLabels = covariateGroupNames,size=10)
 ```
 
 <img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
+
+## Further information
+
+The above is a simple use case of PMXForest for a straight forward PK
+model. However, PMXForest is quite capable of handling most problems and
+complexities. Both the “standard” use for NONMEM based problems as well
+as more tailored solutions to other types of problems are described in
+the package vignettes.
