@@ -13,15 +13,11 @@
 #'
 #' @examples
 #' \dontrun{
-#' modDevDir <- "./"
-#' fremRun   <- 31
-#' fremFiles <- PMXFrem::getFileNames(31,modDevDir = modDevDir)
-#' covNames  <- PMXFrem::getCovNames(fremFiles$mod)
 #'
-#' data <- fread(file.path(modDevDir,"DAT-2-MI-PMX-2-onlyTYPE2-new.csv"))
+#' data <- read.csv("inst/extdata/DAT-1-MI-PMX-2.csv")
 #'
 #' dfCovs <- createInputForestData(
-#'   getCovStats(data,covNames$orgCovNames,missVal=-99),
+#'   getCovStats(data,c("WT","BMI","SEX"),missVal=-99),
 #'   iMiss    =-99
 #' )}
 getCovStats <- function(data,covariates,minLevels = 10,probs=c(0.05,0.95),idVar = "ID",missVal=-99,nsig=3) {

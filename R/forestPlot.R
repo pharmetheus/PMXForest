@@ -16,7 +16,6 @@ utils::globalVariables(c("COVEFF","COVNAME","COVNUM","GROUPNAME","GROUPNAME2","G
 #'
 #' @return A vector with the names from dfres to use for POINT, q1, q2 and ref
 #'
-#' @importFrom PhRame save_script
 #' @importFrom rlang peek_option
 #' @importFrom withr local_options
 #'
@@ -477,10 +476,10 @@ forestPlot <- function(dfres,
                      linetype = "Reference subject",
                      color    = "Reference subject"
                  ),
-                 size     = ref_line_size,
+                 linewidth     = ref_line_size,
                  key_glyph = "path") +
 
-      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0,size=ci_line_size) +
+      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0,linewidth=ci_line_size) +
       geom_point(aes(shape="Point estimate"),color=point_color,size=point_size) +
 
       #browser()
@@ -493,7 +492,7 @@ forestPlot <- function(dfres,
       scale_shape_manual(name    = NULL, values = c("Point estimate"    = point_shape),
                          labels=c("Point estimate" = point_label)) +
 
-      guides(linetype=guide_legend(override.aes=list(size=1))) +
+      guides(linetype=guide_legend(override.aes=list(linewidth=1))) +
       facet_grid(GROUPNAMELABEL~PARAMETERLABEL,scales = "free",
                  labeller = labeller(PARAMETERLABEL= label_fun,
                                      GROUPNAMELABEL = group_name_label_fun)) +
@@ -678,7 +677,7 @@ forestPlot <- function(dfres,
       refText <- "The reference line is based on the average parameter estimates over the posterior parameter distribution and selected covariate values."
     }
 
-    myPlot <- ggpubr::annotate_figure(myPlot,bottom=ggpubr::text_grob(refText,...))
+    myPlot <- ggpubr::annotate_figure(myPlot,bottom=ggpubr::text_grob(refText,size=size,...))
   }
 
   ## return either the arranged plot or the list of plot objects

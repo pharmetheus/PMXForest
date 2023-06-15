@@ -188,4 +188,3 @@ forestPlot(dfres,plotRelative = F,referenceInfo=NULL,xlb = "Reference subject is
 
 ```
 
-# The reference {#sec:referenceValues}

@@ -3,3 +3,4 @@
 ^doc$
 ^Meta$
 RawExampleFiles
+^README\.Rmd$
