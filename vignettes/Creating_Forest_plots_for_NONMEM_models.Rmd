@@ -164,10 +164,10 @@ Define the NONMEM input:
 ```{r}
 runno   <- "7"
 modDir <- "SimVal"
-extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package=packageName)
-covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package=packageName)
-bsFile  <- system.file("extdata",paste0(modDir,"/bs",runno,".dir/raw_results_run",runno,"bs.csv"),package=packageName)
-sirFile <- system.file("extdata",paste0(modDir,"/sir",runno,".dir/raw_results_run",runno,".csv"),package=packageName)
+extFile <- system.file("extdata",paste0(modDir,"/run",runno,".ext"),package="PMXForest")
+covFile <- system.file("extdata",paste0(modDir,"/run",runno,".cov"),package="PMXForest")
+bsFile  <- system.file("extdata",paste0(modDir,"/bs",runno,".dir/raw_results_run",runno,"bs.csv"),package="PMXForest")
+sirFile <- system.file("extdata",paste0(modDir,"/sir",runno,".dir/raw_results_run",runno,".csv"),package="PMXForest")
 ```
 
 The `getSamples` function generates samples from the different sources of data. The Sampling from the variance-covariance matrix and from the small bootstrap will result in symmetric confidence intervals, while sampling from (large) bootstrap and SIR will allow for assymetrical confidence intervals.
@@ -271,7 +271,7 @@ The same function definition as for the empirical Forest plots can be used for e
 Same as for parametric Forest plots except that empirical Forest plots also need the data file.
 
 ```{r}
-dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package=packageName)
+dataFile <- system.file("extdata",paste0(modDir,"/DAT-1-MI-PMX-2.csv"),package="PMXForest")
 dfData   <- read.csv(dataFile) %>% distinct(ID,.keep_all=TRUE) %>% slice(1:300) # Will only use 300 to save time
 ```
 
