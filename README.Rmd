@@ -96,7 +96,9 @@ functionListName <- c("CL (L/h)","AUC (mgh/L)")
 
 ### Generate the data for the plot
 
+
 PMXForest takes care of the simulations/predicitons needed for the plot, including the generation of uncertainty. In the example below, the uncertainty is taken from the variance-covariance information from NONMEM ($COV). The sampling is done by the getSamples function and the actual calculations are done by getForestDFSCM. The calculations can be parallelized if needed.
+
 
 ```{r}
 covFile      <- "inst/extdata/SimVal/run7.cov"
