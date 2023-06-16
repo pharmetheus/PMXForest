@@ -1,0 +1,4 @@
+iteration,commandline.samples,attempted.samples,successful.samples,commandline.resamples,actual.resamples,requested.ratio,actual.ratio,negative.dOFV,minimum.sample.ofv
+1,1000,1000,1000,200,200,5,5,0,-7296.3230985569135
+2,1000,1000,1000,500,500,2,2,0,-7295.7842246938626
+3,2000,2000,2000,1000,1000,2,2,0,-7296.5604107468916

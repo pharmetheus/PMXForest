@@ -1,0 +1,1 @@
+/opt/noarch/psn/psn-5.2.6/bin/sir -samples=1000,1000,2000 -resamples=200,500,1000 -dir=sir7.dir -nm_version=lp75_mpi -nodes=4 -threads=10 run7.mod

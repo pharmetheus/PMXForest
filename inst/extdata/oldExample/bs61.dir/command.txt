@@ -1,0 +1,1 @@
+/opt/psn/psn-4.8.1/bin/bootstrap run61bs.mod -stratify_on=GENO -samples=100 -dir bs61.dir -nm_version=lp73_mpi -nodes=4 -threads=100
