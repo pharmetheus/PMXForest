@@ -16,7 +16,7 @@ Authors@R:
 Author: Niclas Jonsson and Joakim Nyberg
 Maintainer: Niclas Jonsson <niclas.jonsson@pharmetheus.com>
 Description: Functions to support the creation of Forest plots.
-License: GPL (>= 2)
+License: GPL (>= 3)
 Imports:
     dplyr,
     ggplot2,
