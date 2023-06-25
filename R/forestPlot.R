@@ -419,15 +419,15 @@ forestPlot <- function(dfres,
                 aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,fill="Reference area"),alpha=ref_fill_alpha,
                 inherit.aes = FALSE) +
 
-      geom_vline(data=rect_data,
+      geom_vline(data           =rect_data,
                  aes(xintercept = ref_value,
-                     linetype = "Reference subject",
-                     color    = "Reference subject"
+                     linetype   = "Reference subject",
+                     color      = "Reference subject"
                  ),
-                 linewidth     = ref_line_size,
-                 key_glyph = "path") +
+                 size           = ref_line_size,
+                 key_glyph      = "path") +
 
-      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0,linewidth=ci_line_size) +
+      geom_errorbarh(aes(color="CI",linetype="CI"),key_glyph = "path",height=0,size=ci_line_size) +
       geom_point(aes(shape="Point estimate"),color=point_color,size=point_size) +
 
       #browser()
