@@ -22,7 +22,22 @@ You can install the development version of PMXForest from
 devtools::install_github("pharmetheus/PMXForest")
 ```
 
-or download and install the source package directly.
+If also want the latest versions of the vignettes add
+`build_vignettes = TRUE` to the `devtools::install_github` commed. Note,
+though, that it will take quite some time to build the vignettes.
+
+To get the latest stable release, please click on the Releases link on
+the right hand side and download the latest release package. This can be
+installed with the `install.packages` command, e.g.:
+
+``` r
+install.packages("path_to_release.tar.gz")
+#> Installing package into '/Users/niclasj/R/R-4.2/pkgs/qualified'
+#> (as 'lib' is unspecified)
+#> inferring 'repos = NULL' from 'pkgs'
+#> Warning in install.packages("path_to_release.tar.gz"): installation of package
+#> 'path_to_release.tar.gz' had non-zero exit status
+```
 
 ## Example
 
@@ -132,7 +147,7 @@ With the above information is an easy task to generate the Forest plot.
 forestPlot(dfres,groupNameLabels = covariateGroupNames,size=10)
 ```
 
-<img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
 
 ## Further information
 
