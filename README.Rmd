@@ -26,7 +26,13 @@ You can install the development version of PMXForest from [GitHub](https://githu
 devtools::install_github("pharmetheus/PMXForest")
 ```
 
-or download and install the source package directly.
+If also want the latest versions of the vignettes add `build_vignettes = TRUE` to the `devtools::install_github` commannd. Note, though, that it will take quite some time to build the vignettes.
+
+To get the latest stable release, please click on the Releases link on the right hand side and then on Tags, and download the latest release package (tar.gz file). This can be installed with the `install.packages` command, e.g.:
+
+```{r}
+install.packages("path_to_release.tar.gz")
+```
 
 ## Example
 
