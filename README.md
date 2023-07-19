@@ -22,25 +22,21 @@ You can install the development version of PMXForest from
 devtools::install_github("pharmetheus/PMXForest")
 ```
 
-If also want the latest versions of the vignettes add
-`build_vignettes = TRUE` to the `devtools::install_github` commannd.
-Note, though, that it will take quite some time to build the vignettes.
+The latest versions of the vignettes are available in the
+`BuildVignettesHereDirectory`. Open the Rmd-files in RStudio and click
+the Knit button to compile. Note that some of the vignettes will take a
+fair bit of time to compile.
 
-To get the latest stable release, please click on the Releases link on
-the right hand side and then on Tags, and download the latest release
-package (tar.gz file). This can be installed with the `install.packages`
-command, e.g.:
+To get the latest stable release (including vignettes), please click the
+appropriate link on the right side of the page. Download the file with a
+name that starts with PMXForest. Install `PMXForest` with the
+`install.packages` command, e.g.:
 
 ``` r
 install.packages("path_to_release.tar.gz")
-#> Installing package into '/Users/niclasj/R/R-4.2/pkgs/qualified'
-#> (as 'lib' is unspecified)
-#> inferring 'repos = NULL' from 'pkgs'
-#> Warning in install.packages("path_to_release.tar.gz"): installation of package
-#> 'path_to_release.tar.gz' had non-zero exit status
 ```
 
-## Example
+## Example of using PMXForest
 
 This is a basic example which shows you how to create a Forest plot for
 a NONMEM model.
