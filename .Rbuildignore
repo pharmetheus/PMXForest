@@ -5,4 +5,7 @@
 RawExampleFiles
 ^README\.Rmd$
 ^LICENSE\.md$
-^BuildVignettesHere
+^BuildVignettesHere/.*\.R$
+^BuildVignettesHere/.*cache$
+^BuildVignettesHere/.*files$
+^BuildVignettesHere/.*figures$
