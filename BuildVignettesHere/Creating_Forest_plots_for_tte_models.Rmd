@@ -5,7 +5,7 @@ output:
     toc: true
 vignette: >
   %\VignetteIndexEntry{Creating Forest plots for tte models}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{knitr::markdown}
   %\VignetteEncoding{UTF-8}
 ---
 

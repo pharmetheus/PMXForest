@@ -1,7 +1,7 @@
 Type: Package
 Package: PMXForest
 Title: Create Forest plots based on NONMEM output
-Version: 1.2.1
+Version: 1.2.2
 Authors@R: 
     c(person(given = "Niclas",
              family = "Jonsson",
@@ -37,10 +37,11 @@ Suggests:
     bookdown,
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    R.rsp
 Depends: R (>= 3.5.0)
 Config/testthat/edition: 3
 VignetteBuilder: 
-    knitr
+    R.rsp
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.2.1
