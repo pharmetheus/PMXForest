@@ -265,6 +265,7 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
 #' @param errbarplotscale Scaling factor for the width of the leftmost errorbar plot to compensate for y-axis labels.
 #' @param tabplotscale Scaling factor for the width of the rightmost column (usually a table plot) to adjust for the size of the right strip.
 #' @param onlySignificantErrorBars Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).
+#' @param addcodeErr A string of code to be applied to each of the panels with error bars.
 #' @param ... Arguments passed on to \code{ggpubr::text_grob}.
 #'
 #' @details
@@ -371,12 +372,9 @@ forestPlot <- function(dfres,
                        onlySignificantErrorBars = FALSE,
                        setSignEff = NULL,
                        size=theme_get()$text$size*0.8,
+                       addcodeErr="NULL",
                        ...) {
 
-  ## Check if only significant covariates is to be used
-  # if(onlySignificant) {
-  #    dfres <- droplevels(dfres %>% filter(PARAMETER%in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF==TRUE)))
-  # }
 
   ## Setup the plotting data frame
   if(is.null(plotData)) {
@@ -518,6 +516,8 @@ forestPlot <- function(dfres,
           theme(strip.text.y=element_text(size=strip_right_size))
       }
     }
+
+    plotList[[i]] <- eval(parse(text=paste("plotList[[i]]+",addcodeErr)))
 
   }
 
