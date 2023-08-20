@@ -53,6 +53,7 @@ forestPlot(
   onlySignificantErrorBars = FALSE,
   setSignEff = NULL,
   size = theme_get()$text$size * 0.8,
+  addcodeErr = "NULL",
   ...
 )
 }
@@ -158,6 +159,8 @@ the Forest plot (see Details). "data" returns a \code{data.frame} with the actua
 \item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).}
 
 \item{onlySignificantErrorBars}{Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).}
+
+\item{addcodeErr}{A string of code to be applied to each of the panels with error bars.}
 
 \item{...}{Arguments passed on to \code{ggpubr::text_grob}.}
 }
