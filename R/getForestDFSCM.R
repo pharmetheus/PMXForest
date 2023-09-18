@@ -109,6 +109,7 @@ getForestDFSCM <- function(dfCovs,
   }
   if (is.null(cGrouping)) cGrouping <- getGroups(dfCovs)
 
+
   ## Register to allow for paralell computing
   if (ncores>1) registerDoParallel(cores = ncores)
 
@@ -120,13 +121,13 @@ getForestDFSCM <- function(dfCovs,
     for (i in 1:nrow(dfCovs)) {
       n <- 1
       for (j in 1:length(functionList)) {
-        val <- functionList[[j]](thetas = thetas, df = dfCovs[i, ], ...)
+        val <- functionList[[j]](thetas = thetas, df = dfCovs[i, ,drop=FALSE], ...)
         if (!is.null(dfRefRow)) {
           indi<-min(i,nrow(dfRefRow))
-          valbase <- functionList[[j]](thetas = thetas, df = dfRefRow[indi,], ...)
+          valbase <- functionList[[j]](thetas = thetas, df = dfRefRow[indi,,drop=FALSE], ...)
         }
         else {
-          dfMissing <- as.data.frame(dfCovs[1,])
+          dfMissing <- as.data.frame(dfCovs[1,,drop=FALSE])
           dfMissing[,] <- iMiss
           valbase <- functionList[[j]](thetas = thetas, df = dfMissing, ...)
         }
@@ -174,6 +175,7 @@ getForestDFSCM <- function(dfCovs,
     }
     return(strName)
   }
+
 
   dfret <- data.frame()
   for (i in 1:nrow(dfCovs)) {
@@ -225,7 +227,6 @@ getForestDFSCM <- function(dfCovs,
       dfret <- rbind(dfret, dfrow)
     }
   }
-
 
   if (ncores>1) stopImplicitCluster()
 
