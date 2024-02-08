@@ -1,4 +1,5 @@
 dontCheckGraphs <- FALSE
+PMXRenv::activate.unqualified.packages()
 
 test_that("Forest plots for SCM works properly", {
 
@@ -162,7 +163,6 @@ test_that("Forest plots for SCM works properly", {
   ## Tests for setupData
   expect_error(setupForestPlotData(dfresSCM,parameterLabels=c("CL (L/h)","V (L)","Frel","Fake")))
   expect_error(setupForestPlotData(dfresSCM,groupNameLabels=covariates[-1]))
-  expect_error(setupForestPlotData(dfresSCM,statisticsLabels=c("CL (L/h)","V (L)","Frel","Fake")))
 
 
   plotData1 <- setupForestPlotData(dfresSCM)
