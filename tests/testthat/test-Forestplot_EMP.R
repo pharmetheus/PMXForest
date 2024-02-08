@@ -102,7 +102,7 @@ test_that("Forest plots for EMP works properly", {
   ## Will use only 25 samples for the tests
   dfSamplesCOV     <- getSamples(covFile,extFile=extFile,n=25)
 
-  dataFile <- system.file("extdata","DAT-1-MI-PMX-2.csv",package="PMXForest")
+  dataFile <- system.file("extdata","SimVal/DAT-1-MI-PMX-2.csv",package="PMXForest")
   dfData   <- read.csv(dataFile,stringsAsFactors = FALSE) %>% distinct(ID,.keep_all=TRUE) %>% slice(1:20,500:600)
 
   noBaseThetas <- 14

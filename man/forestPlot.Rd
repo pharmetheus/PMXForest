@@ -39,7 +39,7 @@ forestPlot(
   ref_area_label = "Reference area",
   point_label = "Point estimate",
   ci_label = "Confidence interval",
-  statisticsLabel = paste("Statistics:", parameterLabels),
+  statisticsLabel = "Statistics:",
   xlb = ifelse(plotRelative, "Relative parameter value", "Parameter value"),
   commonXlab = FALSE,
   size.legend.text = rel(0.8),
@@ -74,7 +74,7 @@ forestPlot(
 \item{parameters}{A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.}
 
 \item{parameterLabels}{A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
-Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
+If a vector of the same length as \code{parameters} should also be ordered to match \code{parameters}. If \code{parameters} is not specified, then is should match the order in \code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
 
 \item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
 Is by default the same as \code{dfres$GROUPNAME}.}
