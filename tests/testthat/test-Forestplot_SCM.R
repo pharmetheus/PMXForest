@@ -235,6 +235,12 @@ test_that("Forest plots for SCM works properly", {
 
       fp20 <- forestPlot(dfresSCM2,onlySignificantErrorBars = TRUE,setSignEff = lsTrue)
 
+      ## Test different selection and order of parameters and parameterLabels
+      fp21 <- forestPlot(dfresSCM,parameters=c("Frel","CL"))
+      fp22 <- forestPlot(dfresSCM,parameters=c("Frel","CL"),parameterLabels = c("F","Clearance"))
+      fp23 <- forestPlot(dfresSCM,parameters=c("Frel","CL","AUC"),parameterLabels = c("F","Clearance","AUC"))
+      fp24 <- forestPlot(dfresSCM,parameterLabels = c("Clearance","F","AUC"))
+
       dev.off()
       vdiffr::expect_doppelganger("Forest plot with default options", fp5)
       vdiffr::expect_doppelganger("Forest plot with provided plot data", fp6)
@@ -253,6 +259,11 @@ test_that("Forest plots for SCM works properly", {
       vdiffr::expect_doppelganger("Forest plot stackedPlots with refRow", fp18)
       vdiffr::expect_doppelganger("Forest plot wthout error bars for non-significant covariates", fp19)
       vdiffr::expect_doppelganger("Forest plot wthout error bars for non-significant covariates and setSignEff", fp20)
+
+      vdiffr::expect_doppelganger("Forest plot with selection of 2 parameters in different order", fp21)
+      vdiffr::expect_doppelganger("Forest plot with selection of 2 parameters in different order and parameter labels", fp22)
+      vdiffr::expect_doppelganger("Forest plot with a different order of the parameters", fp23)
+      vdiffr::expect_doppelganger("Forest plot different parameterLabels", fp24)
 
     }
   }
