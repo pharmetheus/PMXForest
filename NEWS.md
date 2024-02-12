@@ -2,7 +2,6 @@
 
 * Added a `NEWS.md` file to track changes to the package.
 
-
 # PMXForest 1.2.6
 
 * Fixed a bug related to the order of facet panels and facet labels when the user
