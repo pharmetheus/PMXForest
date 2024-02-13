@@ -360,6 +360,7 @@ forestPlot <- function(dfres,
                        setSignEff = NULL,
                        size=theme_get()$text$size*0.8,
                        addcodeErr="NULL",
+                       xlim=c(NA,NA),
                        ...) {
 
 
@@ -431,6 +432,7 @@ forestPlot <- function(dfres,
                                      GROUPNAMELABEL = group_name_label_fun)) +
       ylab(NULL) +
       xlab(xlb) +
+      coord_cartesian(xlim=xlim) +
       theme(plot.margin = unit(c(5.5,0,5.5,5.5), "pt"))
   }
 
