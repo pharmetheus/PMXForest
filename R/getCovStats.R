@@ -1,7 +1,7 @@
 #' getCovStats
 #'
 #' @description To quickly get a dfCovs data from for Forest plots by just supplying a data file and a vector of covariate names.
-#' @param data The data file that includes covariates.
+#' @param data A data frame that includes the covariates to summarise. Only the first line per subject will be used in the summary.
 #' @param covariates A character vector of covariate names as they appear in the data file.
 #' @param minLevels The maximum number of unique values for a covariate to be regarded as continus. Devfault is 10.
 #' @param probs A vector of two number - the lower and upper percentiles to use for summarising continuous covariates.
