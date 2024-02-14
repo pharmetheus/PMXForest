@@ -60,7 +60,7 @@ getForestDFFREM <- function(dfCovs,
                             ...) {
 
 
-  if(!is.list(covNames)) stop("covNames must be a list")
+  if(is.list(covNames)) stop("covNames should no longer be a list. Perhaps you want to use getCovNames(modFile)$covNames?")
 
   if (!is.null(dfRefRow) && nrow(dfRefRow)!=1 && nrow(dfRefRow)!=nrow(dfCovs)) {
     stop("The number of reference rows (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to dfCovs (change reference for each covariate combination)")
@@ -73,9 +73,9 @@ getForestDFFREM <- function(dfCovs,
   dfCovs[is.na(dfCovs)] <- iMiss
 
   #If a needed covariate is not present in dfCovs, set it to missing
-  if(!all(covNames$covNames %in% names(dfCovs))) {
+  if(!all(covNames %in% names(dfCovs))) {
     if (!quiet) warning("Not all covariates in frem model are present in dfCovs, setting them to missing")
-    dfCovs[,covNames$covNames[!(covNames$covNames %in% names(dfCovs))]] <-iMiss
+    dfCovs[,covNames[!(covNames %in% names(dfCovs))]] <-iMiss
   }
 
 
@@ -123,7 +123,7 @@ getForestDFFREM <- function(dfCovs,
     for (i in 1:nrow(dfCovs)) {
       currentNames <- names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != iMiss]
 
-      if (any(!currentNames %in% covNames$covNames) && !quiet) {
+      if (any(!currentNames %in% covNames) && !quiet) {
         warning(paste0("Can't find some of the covariates: ", currentNames, " in the FREM model, perhaps they are structural covariates!"))
       }
 
@@ -139,8 +139,8 @@ getForestDFFREM <- function(dfCovs,
           # noCovThetas    = noCovThetas,
           # noSigmas       = noSigmas,
           dfext            = dfext,
-          covNames         = covNames$covNames,
-          availCov         = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames$covNames],
+          covNames         = covNames,
+          availCov         = names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss][names(dfRefRow[indi,])[as.numeric(dfRefRow[indi,]) != iMiss] %in% covNames],
           quiet            = quiet
           # noSkipOm       = noSkipOm,
           # noParCov       = noParCov
@@ -155,8 +155,8 @@ getForestDFFREM <- function(dfCovs,
         # noCovThetas  = noCovThetas,
         # noSigmas     = noSigmas,
         dfext        = dfext,
-        covNames     = covNames$covNames,
-        availCov     = names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss][names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss] %in% covNames$covNames],
+        covNames     = covNames,
+        availCov     = names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss][names(dfCovs[i, ])[as.numeric(dfCovs[i,]) != iMiss] %in% covNames],
         quiet        = quiet
         # noSkipOm     = noSkipOm,
         # noParCov     = noParCov
