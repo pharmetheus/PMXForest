@@ -54,6 +54,7 @@ forestPlot(
   setSignEff = NULL,
   size = theme_get()$text$size * 0.8,
   addcodeErr = "NULL",
+  xlim = c(NA, NA),
   ...
 )
 }

@@ -15,7 +15,7 @@ getCovStats(
 )
 }
 \arguments{
-\item{data}{The data file that includes covariates.}
+\item{data}{A data frame that includes the covariates to summarise. Only the first line per subject will be used in the summary.}
 
 \item{covariates}{A character vector of covariate names as they appear in the data file.}
 
@@ -26,6 +26,9 @@ getCovStats(
 \item{idVar}{The name of the ID column to use for identifying one record per subject.}
 
 \item{missVal}{The missing value indicator. Default is -99.}
+
+\item{nsig}{The number of `digits` passed to the `signif` function when applied
+to covariates with more than `minLevels` of unique values.}
 }
 \value{
 A data frame with covariate statistics to be used as an argument for Forest plots.
