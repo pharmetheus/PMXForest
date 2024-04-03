@@ -6,4 +6,12 @@ test_that("getCovStats works", {
   expect_snapshot(getCovStats(data,covariates,missVal=-99))
   expect_snapshot(getCovStats(data,covariates,missVal=-99,probs=c(0.1,0.9)))
 
+  data$FakeWT <- data$WT/1000
+  covariates <- c("WT","HT","SEX","FakeWT")
+
+  expect_snapshot(getCovStats(data,covariates,missVal=-99))
+  expect_snapshot(getCovStats(data,covariates,missVal=-99,nsig=2))
+
+  expect_error(getCovStats(data,"Test",missVal=-99))
+
 })

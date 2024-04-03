@@ -1,12 +1,14 @@
 #' getCovStats
 #'
 #' @description To quickly get a dfCovs data from for Forest plots by just supplying a data file and a vector of covariate names.
-#' @param data The data file that includes covariates.
+#' @param data A data frame that includes the covariates to summarise. Only the first line per subject will be used in the summary.
 #' @param covariates A character vector of covariate names as they appear in the data file.
 #' @param minLevels The maximum number of unique values for a covariate to be regarded as continus. Devfault is 10.
 #' @param probs A vector of two number - the lower and upper percentiles to use for summarising continuous covariates.
 #' @param idVar The name of the ID column to use for identifying one record per subject.
 #' @param missVal The missing value indicator. Default is -99.
+#' @param nsig The number of `digits` passed to the `signif` function when applied
+#' to covariates with more than `minLevels` of unique values.
 #'
 #' @return A data frame with covariate statistics to be used as an argument for Forest plots.
 #' @export
@@ -26,6 +28,9 @@ getCovStats <- function(data,covariates,minLevels = 10,probs=c(0.05,0.95),idVar 
 
   ## Remove duplicated idVar rows
   data <- subset(data,!duplicated(idVar))
+
+  ## Check the input
+  if(!all(covariates %in% names(data))) stop("Not all covariates are present in the data.")
 
   retList <- list()
   for(myCov in covariates) {
@@ -54,7 +59,8 @@ getCovStats <- function(data,covariates,minLevels = 10,probs=c(0.05,0.95),idVar 
       }
 
     } else {
-      retList[[myCov]] <- round(quantile(data[[myCov]],p=probs),digits = nsig)
+      retList[[myCov]] <- signif(quantile(data[[myCov]],p=probs),digits = nsig)
+
     }
   }
   return(retList)

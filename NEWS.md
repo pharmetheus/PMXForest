@@ -1,3 +1,11 @@
+# PMXForest 1.2.8
+
+* Clarified documentations in some functions.
+* Added an `xlim` argument to `forestPlot`.
+* Changed the rounding function in `getCovStats`from `round` to `signif`.
+* Clarified the documentation for `getCovStats()` so it is clear it requires a data.frame and not a file.
+* Moved getForestDFFREM to PMXFrem
+
 # PMXForest 1.2.7
 
 * Added a `NEWS.md` file to track changes to the package.
