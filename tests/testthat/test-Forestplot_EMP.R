@@ -1,4 +1,5 @@
 dontCheckGraphs <- FALSE
+PMXRenv::activate.unqualified.packages()
 
 test_that("Forest plots for EMP works properly", {
 
