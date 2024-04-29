@@ -5,6 +5,7 @@
 * Changed the rounding function in `getCovStats`from `round` to `signif`.
 * Clarified the documentation for `getCovStats()` so it is clear it requires a data.frame and not a file.
 * Moved getForestDFFREM to PMXFrem
+* Added argument parameterLabelsPrefix that will prepend parameterLabelsPrefix to the facet labels for the parameter panels.
 
 # PMXForest 1.2.7
 
