@@ -70,6 +70,7 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #' @param parameters A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.
 #' @param parameterLabels A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
 #' If a vector of the same length as \code{parameters} should also be ordered to match \code{parameters}. If \code{parameters} is not specified, then is should match the order in \code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).
+#' @param parameterLabelsPrefix A string to be added before the \code{parameterLabels} in the facet strip for the parameter panels.
 #' @param groupNameLabels A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
 #'  Is by default the same as \code{dfres$GROUPNAME}.
 #' @param statisticsLabels A character string that will precede the \code{parameterLabels} in the facet labels for the statistics panels. Default is `Statistics:`.
@@ -99,11 +100,18 @@ getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 #' \dontrun{
 #' plotData<- setupForestPlotData(dfres)
 #' }
-setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
-                                parameterLabels=NULL,groupNameLabels=NULL,
-                                statisticsLabels=NULL,
-                                plotRelative=TRUE,noVar=FALSE,reference="func",
-                                sigdigits=2,onlySignificant=FALSE,setSignEff=NULL) {
+setupForestPlotData <- function(dfres,
+                                parameters            = unique(dfres$PARAMETER),
+                                parameterLabels       = NULL,
+                                parameterLabelsPrefix = NULL,
+                                groupNameLabels       = NULL,
+                                statisticsLabels      = NULL,
+                                plotRelative          = TRUE,
+                                noVar                 = FALSE,
+                                reference             = "func",
+                                sigdigits             = 2,
+                                onlySignificant       = FALSE,
+                                setSignEff            = NULL) {
 
   ## Input checks
   if(!is.null(parameterLabels)) {
@@ -135,6 +143,19 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
     dfres$PARAMETERLABEL <- dfres$PARAMETER
   }
 
+  ## Name the STATISTICS column
+  if(is.null(statisticsLabels)) {
+    dfres$STATISTICSLABEL <- dfres$PARAMETERLABEL
+  } else {
+    dfres$STATISTICSLABEL <- factor(paste0(statisticsLabels,dfres$PARAMETERLABEL),levels = paste0(statisticsLabels,unique(dfres$PARAMETERLABEL)))
+  }
+
+  ## Add the parameter labels prefix if requested.
+  if(!is.null(parameterLabelsPrefix)) {
+    dfres$PARAMETERLABEL <- paste0(parameterLabelsPrefix, dfres$PARAMETERLABEL)
+    dfres$PARAMETERLABEL <- factor(dfres$PARAMETERLABEL,levels=unique(dfres$PARAMETERLABEL))
+  }
+
   ## Name the GROUPNAME column
   if(!is.null(groupNameLabels)) {
 
@@ -158,12 +179,6 @@ setupForestPlotData <- function(dfres,parameters=unique(dfres$PARAMETER),
   # Retain order
   dfres$GROUPNAMELABEL <- factor(dfres$GROUPNAMELABEL,levels=unique(dfres$GROUPNAMELABEL[order(dfres$GROUPNAME)]))
 
-  ## Name the STATISTICS column
-  if(is.null(statisticsLabels)) {
-    dfres$STATISTICSLABEL <- dfres$PARAMETERLABEL
-  } else {
-    dfres$STATISTICSLABEL <- factor(paste0(statisticsLabels,dfres$PARAMETERLABEL),levels = paste0(statisticsLabels,unique(dfres$PARAMETERLABEL)))
-  }
 
   ## Determine which statistic to use
   vars <- getPlotVars(plotRelative,noVar,reference)
@@ -319,6 +334,7 @@ forestPlot <- function(dfres,
                        sigdigits = 2,
                        parameters=unique(dfres$PARAMETER), #Labels
                        parameterLabels=parameters,
+                       parameterLabelsPrefix = NULL,
                        groupNameLabels = NULL,
                        referenceInfo = "auto",
                        labelfun=label_value,
@@ -366,9 +382,18 @@ forestPlot <- function(dfres,
 
   ## Setup the plotting data frame
   if(is.null(plotData)) {
-    plotData<- setupForestPlotData(dfres,reference=referenceParameters,plotRelative = plotRelative,parameters=parameters,parameterLabels=parameterLabels,groupNameLabels=groupNameLabels,
-                                   statisticsLabel=statisticsLabel,
-                                   noVar = noVar,sigdigits = sigdigits,onlySignificant = onlySignificant,setSignEff=setSignEff)
+    plotData<- setupForestPlotData(dfres,
+                                   reference             = referenceParameters,
+                                   plotRelative          = plotRelative,
+                                   parameters            = parameters,
+                                   parameterLabels       = parameterLabels,
+                                   parameterLabelsPrefix = parameterLabelsPrefix,
+                                   groupNameLabels       = groupNameLabels,
+                                   statisticsLabel       = statisticsLabel,
+                                   noVar                 = noVar,
+                                   sigdigits             = sigdigits,
+                                   onlySignificant       = onlySignificant,
+                                   setSignEff            = setSignEff)
   } else {
     message("Will use the provided plotData and ignore dfres\n")
   }

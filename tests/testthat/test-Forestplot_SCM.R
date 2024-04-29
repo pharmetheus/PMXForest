@@ -172,11 +172,13 @@ test_that("Forest plots for SCM works properly", {
                                    statisticsLabel=c("CL (L/h)","V (L)","Frel"))
   plotData5 <- setupForestPlotData(dfresSCM,onlySignificant = TRUE)
 
+  plotData6 <- setupForestPlotData(dfresSCM,statisticsLabels = "Statistics: ",parameterLabelsPrefix = "Secondary PK metric: ")
+
   expect_snapshot(plotData1)
   expect_snapshot(plotData2)
   expect_snapshot(plotData4)
   expect_snapshot(plotData5)
-
+  expect_snapshot(plotData6)
 
   check_graphical_output <- function() {
     if(getRversion() <= "3.5.3") {
@@ -240,6 +242,7 @@ test_that("Forest plots for SCM works properly", {
       fp22 <- forestPlot(dfresSCM,parameters=c("Frel","CL"),parameterLabels = c("F","Clearance"))
       fp23 <- forestPlot(dfresSCM,parameters=c("Frel","CL","AUC"),parameterLabels = c("F","Clearance","AUC"))
       fp24 <- forestPlot(dfresSCM,parameterLabels = c("Clearance","F","AUC"))
+      fp25 <- forestPlot(dfresSCM,parameterLabelsPrefix="My Parameters: ")
 
       dev.off()
       vdiffr::expect_doppelganger("Forest plot with default options", fp5)
@@ -264,6 +267,8 @@ test_that("Forest plots for SCM works properly", {
       vdiffr::expect_doppelganger("Forest plot with selection of 2 parameters in different order and parameter labels", fp22)
       vdiffr::expect_doppelganger("Forest plot with a different order of the parameters", fp23)
       vdiffr::expect_doppelganger("Forest plot different parameterLabels", fp24)
+
+      vdiffr::expect_doppelganger("Forest plot parameterLabelsPrefix", fp25)
 
     }
   }

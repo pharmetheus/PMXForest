@@ -1092,3 +1092,25 @@
       #   STATISTIC <chr>, and abbreviated variable names 1: GROUPNAMELABEL,
       #   2: PARAMETER, 3: PARAMETERLABEL, 4: STATISTICSLABEL
 
+---
+
+    Code
+      plotData6
+    Output
+      # A tibble: 63 x 13
+         GROUPNAME GROUPNAM~1 COVEFF COVNAME PARAM~2 PARAM~3 STATI~4   REF point    q1
+         <fct>     <fct>      <lgl>  <fct>   <fct>   <fct>   <fct>   <dbl> <dbl> <dbl>
+       1 NCIL      NCIL       FALSE  NCI=0   CL      Second~ Statis~     1 1     0.956
+       2 NCIL      NCIL       FALSE  NCI=0   Frel    Second~ Statis~     1 1     1    
+       3 NCIL      NCIL       FALSE  NCI=0   AUC     Second~ Statis~     1 1     0.962
+       4 NCIL      NCIL       FALSE  NCI>0   CL      Second~ Statis~     1 1     0.956
+       5 NCIL      NCIL       FALSE  NCI>0   Frel    Second~ Statis~     1 1     1    
+       6 NCIL      NCIL       FALSE  NCI>0   AUC     Second~ Statis~     1 1     0.962
+       7 FORM      FORM       FALSE  Oral t~ CL      Second~ Statis~     1 1     0.956
+       8 FORM      FORM       TRUE   Oral t~ Frel    Second~ Statis~     1 0.854 0.838
+       9 FORM      FORM       TRUE   Oral t~ AUC     Second~ Statis~     1 0.854 0.814
+      10 FORM      FORM       FALSE  FDC     CL      Second~ Statis~     1 1     0.956
+      # ... with 53 more rows, 3 more variables: q2 <dbl>, reference <chr>,
+      #   STATISTIC <chr>, and abbreviated variable names 1: GROUPNAMELABEL,
+      #   2: PARAMETER, 3: PARAMETERLABEL, 4: STATISTICSLABEL
+

@@ -13,6 +13,7 @@ forestPlot(
   sigdigits = 2,
   parameters = unique(dfres$PARAMETER),
   parameterLabels = parameters,
+  parameterLabelsPrefix = NULL,
   groupNameLabels = NULL,
   referenceInfo = "auto",
   labelfun = label_value,
@@ -76,6 +77,8 @@ forestPlot(
 
 \item{parameterLabels}{A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
 If a vector of the same length as \code{parameters} should also be ordered to match \code{parameters}. If \code{parameters} is not specified, then is should match the order in \code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
+
+\item{parameterLabelsPrefix}{A string to be added before the \code{parameterLabels} in the facet strip for the parameter panels.}
 
 \item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
 Is by default the same as \code{dfres$GROUPNAME}.}
