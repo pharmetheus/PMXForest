@@ -1,3 +1,7 @@
+# PMXForest 1.2.9
+
+* Repeating the 1.2.8 release since something went wrong in the packaging.
+
 # PMXForest 1.2.8
 
 * Clarified documentations in some functions.
