@@ -22,45 +22,37 @@
 #'   getCovStats(data,c("WT","BMI","SEX"),missVal=-99),
 #'   iMiss    =-99
 #' )}
-getCovStats <- function(data,covariates,minLevels = 10,probs=c(0.05,0.95),idVar = "ID",missVal=-99,nsig=3) {
+#'
+getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95),
+                         idVar = "ID", missVal = -99, nsig = 3) {
 
-  data <- data %>% distinct(!!ensym(idVar),.keep_all = TRUE)
-
-  ## Remove duplicated idVar rows
-  data <- subset(data,!duplicated(idVar))
+  data <- data %>% distinct(!!ensym(idVar), .keep_all = TRUE)
 
   ## Check the input
   if(!all(covariates %in% names(data))) stop("Not all covariates are present in the data.")
 
+  data <- subset(data, !duplicated(idVar))
   retList <- list()
-  for(myCov in covariates) {
-    data <- data[data[[myCov]] != missVal,]
-
-    if(length(unique(data[[myCov]])) <= minLevels) {
-
-      numLevs <- length(unique(data[[myCov]]))
-      ## Binary covariate
-      if(numLevs == 2) {
-        retList[[myCov]] <- unique(data[[myCov]])
-      } else {
-
-        levs <- sort(unique(data[[myCov]]))
+  for (myCov in covariates) {
+    dataTmp <- data[data[[myCov]] != missVal, ]
+    if (length(unique(dataTmp[[myCov]])) <= minLevels) {
+      numLevs <- length(unique(dataTmp[[myCov]]))
+      if (numLevs == 2) {
+        retList[[myCov]] <- unique(dataTmp[[myCov]])
+      }
+      else {
+        levs <- sort(unique(dataTmp[[myCov]]))
         covList <- list()
         for (i in 2:numLevs) {
-
-          vec <- rep(0,numLevs)
+          vec <- rep(0, numLevs)
           vec[i] <- 1
-
-          covList[[paste0(myCov,"_",levs[i])]] <- vec
+          covList[[paste0(myCov, "_", levs[i])]] <- vec
         }
-
         retList[[myCov]] <- covList
-
       }
-
-    } else {
+    }
+    else {
       retList[[myCov]] <- signif(quantile(data[[myCov]],p=probs),digits = nsig)
-
     }
   }
   return(retList)

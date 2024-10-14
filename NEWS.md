@@ -1,5 +1,7 @@
 # PMXForest 1.2.10
 
+* Making sure that IDs with missing data are only filtered out for the missing covariate concerned instead of across all covariates
+
 # PMXForest 1.2.9
 
 * Repeating the 1.2.8 release since something went wrong in the packaging.
