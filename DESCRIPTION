@@ -1,7 +1,7 @@
 Type: Package
 Package: PMXForest
 Title: Create Forest plots based on NONMEM output.
-Version: 1.2.10
+Version: 1.2.11
 Authors@R: 
     c(person(given = "Niclas",
              family = "Jonsson",

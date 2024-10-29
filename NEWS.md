@@ -1,3 +1,7 @@
+# PMXForest 1.2.11
+
+* Fixed a bug in the handling of missing covariates in getCovStats().
+
 # PMXForest 1.2.10
 
 * Making sure that IDs with missing data are only filtered out for the missing covariate concerned instead of across all covariates
