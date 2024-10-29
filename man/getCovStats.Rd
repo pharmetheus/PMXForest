@@ -45,4 +45,5 @@ dfCovs <- createInputForestData(
   getCovStats(data,c("WT","BMI","SEX"),missVal=-99),
   iMiss    =-99
 )}
+
 }

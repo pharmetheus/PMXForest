@@ -52,7 +52,7 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
       }
     }
     else {
-      retList[[myCov]] <- signif(quantile(data[[myCov]],p=probs),digits = nsig)
+      retList[[myCov]] <- signif(quantile(dataTmp[[myCov]],p=probs),digits = nsig)
     }
   }
   return(retList)
