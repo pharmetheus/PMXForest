@@ -1,3 +1,7 @@
+# PMXForest (development version)
+
+* Updated the documentation for `noBaseThetas` in getForestDFSCM.
+
 # PMXForest 1.2.11
 
 * Fixed a bug in the handling of missing covariates in getCovStats().

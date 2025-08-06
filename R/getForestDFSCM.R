@@ -15,7 +15,7 @@
 #' from the reference value will be calculated. If the function returns a vector of values, each value will be used
 #' but functionListName must contain the names with a length of all return for all functions in the functionList
 #' @param functionListName A vector of strings (names) of the parameters for each function in the functionList
-#' @param noBaseThetas the number of structural thetas in the model
+#' @param noBaseThetas the number of parameters from `dfParameters` to pass to the functions in `functionList`.
 #' @param dfParameters A data frame with parameter samples from the uncertainty distribution.
 #' The vector of final parameter estimates is assumed to be in the first row.
 #' The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.
