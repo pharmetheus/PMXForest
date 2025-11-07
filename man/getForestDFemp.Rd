@@ -33,7 +33,7 @@ getForestDFemp(
 
 \item{covExpressionsList}{A list of expressions that define the covariate values to visualize in the Forest plot.}
 
-\item{noBaseThetas}{the number of structural thetas in the model}
+\item{noBaseThetas}{the number of parameters from `dfParameters` to pass to the functions in `functionList`.}
 
 \item{dfParameters}{A data frame with parameter samples from the uncertainty distribution.
 The vector of final parameter estimates is assumed to be in the first row.

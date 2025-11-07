@@ -2,7 +2,7 @@
 % Please edit documentation in R/getCovStats.R
 \name{getCovStats}
 \alias{getCovStats}
-\title{getCovStats}
+\title{Get Covariate Statistics for Forest Plots}
 \usage{
 getCovStats(
   data,
@@ -15,35 +15,85 @@ getCovStats(
 )
 }
 \arguments{
-\item{data}{A data frame that includes the covariates to summarise. Only the first line per subject will be used in the summary.}
+\item{data}{A data frame that includes the covariates to summarise. Only the
+first record per subject (identified by `idVar`) will be used.}
 
-\item{covariates}{A character vector of covariate names as they appear in the data file.}
+\item{covariates}{A character vector of covariate names as they appear in the
+data frame.}
 
-\item{minLevels}{The maximum number of unique values for a covariate to be regarded as continus. Devfault is 10.}
+\item{minLevels}{The maximum number of unique values a covariate can have to be
+treated as categorical. Covariates with more unique values than `minLevels`
+are treated as continuous. Default is 10.}
 
-\item{probs}{A vector of two number - the lower and upper percentiles to use for summarising continuous covariates.}
+\item{probs}{A numeric vector of two probabilities used to calculate quantiles
+for continuous covariates. Defaults to `c(0.05, 0.95)`.}
 
-\item{idVar}{The name of the ID column to use for identifying one record per subject.}
+\item{idVar}{The name of the subject identifier column, used to select one
+record per subject. Defaults to `"ID"`.}
 
-\item{missVal}{The missing value indicator. Default is -99.}
+\item{missVal}{The value indicating missing data, which will be excluded from
+calculations. Defaults to -99.}
 
-\item{nsig}{The number of `digits` passed to the `signif` function when applied
-to covariates with more than `minLevels` of unique values.}
+\item{nsig}{The number of significant digits (passed to the `signif`
+function) for rounding the summary of continuous covariates. Defaults to 3.}
 }
 \value{
-A data frame with covariate statistics to be used as an argument for Forest plots.
+A list where each element corresponds to a covariate.
+  \itemize{
+    \item For **continuous** covariates, the element is a named numeric vector
+      of quantiles.
+    \item For **binary** covariates, the element is a vector of the two
+      unique values.
+    \item For **multi-level categorical** covariates, the element is a nested
+      list of one-hot encoded vectors, with the first level used as the reference.
+  }
 }
 \description{
-To quickly get a dfCovs data from for Forest plots by just supplying a data file and a vector of covariate names.
+Quickly generates a list of summary statistics for specified
+  covariates, formatted for use in forest plots. The function handles
+  continuous, binary, and multi-level categorical variables differently based
+  on their number of unique values.
 }
 \examples{
-\dontrun{
+# --- Basic Example ---
 
-data <- read.csv("inst/extdata/DAT-1-MI-PMX-2.csv")
+# 1. Create a sample dataset
+# This data includes duplicate IDs, continuous (WT), binary (SEX),
+# multi-level categorical (RACE), and a variable with a missing value (BMI).
+sample_data <- data.frame(
+  ID = c(1, 1, 2, 3, 4, 5),
+  WT = c(60.5, 61.0, 70.2, 80.8, 65.1, 90.3),
+  SEX = c(0, 0, 1, 0, 1, 0),
+  RACE = c(1, 1, 2, 3, 1, 2),
+  BMI = c(22.1, 22.4, 25.3, -99, 23.5, 28.9)
+)
 
-dfCovs <- createInputForestData(
-  getCovStats(data,c("WT","BMI","SEX"),missVal=-99),
-  iMiss    =-99
-)}
+# 2. Define covariates and get statistics
+covariates_to_summarize <- c("WT", "SEX", "RACE")
 
+# Note: WT has 5 unique values in the distinct-ID dataset.
+# To ensure it's treated as continuous, we set minLevels to be less than 5.
+cov_stats <- getCovStats(
+  data = sample_data,
+  covariates = covariates_to_summarize,
+  minLevels = 4
+)
+
+# 3. View the output list structure
+print(cov_stats)
+
+
+# --- Example with Missing Value Handling ---
+
+# Get statistics for BMI, which contains a -99 missing value indicator.
+# We set minLevels = 3 so BMI (with 4 unique non-missing values) is
+# correctly treated as continuous.
+bmi_stats <- getCovStats(
+  data = sample_data,
+  covariates = "BMI",
+  missVal = -99,
+  minLevels = 3
+)
+
+print(bmi_stats)
 }
