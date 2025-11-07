@@ -1,20 +1,12 @@
 Type: Package
 Package: PMXForest
 Title: Create Forest plots based on NONMEM output.
-Version: 1.2.11
+Version: 1.2.12
 Authors@R: 
-    c(person(given = "Niclas",
-             family = "Jonsson",
-             role = c("aut", "cre"),
-             email = "niclas.jonsson@pharmetheus.com"),
-      person(given = "Joakim",
-             family = "Nyberg",
-             role = c("aut"),
-             email = "joakim.nyberg@pharmetheus.com"),
-      person("Pharmetheus AB", role = c("cph", "fnd"))
-      )
-Author: Niclas Jonsson and Joakim Nyberg
-Maintainer: Niclas Jonsson <niclas.jonsson@pharmetheus.com>
+    person("Pharmetheus AB", email = "info@pharmetheus.com", role = c("cre","cph")),
+    person("Joakim", "Nyberg", role = c("aut")),
+    person("Niclas", "Jonsson", role = c("aut"))
+Maintainer: Pharmetheus AB <info@pharmetheus.com>
 Description: Functions to support the creation of Forest plots.
 License: GPL (>= 3)
 Imports:

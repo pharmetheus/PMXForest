@@ -1,3 +1,7 @@
+# PMXForest 1.2.12
+
+* Update the DESCRIPTION fiel to add Pharmetheus as the copyright holder.
+
 # PMXForest 1.2.11
 
 * Fixed a bug in the handling of missing covariates in getCovStats().
