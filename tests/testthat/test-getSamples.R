@@ -161,3 +161,65 @@ test_that("getSamples input validation and data frame checks", {
   expect_equal(nrow(res_null), nrow(df_input) + 1) # Final estimate + samples
   expect_true("OBJ" %in% names(res_null))
 })
+
+
+test_that("getSamples handles data.frame input for extFile", {
+  tmp_cov <- tempfile(fileext = ".cov")
+  cov_content <- "TABLE NO: 1
+NAME      THETA1      THETA2
+THETA1    0.1         0.01
+THETA2    0.01        0.1"
+  writeLines(cov_content, tmp_cov)
+
+  # Ensure ITERATION is a character to match internal subsetting
+  df_ext_manual <- data.frame(
+    ITERATION = "-1000000000",
+    THETA1 = 1.5,
+    THETA2 = 2.5,
+    OBJ = 100.0,
+    stringsAsFactors = FALSE
+  )
+
+  # Run the function requesting 10 samples
+  res <- getSamples(input = tmp_cov, extFile = df_ext_manual, n = 10)
+
+  expect_s3_class(res, "data.frame")
+
+  # Expect n + 1 rows (10 samples + 1 final estimate row)
+  expect_equal(nrow(res), 11)
+
+  # Verify alignment: the first row must match the manual estimates
+  # We use as.numeric to safely compare values
+  expect_equal(as.numeric(res[1, "THETA1"]), 1.5)
+  expect_equal(as.numeric(res[1, "OBJ"]), 100.0)
+
+  unlink(tmp_cov)
+})
+
+
+test_that("getSamples stops on parameter dimensionality mismatch", {
+  # 1. Setup mock covariance file with 2 parameters
+  tmp_cov <- tempfile(fileext = ".cov")
+  cov_content <- "TABLE NO: 1
+NAME      THETA1      THETA2
+THETA1    0.1         0.01
+THETA2    0.01        0.1"
+  writeLines(cov_content, tmp_cov)
+
+  # 2. Create a dfExt with 3 parameters (The Mismatch)
+  df_ext_mismatch <- data.frame(
+    ITERATION = -1000000000,
+    THETA1 = 1.5,
+    THETA2 = 2.5,
+    THETA3 = 3.5, # Extra parameter not in .cov
+    OBJ = 100
+  )
+
+  # 3. Verify the stop() triggers with the correct message
+  expect_error(
+    getSamples(input = tmp_cov, extFile = df_ext_mismatch, n = 10),
+    "Critical Mismatch: The .ext data contains 3 parameters, but the .cov matrix has 2 parameters"
+  )
+
+  unlink(tmp_cov)
+})

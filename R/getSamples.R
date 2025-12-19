@@ -1,42 +1,40 @@
 #' getSamples
 #'
-#' @description Function that gets samples, either from a regular bootstrap (Psn
-#'   output) a SIR (PsN output), a covariance matrix (NM output) or samples from
-#'   a small bootstrap using the estimated covariance matrix
+#' @description Function that gets samples, either from a regular bootstrap (PsN
+#'   output), a SIR (PsN output), or a covariance matrix (NONMEM output).
+#'   It includes protective coding to ensure the parameter estimates in the
+#'   .ext data align with the dimensions of the .cov matrix.
 #'
 #' @importFrom dplyr filter
 #' @param input The input file name (character string). If the file name
-#'   extension is `.cov` it is assumed that the file is a a NONMEM .cov file and
-#'   if the extension is `.csv` is is assumed that it is a PsN raw results file
-#'   from either a bootstrap or a SIR. Can also be a data.frame with the same
+#'   extension is `.cov` it is assumed that the file is a NONMEM .cov file.
+#'   If the extension is `.csv`, it is assumed to be a PsN raw results file
+#'   from a bootstrap or SIR. Can also be a data.frame with the same
 #'   structure as such files.
-#' @param extFile The name of the NONMEM ext file. Needed to transform output to
-#'   the ext-format.  Should not be NULL.
-#' @param n The number of samples to generate when sampling is done from a
-#'   variance-covaraince matrix. NULL is permissable if the input is a SIR or
-#'   bootstrap raw_results file.
-#' @param indexvec A vector that can be used to subset the columns in the raw
-#'   results file so that the columns comes in the order THETA, SIGMA, OMEGA.
-#'   not required if a PsN raw_results_structure is present in the same
-#'   directory as the csv file.
-#' @param zerosindex A vector with indicies that indicates which parameters that
-#'   are fixed to zero.
+#' @param extFile The name of the NONMEM .ext file (character string) OR a
+#'   data.frame containing the parameter iterations. Providing a data.frame
+#'   allows for manual alignment or "padding" of parameters if NONMEM has
+#'   omitted columns in the .cov file.
+#' @param n The number of samples to generate when sampling from a
+#'   variance-covariance matrix. This is required if `input` is a `.cov` file.
+#'   NULL is permissible if the input is a SIR or bootstrap raw_results file.
+#' @param indexvec A vector used to subset columns in the raw results file
+#'   so parameters appear in the order: THETA, SIGMA, OMEGA. Not required
+#'   if a PsN `raw_results_structure` file is in the same directory.
+#' @param zerosindex A vector of indices indicating which parameters are
+#'   fixed to zero.
 #'
-#' @return A data frame with parameter vectors.
+#' @return A data frame with $n + 1$ rows (if $n$ is specified) or the full set
+#'   of resamples. The first row contains the final parameter estimates
+#'   (ITERATION -1000000000), followed by the generated or extracted samples.
 #'
-#'   In case a .cov file is provided as input the parameter vectors is the
-#'   result of multivariate sampling from the variance-covariance matrix.
+#' @details
+#'   **Protective Coding:** When sampling from a `.cov` file, the function
+#'   verifies that the number of parameters in the `extFile` matches the
+#'   dimensions of the covariance matrix. If a mismatch is detected (a known
+#'   NONMEM edge case), the function will `stop()` and prompt the user to
+#'   provide a manually aligned data.frame to `extFile`.
 #'
-#'   In case a .csv file is provided as input and n=NULL, the input is assumed
-#'   to be a SIR or bootstrap file. In case of a SIR file, all samples present
-#'   in the .csv file is returned. In case it is a bootstrap file, the function
-#'   returns all samples with a nonzero value in the ofv column.
-#'
-#'   In case a .csv file is provided as input and n is not NULL, it is assumed
-#'   that the raw results come from a boostrap analysis. A variance- covariance
-#'   matrix will be created from the samples with a non-zero value in the ofv
-#'   column and n parameter vectors will be returned obtained by multivariate
-#'   sampling from the constructed variance-covariance matrix.
 #' @export
 #'
 #' @examples
@@ -76,10 +74,24 @@ getSamples <- function(input,
        tools::file_ext(input) != "csv") stop("The input file name needs to have either a .cov or .csv extension")
     if(!file.exists(input)) stop(paste("Can not find",input))
   }
-  ## Check the extFile argument
-  if(!is.null(extFile) && tools::file_ext(extFile) != "ext") stop(paste(extFile, "does not have a .ext extension"))
-  if(!is.null(extFile) && !file.exists(extFile)) stop(paste("Can not find",extFile))
+
+  ## Check the extFile argument (Updated to allow data.frame)
+  if (!is.null(extFile) && !is.data.frame(extFile)) {
+    if(tools::file_ext(extFile) != "ext") stop(paste(extFile, "does not have a .ext extension"))
+    if(!file.exists(extFile)) stop(paste("Can not find",extFile))
+  }
+
   if(class(input) != "data.frame" && tools::file_ext(input) == "csv" && is.null(extFile)) stop("Need to provide an .ext file when input is a .csv file.")
+
+  # Load the ext data
+  # This section ensures dfExt is available for all subsequent blocks
+  if (!is.null(extFile)) {
+    if (is.data.frame(extFile)) {
+      dfExt <- extFile
+    } else {
+      dfExt <- getExt(extFile = extFile)
+    }
+  }
 
   # A data frame was provided
   if (is.data.frame(input)) {
@@ -87,11 +99,11 @@ getSamples <- function(input,
     if (!is.null(indexvec)) dfParameters <- subset(dfParameters)[, indexvec]
     # if ext file is provided
     if (!is.null(extFile)) { #If a ext file is provided, use that to transform input
-      dfExt     <- subset(getExt(extFile = extFile), ITERATION == "-1000000000") # Get the final parameter estimates
+      dfExtSub <- subset(dfExt, ITERATION == "-1000000000") # Get the final parameter estimates
       if (is.null(n)) {
-        dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+        dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
         dfParameters <- cbind(dfParameters, OBJ = 0)
-        dfParameters        <- rbind(dfExt[,-1],dfParameters) # Add final parameters in the top row.
+        dfParameters        <- rbind(dfExtSub[,-1],dfParameters) # Add final parameters in the top row.
         return(dfParameters)
       } else {
         # Now construct sigma and mu
@@ -105,9 +117,9 @@ getSamples <- function(input,
         }
 
         dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
-        dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+        dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
         dfParameters <- cbind(dfParameters, OBJ = 0)
-        dfParameters        <- rbind(dfExt[,-1],dfParameters) # Add final parameters in the top row.
+        dfParameters        <- rbind(dfExtSub[,-1],dfParameters) # Add final parameters in the top row.
         return(dfParameters)
       }
     } else {
@@ -126,19 +138,35 @@ getSamples <- function(input,
       names(dfParameters)<-tmpnames
       dfParameters <- cbind(dfParameters, OBJ = 0)
       return(dfParameters)
+    }
   }
- }
+
   ## Sample from the varcov matrix if a .cov was provided
   if(tools::file_ext(input) == "cov") {
 
     ## Check that n is provided
     if(is.null(n)) stop("n - number of samples - needs to be provided")
 
-    dfExt     <- subset(getExt(extFile = extFile), ITERATION == "-1000000000") # Get the final parameter estimates
+    dfExtSub  <- subset(dfExt, ITERATION == "-1000000000") # Get the final parameter estimates
     dfcov     <- read.table(input, fill = TRUE, header = TRUE, sep = "", skip = 1, stringsAsFactors = FALSE)
     sigma     <- data.matrix(dfcov[, 2:ncol(dfcov)])
-    strNames  <- names(dfExt[, -(c(1, ncol(dfExt)))])
-    mu        <- as.numeric(dfExt[, -(c(1, ncol(dfExt)))]) # The mean is the final estimates
+
+    # Identify parameter columns in ext (excluding ITERATION and OBJ)
+    strNames  <- names(dfExtSub[, -(c(1, ncol(dfExtSub)))])
+    mu        <- as.numeric(dfExtSub[, -(c(1, ncol(dfExtSub)))]) # The mean is the final estimates
+
+    ## Dimensionality Check: Protective Coding
+    n_ext <- length(strNames)
+    n_cov <- nrow(sigma)
+
+    if (n_ext != n_cov) {
+      stop(paste0(
+        "Critical Mismatch: The .ext data contains ", n_ext, " parameters, ",
+        "but the .cov matrix has ", n_cov, " parameters.\n",
+        "NONMEM may have omitted parameters from the .cov file. To fix this, ",
+        "provide a modified data.frame to 'extFile' that matches the .cov dimensions."
+      ))
+    }
 
     #Get the parameters which are fixed based on the covariance
     fixedmu = rep(FALSE,1,ncol(sigma))
@@ -149,22 +177,16 @@ getSamples <- function(input,
     dfParameters        <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu = fixedmu))
     names(dfParameters) <- strNames
     dfParameters        <- cbind(dfParameters, OBJ = 0) # Add a dummy column with the OBJ to make it look more like a ext file
-    dfParameters        <- rbind(dfExt[,-1],dfParameters) # Add final parameters in the top row.
+    dfParameters        <- rbind(dfExtSub[,-1],dfParameters) # Add final parameters in the top row.
     return(dfParameters)
   }
 
-
-
-
-
   ## Sample from a PsN raw results file if a .csv was provided
- # args <- list(...)
-
   if (tools::file_ext(input) == "csv") { # Submitted a bootstrap file, SSE or a SIR file
 
-    ## Read the csv and ext files
+    ## Read the csv data
     dfParameters <- read.csv(file = input, header = TRUE,stringsAsFactors = FALSE)
-    dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
+    dfExtSub <- subset(dfExt, ITERATION == "-1000000000")
 
     ## Figure out the parameter positions in the input file
     if(!is.null(indexvec)) {
@@ -198,12 +220,10 @@ getSamples <- function(input,
       }
     }
 
-
-
     ## If its a SIR results file
     if ("resamples" %in% names(dfParameters) & "samples_order" %in% names(dfParameters)) {
       dfParameters <- subset(dfParameters, resamples == 1)[, indexvec]
-      dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+      dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
       dfParameters <- cbind(dfParameters, OBJ = 0)
       return(dfParameters)
     }
@@ -225,7 +245,7 @@ getSamples <- function(input,
       }
 
       dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
-      dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+      dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
       dfParameters <- cbind(dfParameters, OBJ = 0)
       return(dfParameters)
 
@@ -233,11 +253,9 @@ getSamples <- function(input,
       ## Remove rows with ofv = 0
       dfParameters <- dfParameters %>% filter(ofv != 0)
       dfParameters <- dfParameters[, indexvec]
-      dfParameters <- addMissingColumns(dfParameters, dfExt, zerosindex)
+      dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
       dfParameters <- cbind(dfParameters, OBJ = 0)
       return(dfParameters)
     }
   }
-
 }
-

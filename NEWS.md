@@ -1,3 +1,7 @@
+# PMXForest 1.2.14
+
+* Aded protective coding for the case when there is a missmatch between .ext and .cov.
+
 # PMXForest 1.2.13
  
 * Updated unit tests to improve coverage.
