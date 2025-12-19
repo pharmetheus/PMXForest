@@ -1,3 +1,7 @@
+# PMXForest 1.2.13
+ 
+* Updated unit tests to improve coverage.
+ 
 # PMXForest 1.2.12
 
 * Update the DESCRIPTION fiel to add Pharmetheus as the copyright holder.
