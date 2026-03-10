@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  # merge_group:
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+
+  lint-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: 
+          - ubuntu-24.04
+        r-version:
+          - '4.2.2'
+    runs-on: ${{ matrix.runs-on }}
+
+    steps:
+      - name: Checkout repositories
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.r-version }}
+          use-public-rspm: true
+
+      - name: Install lintr
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: 'lintr@3.0.2'
+          install-pandoc: false
+          install-quarto: false
+
+      - name: Run lint
+        run: make check-lint
+
+  format-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: 
+          - ubuntu-24.04
+        r-version:
+          - '4.2.2'
+    runs-on: ${{ matrix.runs-on }}
+
+    steps:
+      - name: Checkout repositories
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.r-version }}
+          use-public-rspm: true
+
+      - name: Install styler
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: 'styler@1.8.0'
+          install-pandoc: false
+          install-quarto: false
+
+      - name: Enable styler cache
+        run: styler::cache_activate()
+        shell: Rscript {0}
+
+      - name: Determine version and cache location
+        id: styler-cache-keys
+        run: |
+          cat("location=",styler::cache_info(format = "tabular")$location,"\n",file = Sys.getenv("GITHUB_OUTPUT"),append = TRUE,sep = "")
+          cat("styler-version=",as.character(utils::packageVersion("styler")),"\n",file = Sys.getenv("GITHUB_OUTPUT"),append = TRUE,sep = "")
+        shell: Rscript {0}
+
+      - name: Cache styler
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ${{ steps.styler-cache-keys.outputs.location }}
+          key: ${{ matrix.runs-on }}-R-${{ matrix.r-version }}-styler-${{ steps.styler-cache-keys.outputs.styler-version }}-${{ github.event_name == 'merge_group' && 'main' || (github.head_ref || github.ref_name) }}
+          restore-keys: |
+            ${{ matrix.runs-on }}-R-${{ matrix.r-version }}-styler-${{ steps.styler-cache-keys.outputs.styler-version }}-
+            ${{ matrix.runs-on }}-R-${{ matrix.r-version }}-styler-
+            ${{ matrix.runs-on }}-R-${{ matrix.r-version }}-
+
+      - name: Run format check
+        shell: bash
+        run: make check-format
+
+  unit-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: 
+          - ubuntu-24.04
+        r-version:
+          - '4.2.2'
+    runs-on: ${{ matrix.runs-on }}
+
+    steps:
+      - name: Checkout repositories
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        if: ${{ matrix.runs-on != 'self-hosted' }}
+        env:
+          RSPM: "https://packagemanager.posit.co/cran/__linux__/jammy/2022-10-27"
+        with:
+          r-version: ${{ matrix.r-version }}
+
+      - name: Install dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+          extra-packages: 'testthat@3.1.5'
+          install-pandoc: false
+          install-quarto: false
+
+      - name: Run unit tests
+        shell: bash
+        run: make test
+
+
+  check-r-package:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: 
+          - ubuntu-24.04
+        r-version:
+          - '4.2.2'
+    runs-on: ${{ matrix.runs-on }}
+
+    steps:
+      - name: Checkout repositories
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        if: ${{ matrix.runs-on != 'self-hosted' }}
+        env:
+          RSPM: "https://packagemanager.posit.co/cran/__linux__/jammy/2022-10-27"
+        with:
+          r-version: ${{ matrix.r-version }}
+
+      - name: Install dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"soft"'
+          extra-packages: 'rcmdcheck@1.4.0'
+          install-pandoc: false
+          install-quarto: false
+
+      - name: R CMD check
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran", "--no-tests")'
+          build_args: 'c("--no-manual")'
+          error-on: '"warning"'
+          upload-results: false

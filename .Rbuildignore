@@ -9,3 +9,5 @@ RawExampleFiles
 ^BuildVignettesHere/.*cache$
 ^BuildVignettesHere/.*files$
 ^BuildVignettesHere/.*figures$
+^\.github$
+^Makefile$
