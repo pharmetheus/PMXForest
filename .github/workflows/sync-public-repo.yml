@@ -1,0 +1,250 @@
+name: Sync Public repo
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "CD"
+    types:
+      - "completed"
+  release:
+    types:
+      - "edited"
+  schedule:
+    - cron: "0 21 * * 1-5"
+
+concurrency:
+  group: sync-public-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+
+  sync-git:
+    runs-on: ubuntu-slim
+
+    outputs:
+      private-repo: ${{ steps.repo-names.outputs.private-repo }}
+      public-repo: ${{ steps.repo-names.outputs.public-repo }}
+
+    steps:
+      - name: Repository names
+        id: repo-names
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PRIVATE_REPO="${GITHUB_REPOSITORY#*/}"
+          PUBLIC_REPO="${PRIVATE_REPO%-private}"
+          if [[ "$PRIVATE_REPO" == "$PUBLIC_REPO" ]]; then
+            echo "Repository name does not end with -private"
+            exit 1
+          fi
+          echo "private-repo=$PRIVATE_REPO" >> "$GITHUB_OUTPUT"
+          echo "public-repo=$PUBLIC_REPO" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        with:
+          app-id: ${{ secrets.PMX_REPO_MIRROR_APP_ID }}
+          private-key: ${{ secrets.PMX_REPO_MIRROR_SECRET }}
+          owner: ${{ github.repository_owner }}
+          repositories: >-
+            ${{
+              format(
+                '{0},{1}',
+                steps.repo-names.outputs.private-repo,
+                steps.repo-names.outputs.public-repo
+              )
+            }}
+
+      - name: Sync repositories
+        shell: bash
+        env:
+          SYNC_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          PRIVATE_REPO: ${{ steps.repo-names.outputs.private-repo }}
+          PUBLIC_REPO: ${{ steps.repo-names.outputs.public-repo }}
+        run: |
+          set -euo pipefail
+
+          git clone --mirror "https://x-access-token:${SYNC_TOKEN}@github.com/${OWNER}/${PRIVATE_REPO}.git" "${PRIVATE_REPO}"
+          cd "${PRIVATE_REPO}"
+
+          git remote set-url --push origin "https://x-access-token:${SYNC_TOKEN}@github.com/${OWNER}/${PUBLIC_REPO}.git"
+          git push --mirror
+
+  sync-releases:
+    needs:
+      - sync-git
+    runs-on: ubuntu-slim
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        with:
+          app-id: ${{ secrets.PMX_REPO_MIRROR_APP_ID }}
+          private-key: ${{ secrets.PMX_REPO_MIRROR_SECRET }}
+          owner: ${{ github.repository_owner }}
+          repositories: >-
+            ${{
+              format(
+                '{0},{1}',
+                needs.sync-git.outputs.private-repo,
+                needs.sync-git.outputs.public-repo
+              )
+            }}
+
+      - name: Sync releases
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          PRIVATE_REPO: ${{ needs.sync-git.outputs.private-repo }}
+          PUBLIC_REPO: ${{ needs.sync-git.outputs.public-repo }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const fs = require('fs');
+            const os = require('os');
+            const path = require('path');
+
+            const owner = context.repo.owner;
+            const privateRepo = process.env.PRIVATE_REPO;
+            const publicRepo = process.env.PUBLIC_REPO;
+
+            const privateReleases = await github.paginate(
+              github.rest.repos.listReleases,{
+                owner,
+                repo: privateRepo,
+                per_page: 100
+            });
+            core.info(`Private releases: ${privateReleases.length}`);
+
+            const publicReleases = await github.paginate(
+              github.rest.repos.listReleases,{
+                owner,
+                repo: publicRepo,
+                per_page: 100
+            });
+            core.info(`Public releases: ${publicReleases.length}`);
+
+            const publicTags = new Map(publicReleases.map(r => [r.tag_name, r]));
+
+            for (const rel of privateReleases) {
+              core.startGroup(`Sync release ${rel.tag_name}`);
+
+              if (rel.draft) {
+                core.info(`Skipping draft release ${rel.tag_name}`);
+                core.endGroup();
+                continue;
+              }
+              
+              const desiredName = rel.name || rel.tag_name;
+              const desiredBody = rel.body || '';
+              const desiredPrerelease = rel.prerelease;
+
+              let publicRel = publicTags.get(rel.tag_name);
+              let releaseId;
+
+              if (!publicRel) {
+                core.info(`Creating new release for tag ${rel.tag_name}`);
+                const created = await github.rest.repos.createRelease({
+                  owner,
+                  repo: publicRepo,
+                  tag_name: rel.tag_name,
+                  target_commitish: rel.target_commitish || undefined,
+                  name: rel.name || rel.tag_name,
+                  body: rel.body || '',
+                  draft: false,
+                  prerelease: rel.prerelease,
+                  make_latest: rel.prerelease ? 'false' : 'legacy'
+                });
+                publicRel = created.data;
+                publicTags.set(rel.tag_name, publicRel);
+                releaseId = created.data.id;
+                core.info(`Release ${desiredName} created for tag ${rel.tag_name}`);
+              } else {
+                releaseId = publicRel.id;
+
+                const needsMetadataUpdate =
+                (publicRel.name || '') !== desiredName ||
+                (publicRel.body || '') !== desiredBody ||
+                !!publicRel.prerelease !== desiredPrerelease;
+
+                if (needsMetadataUpdate) {
+                  core.info(`Updating metadata for release ${rel.tag_name}`);
+
+                  const updated = await github.rest.repos.updateRelease({
+                    owner,
+                    repo: publicRepo,
+                    release_id: releaseId,
+                    tag_name: rel.tag_name,
+                    target_commitish: rel.target_commitish || undefined,
+                    name: desiredName,
+                    body: desiredBody,
+                    draft: false,
+                    prerelease: desiredPrerelease,
+                    make_latest: desiredPrerelease ? 'false' : 'legacy'
+                  });
+
+                  publicRel = updated.data;
+                  publicTags.set(rel.tag_name, publicRel);
+
+                  core.info(`Release ${rel.tag_name} metadata updated`);
+                } else {
+                  core.info(`Release ${rel.tag_name} metadata already in sync`);
+                }
+              }
+
+              const privateAssets = rel.assets || [];
+              if (privateAssets.length === 0) {
+                core.info(`No assets to sync for ${rel.tag_name}`);
+                core.endGroup();
+                continue;
+              }
+
+              const { data: publicAssets } = await github.rest.repos.listReleaseAssets({
+                owner,
+                repo: publicRepo,
+                release_id: releaseId,
+                per_page: 100
+              });
+              const publicAssetNames = new Set(publicAssets.map(a => a.name));
+
+              const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `release-${rel.tag_name}-`));
+              
+              for (const asset of privateAssets) {
+                if (publicAssetNames.has(asset.name)) {
+                  core.info(`Asset ${asset.name} already exists in release ${rel.name} on ${publicRepo}, skipping`);
+                  continue;
+                }
+
+                const downloadResponse = await github.rest.repos.getReleaseAsset({
+                  owner,
+                  repo: privateRepo,
+                  asset_id: asset.id,
+                  headers: {
+                    accept: 'application/octet-stream'
+                  }
+                });
+
+                const data = Buffer.isBuffer(downloadResponse.data) ? downloadResponse.data : Buffer.from(downloadResponse.data);
+                const assetPath = path.join(tempDir, asset.name);
+                fs.writeFileSync(assetPath, data);
+
+                core.info(`Uploading asset ${asset.name} to release ${rel.name} in ${publicRepo}`);
+
+                const uploadResponse = await github.rest.repos.uploadReleaseAsset({
+                  owner,
+                  repo: publicRepo,
+                  release_id: releaseId,
+                  name: asset.name,
+                  label: asset.label || undefined,
+                  data: fs.readFileSync(assetPath)
+                });
+                core.info(`Asset ${asset.name} uploaded to release ${rel.name} in ${publicRepo}`);
+              }
+              core.info(`Finished syncing ${rel.tag_name}`);
+              core.endGroup();
+            }
+            core.info('Releases sync complete.');
