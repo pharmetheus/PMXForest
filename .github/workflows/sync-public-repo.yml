@@ -71,6 +71,13 @@ jobs:
           git clone --mirror "https://x-access-token:${SYNC_TOKEN}@github.com/${OWNER}/${PRIVATE_REPO}.git" "${PRIVATE_REPO}"
           cd "${PRIVATE_REPO}"
 
+          # Delete refs/pull/* before push mirror
+          git for-each-ref --format='%(refname)' refs/pull | while read -r ref; do
+            git update-ref -d "$ref"
+          done
+
+          git push --mirror
+
           git remote set-url --push origin "https://x-access-token:${SYNC_TOKEN}@github.com/${OWNER}/${PUBLIC_REPO}.git"
           git push --mirror
 
