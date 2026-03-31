@@ -9,8 +9,9 @@
 #' @param input The input file name (character string). If the file name
 #'   extension is `.cov` it is assumed that the file is a NONMEM .cov file.
 #'   If the extension is `.csv`, it is assumed to be a PsN raw results file
-#'   from a bootstrap or SIR. Can also be a data.frame with the same
-#'   structure as such files.
+#'   from a bootstrap or SIR. Can also be a numeric data.frame containing
+#'   only parameter estimates; in this case, the user is responsible for
+#'   column naming and subsetting.
 #' @param extFile The name of the NONMEM .ext file (character string) OR a
 #'   data.frame containing the parameter iterations. Providing a data.frame
 #'   allows for manual alignment or "padding" of parameters if NONMEM has
@@ -24,9 +25,12 @@
 #' @param zerosindex A vector of indices indicating which parameters are
 #'   fixed to zero.
 #'
-#' @return A data frame with $n + 1$ rows (if $n$ is specified) or the full set
-#'   of resamples. The first row contains the final parameter estimates
-#'   (ITERATION -1000000000), followed by the generated or extracted samples.
+#' @return A data frame with $n + 1$ rows (if $n$ is specified for file inputs)
+#'   or the full set of resamples. The first row contains the final parameter
+#'   estimates (ITERATION -1000000000), followed by the samples.
+#'   **Note:** If `input` is a data.frame, the function returns exactly $n$
+#'   samples (if $n$ is specified) or the exact input data.frame (if $n$ is NULL),
+#'   without appending a row of base estimates.
 #'
 #' @details
 #'   **Protective Coding:** When sampling from a `.cov` file, the function
@@ -40,25 +44,32 @@
 #' @examples
 #' \dontrun{
 #'
+#' covFile  <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
+#' extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+#' bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
+#' sirFile  <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
+#'
 #' # Covariance matrix
-#' getSamples(covFile,extFile,n=175)
+#' mySamplesCov <- getSamples(covFile,extFile,n=175)
 #'
-#' # Bootstrap
-#' getSamples(BSFile,extFile)
+#' # Non-parametric bootstrap. Derive percentiles from the samples in the bootFile.
+#' mySamplesBS  <- getSamples(bootFile,extFile)
 #'
-#' # SIRFile
-#' getSamples(SIRFile,extFile)
+#' # "Small bootstrap". Derive a var-cov matrix using the samples in the botFile and draw n
+#' # new samples from this matrix. Derive percentiles from the new samples.
+#' mySamplesSmallBS <- getSamples(bootFile,extFile,n=175)
 #'
-#' # Small bootstrap mvnorm sampling
-#' getSamples(BSFile,extFile,n=175)
+#' # SIR. Derive percentiles from the samples in the sirFile.
+#' mySamplesSir <- getSamples(sirFile,extFile)
 #'
-#' # Data frame
-#' dfParameters<-read.csv(rawresFile)
+#' # Use data frame as input
+#' dfParameters <- read.csv(bootFile) %>% select(X4..TVCL:X1..RUV)
 #'
-#' getSamples(dfParameters)
+#' # Use all rows in the data frame.
+#' mySamplesDF <- getSamples(dfParameters)
 #'
-#' # Data frame mvnorm sampling
-#' getSamples(dfParameters,n=175)
+#' # Use the data in the data frame to generate a var-cov matrix and draw n new samples from it.
+#' mySamplesDFmvnorm <- getSamples(dfParameters,n=175)
 #' }
 getSamples <- function(input,
                        extFile    = NULL,
@@ -94,51 +105,38 @@ getSamples <- function(input,
   }
 
   # A data frame was provided
+  # A data frame was provided
   if (is.data.frame(input)) {
-    dfParameters<-input
-    if (!is.null(indexvec)) dfParameters <- subset(dfParameters)[, indexvec]
-    # if ext file is provided
-    if (!is.null(extFile)) { #If a ext file is provided, use that to transform input
-      dfExtSub <- subset(dfExt, ITERATION == "-1000000000") # Get the final parameter estimates
-      if (is.null(n)) {
-        dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
-        dfParameters <- cbind(dfParameters, OBJ = 0)
-        dfParameters        <- rbind(dfExtSub[,-1],dfParameters) # Add final parameters in the top row.
-        return(dfParameters)
-      } else {
-        # Now construct sigma and mu
-        sigma <- cov(dfParameters)
-        mu    <- colMeans(dfParameters)
+    dfParameters <- input
 
-        #Get the parameters which are fixed based on the covariance
-        fixedmu = rep(FALSE,1,ncol(sigma))
-        for (j in 1:ncol(sigma)) {
-          fixedmu[j]<-all(sigma[,j]==0)
-        }
+    # Safety check: cov() will fail cryptically if non-numeric columns exist
+    if (!all(sapply(dfParameters, is.numeric))) {
+      stop("When providing a data.frame, all columns must be numeric parameter estimates.")
+    }
 
-        dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
-        dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
-        dfParameters <- cbind(dfParameters, OBJ = 0)
-        dfParameters        <- rbind(dfExtSub[,-1],dfParameters) # Add final parameters in the top row.
-        return(dfParameters)
-      }
-    } else {
-      if (is.null(n)) return(dfParameters)
-      # Now construct sigma and mu
-      sigma <- cov(dfParameters)
-      mu    <- colMeans(dfParameters)
+    # Subset if indexvec is provided
+    if (!is.null(indexvec)) {
+      dfParameters <- dfParameters[, indexvec, drop = FALSE]
+    }
 
-      #Get the parameters which are fixed based on the covariance
-      fixedmu = rep(FALSE,1,ncol(sigma))
-      for (j in 1:ncol(sigma)) {
-        fixedmu[j]<-all(sigma[,j]==0)
-      }
-      tmpnames<-names(dfParameters)
-      dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
-      names(dfParameters)<-tmpnames
-      dfParameters <- cbind(dfParameters, OBJ = 0)
+    # If n is not provided, simply return the input data frame
+    if (is.null(n)) {
       return(dfParameters)
     }
+
+    # If n is provided, generate n samples using the covariance matrix
+    sigma <- cov(dfParameters)
+    mu    <- colMeans(dfParameters)
+
+    # Get the parameters which are fixed based on the covariance
+    fixedmu <- apply(sigma, 2, function(x) all(x == 0))
+    tmpnames <- names(dfParameters)
+
+    dfSamples <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n, fixed_mu = fixedmu))
+    names(dfSamples) <- tmpnames
+    dfSamples <- cbind(dfSamples, OBJ = 0)
+
+    return(dfSamples)
   }
 
   ## Sample from the varcov matrix if a .cov was provided
@@ -247,6 +245,9 @@ getSamples <- function(input,
       dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = n,fixed_mu=fixedmu))
       dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
       dfParameters <- cbind(dfParameters, OBJ = 0)
+
+      dfParameters <- rbind(dfExtSub[,-1], dfParameters)
+
       return(dfParameters)
 
     } else {

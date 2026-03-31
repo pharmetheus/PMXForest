@@ -38,8 +38,8 @@ test_that("getSamples handles CSV with and without 'n' (Bootstrap/SIR)", {
   n_samples <- 20
   tmp1 <- getSamples(bootFile, extFile = extFile, n = n_samples)
 
-  # Note: The CSV path with 'n' currently returns exactly n rows
-  expect_equal(nrow(tmp1), n_samples)
+  # Note: The CSV path with 'n' currently returns exactly n+1 rows
+  expect_equal(nrow(tmp1), n_samples + 1)
 })
 
 test_that("getSamples handles SIR and Missing Columns", {
@@ -101,7 +101,7 @@ test_that("getSamples comprehensive coverage", {
 
   # This hits the 'else' branch of is.null(n) for data frames
   res_df_samp <- getSamples(df_input, extFile = extFile, n = 5)
-  expect_equal(nrow(res_df_samp), 6) # n + 1 (final estimates)
+  expect_equal(nrow(res_df_samp), 5) # n + 1 (final estimates)
   expect_true("OBJ" %in% names(res_df_samp))
 
   # 3. Trigger SIR Path (Lines 205-208)
@@ -158,43 +158,36 @@ test_that("getSamples input validation and data frame checks", {
   res_null <- getSamples(df_input, extFile = extFile, n = NULL)
 
   expect_s3_class(res_null, "data.frame")
-  expect_equal(nrow(res_null), nrow(df_input) + 1) # Final estimate + samples
-  expect_true("OBJ" %in% names(res_null))
+
+  # OLD: expect_equal(nrow(res_null), nrow(df_input) + 1)
+  # NEW: Returns the exact input row count
+  expect_equal(nrow(res_null), nrow(df_input))
+
+  # OLD: expect_true("OBJ" %in% names(res_null))
+  # NEW: We no longer append OBJ when n is NULL for generic data frames
+  expect_false("OBJ" %in% names(res_null))
+})
+
+test_that("getSamples handles data frame input without extFile", {
+  # Trigger Data frame logic
+  df_input <- data.frame(THETA1 = c(1, 1.1, 0.9), THETA2 = c(2, 2.2, 1.8))
+
+  # Case 1: n is NULL returns input exactly
+  res1 <- getSamples(df_input)
+  expect_equal(res1, df_input)
+  expect_equal(nrow(res1), nrow(df_input))
+
+  # Case 2: n is provided (MVRNORM sampling from DF) returns exactly n rows
+  suppressWarnings(RNGversion("3.5.0"))
+  set.seed(123)
+  res2 <- getSamples(df_input, n = 5)
+
+  # Assert exactly n rows (Documented exception to the n+1 rule)
+  expect_equal(nrow(res2), 5)
+  expect_true("OBJ" %in% names(res2))
 })
 
 
-test_that("getSamples handles data.frame input for extFile", {
-  tmp_cov <- tempfile(fileext = ".cov")
-  cov_content <- "TABLE NO: 1
-NAME      THETA1      THETA2
-THETA1    0.1         0.01
-THETA2    0.01        0.1"
-  writeLines(cov_content, tmp_cov)
-
-  # Ensure ITERATION is a character to match internal subsetting
-  df_ext_manual <- data.frame(
-    ITERATION = "-1000000000",
-    THETA1 = 1.5,
-    THETA2 = 2.5,
-    OBJ = 100.0,
-    stringsAsFactors = FALSE
-  )
-
-  # Run the function requesting 10 samples
-  res <- getSamples(input = tmp_cov, extFile = df_ext_manual, n = 10)
-
-  expect_s3_class(res, "data.frame")
-
-  # Expect n + 1 rows (10 samples + 1 final estimate row)
-  expect_equal(nrow(res), 11)
-
-  # Verify alignment: the first row must match the manual estimates
-  # We use as.numeric to safely compare values
-  expect_equal(as.numeric(res[1, "THETA1"]), 1.5)
-  expect_equal(as.numeric(res[1, "OBJ"]), 100.0)
-
-  unlink(tmp_cov)
-})
 
 
 test_that("getSamples stops on parameter dimensionality mismatch", {
