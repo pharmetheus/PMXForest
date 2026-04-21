@@ -1,6 +1,10 @@
 # PMXForest 1.2.14
 
 * Aded protective coding for the case when there is a missmatch between .ext and .cov.
+* Fixed the "small bootstrap" logic (.csv with n provided) to correctly prepend the base estimates from the .ext file, ensuring the output is always n+1 rows.
+* Refactored the data.frame input logic to act as a pure, generic MVRNORM sampler.
+* Added an is.numeric safety check to protect cov() when a data.frame is provided.
+* Updated documentation and unit tests to explicitly define the data.frame input as an exception to the n+1 rule (returning exactly n rows).
 
 # PMXForest 1.2.13
  
