@@ -1,3 +1,16 @@
+# PMXForest (development version)
+
+## Breaking Changes
+* `getCovStats()` now explicitly sorts binary covariate levels alphanumerically (e.g., always returning `c(0, 1)`) rather than returning them based on their order of appearance in the dataset. This ensures deterministic and reproducible row ordering in downstream forest plots.
+
+## New Features
+* **Streamlined Covariate Setup:** Introduced `setupDfCovs()`, a high-level wrapper that natively pipelines `getCovStats()` and `createInputForestData()`. This significantly reduces user friction during standard workflow setup.
+* **Flexible Covariate Background States:** `setupDfCovs()` includes `additionalCovs` and `useMissVal` arguments. This allows users to include supplementary covariates (such as those from FREM workflows) and toggle whether inactive cells hold `missVal` or computed baseline references. Reference values are strictly computed on deduplicated data (one record per `idVar`) to prevent longitudinal sampling skew.
+* **Automated Reference Row Generation:** Added `setupDfRefRow()` to generate the reference data frame required by `getForestDF` functions. Using a geometry-matching strategy, it maps computed baseline reference values (mode, median, or mean) onto the `dfCovs` structure. It supports both single-row outputs (`singleRef = TRUE`) and full matrix overlays (`singleRef = FALSE`) that perfectly preserve background missingness.
+
+## Bug Fixes
+* **Programmatic Evaluation:** Fixed a Non-Standard Evaluation (NSE) bug in `getCovStats()`. The `idVar` argument is now safely evaluated using `rlang::sym()` instead of `rlang::ensym()`, allowing the function to be properly wrapped and called programmatically without scoping errors.
+
 # PMXForest 1.2.15
 
 * Fixed the "small bootstrap" logic (.csv with n provided) to correctly prepend the base estimates from the .ext file, ensuring the output is always n+1 rows.

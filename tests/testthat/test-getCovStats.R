@@ -100,3 +100,17 @@ test_that("Function throws an error for non-existent covariates", {
     "Not all covariates are present in the data."
   )
 })
+
+test_that("getCovStats consistently sorts binary covariates regardless of appearance order", {
+  # Here, 1 appears before 0 for the binary variable TRT
+  mock_data <- data.frame(
+    ID = 1:2,
+    TRT = c(1, 0)
+  )
+
+  stats <- getCovStats(mock_data, covariates = "TRT")
+
+  # The output vector should be strictly sorted: c(0, 1)
+  expect_equal(as.numeric(stats$TRT), c(0, 1),
+               info = "Binary covariates are not being properly sorted.")
+})

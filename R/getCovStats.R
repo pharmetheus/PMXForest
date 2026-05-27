@@ -25,7 +25,7 @@
 #'   \itemize{
 #'     \item For **continuous** covariates, the element is a named numeric vector
 #'       of quantiles.
-#'     \item For **binary** covariates, the element is a vector of the two
+#'     \item For **binary** covariates, the element is a sorted vector of the two
 #'       unique values.
 #'     \item For **multi-level categorical** covariates, the element is a nested
 #'       list of one-hot encoded vectors, with the first level used as the reference.
@@ -59,25 +59,11 @@
 #'
 #' # 3. View the output list structure
 #' print(cov_stats)
-#'
-#'
-#' # --- Example with Missing Value Handling ---
-#'
-#' # Get statistics for BMI, which contains a -99 missing value indicator.
-#' # We set minLevels = 3 so BMI (with 4 unique non-missing values) is
-#' # correctly treated as continuous.
-#' bmi_stats <- getCovStats(
-#'   data = sample_data,
-#'   covariates = "BMI",
-#'   missVal = -99,
-#'   minLevels = 3
-#' )
-#'
-#' print(bmi_stats)
 getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95),
                          idVar = "ID", missVal = -99, nsig = 3) {
 
-  data <- data %>% distinct(!!ensym(idVar), .keep_all = TRUE)
+  # REFACTORED: Use sym() instead of ensym() to allow programmatic wrapping.
+  data <- data %>% distinct(!!sym(idVar), .keep_all = TRUE)
 
   ## Check the input
   if(!all(covariates %in% names(data))) stop("Not all covariates are present in the data.")
@@ -88,7 +74,8 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
     if (length(unique(dataTmp[[myCov]])) <= minLevels) {
       numLevs <- length(unique(dataTmp[[myCov]]))
       if (numLevs == 2) {
-        retList[[myCov]] <- unique(dataTmp[[myCov]])
+        # REFACTORED: Sort binary variables for predictable output ordering
+        retList[[myCov]] <- sort(unique(dataTmp[[myCov]]))
       }
       else {
         levs <- sort(unique(dataTmp[[myCov]]))
@@ -102,7 +89,7 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
       }
     }
     else {
-      retList[[myCov]] <- signif(quantile(dataTmp[[myCov]],p=probs),digits = nsig)
+      retList[[myCov]] <- signif(quantile(dataTmp[[myCov]], p=probs), digits = nsig)
     }
   }
   return(retList)
