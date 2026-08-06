@@ -279,15 +279,38 @@ jobs:
                 release_id: releaseId,
                 per_page: 100
               });
-              const publicAssetNames = new Set(publicAssets.map(a => a.name));
+              const publicAssetsMap = new Map(publicAssets.map(a => [a.name, a]));
 
               const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `release-${rel.tag_name}-`));
               
               for (const asset of privateAssets) {
-                if (publicAssetNames.has(asset.name)) {
-                  core.info(`Asset ${asset.name} already exists in release ${rel.name} on ${publicRepo}, skipping`);
-                  continue;
+                const existingPublicAsset = publicAssetsMap.get(asset.name);
+                let needsUpload = true;
+
+                if (existingPublicAsset) {
+                  // Grab timestamps in milliseconds
+                  const privateUpdated = new Date(asset.updated_at).getTime();
+                  const publicUpdated = new Date(existingPublicAsset.updated_at).getTime();
+                  
+                  const sizeChanged = asset.size !== existingPublicAsset.size;
+
+                  // If the private asset was regenerated AFTER the public sync, or size differs
+                  if (privateUpdated > publicUpdated || sizeChanged) {
+                    core.info(`Asset ${asset.name} was modified (size or timestamp changed). Deleting outdated public asset...`);
+                    
+                    // Deleting the existing asset before uploading one with the same name
+                    await github.rest.repos.deleteReleaseAsset({
+                      owner,
+                      repo: publicRepo,
+                      asset_id: existingPublicAsset.id
+                    });
+                  } else {
+                    core.info(`Asset ${asset.name} is already up-to-date in release ${rel.name} on ${publicRepo}, skipping.`);
+                    needsUpload = false;
+                  }
                 }
+
+                if (!needsUpload) continue;
 
                 const downloadResponse = await github.rest.repos.getReleaseAsset({
                   owner,
