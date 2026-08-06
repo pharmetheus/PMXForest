@@ -13,6 +13,7 @@ concurrency:
 jobs:
 
   lint-check:
+    if: endsWith(github.repository, '-private')
     strategy:
       fail-fast: false
       matrix:
@@ -43,6 +44,7 @@ jobs:
         run: make check-lint
 
   format-check:
+    if: endsWith(github.repository, '-private')
     strategy:
       fail-fast: false
       matrix:
@@ -95,6 +97,7 @@ jobs:
         run: make check-format
 
   unit-test:
+    if: endsWith(github.repository, '-private')
     strategy:
       fail-fast: false
       matrix:
@@ -130,6 +133,7 @@ jobs:
 
 
   check-r-package:
+    if: endsWith(github.repository, '-private')
     strategy:
       fail-fast: false
       matrix:
