@@ -196,11 +196,12 @@ jobs:
         env:
           PACKAGEMANAGER_ADDRESS: ${{ secrets.RSPM_ADDRESS }}
           PACKAGEMANAGER_TOKEN: ${{ secrets.RSPM_TOKEN }}
+          PACKAGEMANAGER_SOURCE: ${{ vars.RSPM_SOURCE }}
           DOWNLOAD_PATH: ${{ steps.download-artifact.outputs.download-path }}
         run: |
           cd "$DOWNLOAD_PATH"
           echo "🚚 Publishing $PKG . . ."
-          rspm add --source=github-sysdev --path="$PKG"
+          rspm add --source="$PACKAGEMANAGER_SOURCE" --path="$PKG" --replace
           echo "✅ Published $PKG"
 
       - name: Create GitHub Release
