@@ -18,7 +18,7 @@ env:
 jobs:
 
   build:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'publish-to-dev') && endsWith(github.repository, '-private' }}
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'publish-to-dev') && endsWith(github.repository, '-private') }}
 
     strategy:
       fail-fast: false
@@ -106,7 +106,7 @@ jobs:
             ${{ env.PKG }}
 
   publish:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'publish-to-dev') && endsWith(github.repository, '-private' }}
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'publish-to-dev') && endsWith(github.repository, '-private') }}
     environment: development
 
     needs:
@@ -177,7 +177,7 @@ jobs:
             });
 
   remove-label:
-    if: ${{ always() && contains(github.event.pull_request.labels.*.name, 'publish-to-dev') && endsWith(github.repository, '-private' }}
+    if: ${{ always() && contains(github.event.pull_request.labels.*.name, 'publish-to-dev') && endsWith(github.repository, '-private') }}
     needs:
       - build
       - publish
