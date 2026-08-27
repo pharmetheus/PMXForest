@@ -9,6 +9,7 @@
 * **Automated Reference Row Generation:** Added `setupDfRefRow()` to generate the reference data frame required by `getForestDF` functions. Using a geometry-matching strategy, it maps computed baseline reference values (mode, median, or mean) onto the `dfCovs` structure. It supports both single-row outputs (`singleRef = TRUE`) and full matrix overlays (`singleRef = FALSE`) that perfectly preserve background missingness.
 
 ## Bug Fixes
+* **Reversed relative confidence intervals:** Fixed a bug in `getForestDFSCM()` and `getForestDFemp()` where the `Q*_REL_REFFUNC` and `Q*_REL_REFFINAL` columns had their lower and upper limits swapped when the `functionList` function returned a negative reference value. The relative quantiles are now computed from the ratio directly instead of dividing the absolute quantiles by the (possibly negative) reference, so the interval endpoints stay correctly ordered.
 * **Programmatic Evaluation:** Fixed a Non-Standard Evaluation (NSE) bug in `getCovStats()`. The `idVar` argument is now safely evaluated using `rlang::sym()` instead of `rlang::ensym()`, allowing the function to be properly wrapped and called programmatically without scoping errors.
 
 # PMXForest 1.2.15

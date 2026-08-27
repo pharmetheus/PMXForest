@@ -38,6 +38,52 @@ test_that("getForestDFSCM handles parallel setup and auto-naming", {
   expect_equal(unique(res_ref$REFROW), "YES") # Line 206
 })
 
+test_that("getForestDFSCM keeps relative CI endpoints ordered when paramFunction is negative", {
+  # Uncertainty samples with a clear spread (row 1 = final estimates)
+  df_params <- data.frame(
+    THETA1 = c(10, 5, 7, 9, 11, 13, 15),
+    THETA2 = 1
+  )
+
+  df_covs <- data.frame(WT = c(70, 100), AGE = c(25, 25), stringsAsFactors = FALSE)
+  df_ref  <- data.frame(WT = 70, AGE = 25)
+
+  # Function returns a NEGATIVE value; reference value is therefore negative too
+  p_func_neg <- function(thetas, df, ...) -thetas[1] * (df$WT / 70)
+  p_func_pos <- function(thetas, df, ...)  thetas[1] * (df$WT / 70)
+
+  res_neg <- getForestDFSCM(dfCovs           = df_covs,
+                            dfRefRow         = df_ref,
+                            functionList     = list(p_func_neg),
+                            functionListName = "CL",
+                            noBaseThetas     = 2,
+                            dfParameters     = df_params,
+                            probs            = c(0.05, 0.95))
+
+  res_pos <- getForestDFSCM(dfCovs           = df_covs,
+                            dfRefRow         = df_ref,
+                            functionList     = list(p_func_pos),
+                            functionListName = "CL",
+                            noBaseThetas     = 2,
+                            dfParameters     = df_params,
+                            probs            = c(0.05, 0.95))
+
+  # Absolute quantile columns are always ascending (Q1 = lower prob, Q2 = upper prob)
+  expect_true(all(res_neg$Q1 <= res_neg$Q2))
+
+  # The relative CI columns must also stay ascending: Q1_REL_* is the lower limit,
+  # Q2_REL_* the upper limit, since positions 1 and 2 of `probs` are used as the
+  # plotted uncertainty. This holds for the positive function ...
+  expect_true(all(res_pos$Q1_REL_REFFUNC  <= res_pos$Q2_REL_REFFUNC))
+  expect_true(all(res_pos$Q1_REL_REFFINAL <= res_pos$Q2_REL_REFFINAL))
+
+  # ... and must equally hold for the negative function. Dividing the ascending
+  # absolute quantiles by a negative reference reverses their order, so without
+  # the fix Q1_REL_* ends up above Q2_REL_* and the forest CI is drawn reversed.
+  expect_true(all(res_neg$Q1_REL_REFFUNC  <= res_neg$Q2_REL_REFFUNC))
+  expect_true(all(res_neg$Q1_REL_REFFINAL <= res_neg$Q2_REL_REFFINAL))
+})
+
 test_that("getForestDFSCM parallel logic and input conversion", {
   df_params <- data.frame(THETA1 = 10, THETA2 = 2)
   p_func <- function(thetas, df, ...) thetas[1]

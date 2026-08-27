@@ -202,6 +202,14 @@ getForestDFSCM <- function(dfCovs,
       #Calculate reference value based one the pointFunction
       func_base<-pointFunction(dft$VALUEBASE)
       true_base <- dft$VALUEBASE[dft$ITER == 1]
+
+      #Quantiles of the value relative to the reference. Computed on the ratio
+      #directly (rather than dividing `quant` by the scalar base) so the endpoints
+      #stay ordered as lower/upper even when the reference value is negative.
+      #Fall back to quant/base when the base is NA so an all-NA reference yields
+      #NA columns rather than erroring in quantile().
+      quant_reffunc  <- if (is.na(func_base))  quant/func_base  else quantile(dft$VALUE/func_base,  probs = probs, names = FALSE, na.rm = T)
+      quant_reffinal <- if (is.na(true_base)) quant/true_base else quantile(dft$VALUE/true_base, probs = probs, names = FALSE, na.rm = T)
       groupname<-group
       if (!is.null(groupnames)) groupname<-groupnames[i]
       dfrow <- cbind(dfCovs[i, ], data.frame(
@@ -214,8 +222,8 @@ getForestDFSCM <- function(dfCovs,
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k)]] <- quant[k]
-        dfp[[paste0("Q",k,"_REL_REFFUNC")]] <-  quant[k]/func_base
-        dfp[[paste0("Q",k,"_REL_REFFINAL")]] <-  quant[k]/true_base
+        dfp[[paste0("Q",k,"_REL_REFFUNC")]] <-  quant_reffunc[k]
+        dfp[[paste0("Q",k,"_REL_REFFINAL")]] <-  quant_reffinal[k]
         dfrow <- cbind(dfrow, dfp[, 2:4])
       }
       for (k in 1:length(probs)) {
