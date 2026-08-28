@@ -8,69 +8,77 @@ getSamples(input, extFile = NULL, n = NULL, indexvec = NULL, zerosindex = NULL)
 }
 \arguments{
 \item{input}{The input file name (character string). If the file name
-extension is `.cov` it is assumed that the file is a a NONMEM .cov file and
-if the extension is `.csv` is is assumed that it is a PsN raw results file
-from either a bootstrap or a SIR. Can also be a data.frame with the same
-structure as such files.}
+extension is `.cov` it is assumed that the file is a NONMEM .cov file.
+If the extension is `.csv`, it is assumed to be a PsN raw results file
+from a bootstrap or SIR. Can also be a numeric data.frame containing
+only parameter estimates; in this case, the user is responsible for
+column naming and subsetting.}
 
-\item{extFile}{The name of the NONMEM ext file. Needed to transform output to
-the ext-format.  Should not be NULL.}
+\item{extFile}{The name of the NONMEM .ext file (character string) OR a
+data.frame containing the parameter iterations. Providing a data.frame
+allows for manual alignment or "padding" of parameters if NONMEM has
+omitted columns in the .cov file.}
 
-\item{n}{The number of samples to generate when sampling is done from a
-variance-covaraince matrix. NULL is permissable if the input is a SIR or
-bootstrap raw_results file.}
+\item{n}{The number of samples to generate when sampling from a
+variance-covariance matrix. This is required if `input` is a `.cov` file.
+NULL is permissible if the input is a SIR or bootstrap raw_results file.}
 
-\item{indexvec}{A vector that can be used to subset the columns in the raw
-results file so that the columns comes in the order THETA, SIGMA, OMEGA.
-not required if a PsN raw_results_structure is present in the same
-directory as the csv file.}
+\item{indexvec}{A vector used to subset columns in the raw results file
+so parameters appear in the order: THETA, SIGMA, OMEGA. Not required
+if a PsN `raw_results_structure` file is in the same directory.}
 
-\item{zerosindex}{A vector with indicies that indicates which parameters that
-are fixed to zero.}
+\item{zerosindex}{A vector of indices indicating which parameters are
+fixed to zero.}
 }
 \value{
-A data frame with parameter vectors.
-
-  In case a .cov file is provided as input the parameter vectors is the
-  result of multivariate sampling from the variance-covariance matrix.
-
-  In case a .csv file is provided as input and n=NULL, the input is assumed
-  to be a SIR or bootstrap file. In case of a SIR file, all samples present
-  in the .csv file is returned. In case it is a bootstrap file, the function
-  returns all samples with a nonzero value in the ofv column.
-
-  In case a .csv file is provided as input and n is not NULL, it is assumed
-  that the raw results come from a boostrap analysis. A variance- covariance
-  matrix will be created from the samples with a non-zero value in the ofv
-  column and n parameter vectors will be returned obtained by multivariate
-  sampling from the constructed variance-covariance matrix.
+A data frame with $n + 1$ rows (if $n$ is specified for file inputs)
+  or the full set of resamples. The first row contains the final parameter
+  estimates (ITERATION -1000000000), followed by the samples.
+  **Note:** If `input` is a data.frame, the function returns exactly $n$
+  samples (if $n$ is specified) or the exact input data.frame (if $n$ is NULL),
+  without appending a row of base estimates.
 }
 \description{
-Function that gets samples, either from a regular bootstrap (Psn
-  output) a SIR (PsN output), a covariance matrix (NM output) or samples from
-  a small bootstrap using the estimated covariance matrix
+Function that gets samples, either from a regular bootstrap (PsN
+  output), a SIR (PsN output), or a covariance matrix (NONMEM output).
+  It includes protective coding to ensure the parameter estimates in the
+  .ext data align with the dimensions of the .cov matrix.
+}
+\details{
+**Protective Coding:** When sampling from a `.cov` file, the function
+  verifies that the number of parameters in the `extFile` matches the
+  dimensions of the covariance matrix. If a mismatch is detected (a known
+  NONMEM edge case), the function will `stop()` and prompt the user to
+  provide a manually aligned data.frame to `extFile`.
 }
 \examples{
 \dontrun{
 
+covFile  <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
+extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
+sirFile  <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
+
 # Covariance matrix
-getSamples(covFile,extFile,n=175)
+mySamplesCov <- getSamples(covFile,extFile,n=175)
 
-# Bootstrap
-getSamples(BSFile,extFile)
+# Non-parametric bootstrap. Derive percentiles from the samples in the bootFile.
+mySamplesBS  <- getSamples(bootFile,extFile)
 
-# SIRFile
-getSamples(SIRFile,extFile)
+# "Small bootstrap". Derive a var-cov matrix using the samples in the botFile and draw n
+# new samples from this matrix. Derive percentiles from the new samples.
+mySamplesSmallBS <- getSamples(bootFile,extFile,n=175)
 
-# Small bootstrap mvnorm sampling
-getSamples(BSFile,extFile,n=175)
+# SIR. Derive percentiles from the samples in the sirFile.
+mySamplesSir <- getSamples(sirFile,extFile)
 
-# Data frame
-dfParameters<-read.csv(rawresFile)
+# Use data frame as input
+dfParameters <- read.csv(bootFile) \%>\% select(X4..TVCL:X1..RUV)
 
-getSamples(dfParameters)
+# Use all rows in the data frame.
+mySamplesDF <- getSamples(dfParameters)
 
-# Data frame mvnorm sampling
-getSamples(dfParameters,n=175)
+# Use the data in the data frame to generate a var-cov matrix and draw n new samples from it.
+mySamplesDFmvnorm <- getSamples(dfParameters,n=175)
 }
 }

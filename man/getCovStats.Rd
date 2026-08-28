@@ -42,7 +42,7 @@ A list where each element corresponds to a covariate.
   \itemize{
     \item For **continuous** covariates, the element is a named numeric vector
       of quantiles.
-    \item For **binary** covariates, the element is a vector of the two
+    \item For **binary** covariates, the element is a sorted vector of the two
       unique values.
     \item For **multi-level categorical** covariates, the element is a nested
       list of one-hot encoded vectors, with the first level used as the reference.
@@ -81,19 +81,4 @@ cov_stats <- getCovStats(
 
 # 3. View the output list structure
 print(cov_stats)
-
-
-# --- Example with Missing Value Handling ---
-
-# Get statistics for BMI, which contains a -99 missing value indicator.
-# We set minLevels = 3 so BMI (with 4 unique non-missing values) is
-# correctly treated as continuous.
-bmi_stats <- getCovStats(
-  data = sample_data,
-  covariates = "BMI",
-  missVal = -99,
-  minLevels = 3
-)
-
-print(bmi_stats)
 }
