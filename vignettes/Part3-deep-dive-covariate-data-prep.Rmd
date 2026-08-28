@@ -1,0 +1,289 @@
+---
+title: "3. Deep Dive: Covariate Data Preparation"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
+vignette: >
+  %\VignetteIndexEntry{3. Deep Dive: Covariate Data Preparation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{css, echo=FALSE}
+.callout-note {
+  background-color: #e7f1ff;
+  border-left: 4px solid #0dcaf0;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+.callout-warning {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #664d03;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  warning  = FALSE,
+  message  = FALSE
+)
+```
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(PMXForest)
+  library(dplyr)
+})
+
+set.seed(865765)
+```
+
+# Introduction
+
+The covariate structure passed to `getForestDFSCM()` is a data frame in which each
+row is one row of the Forest plot, with inactive cells set to a missing-value
+indicator (`-99` by default). Four functions build that structure:
+
+| Function | Role |
+| --- | --- |
+| `getCovStats()` | summarise each covariate from the data |
+| `createInputForestData()` | reshape a covariate list into the row structure |
+| `setupDfCovs()` | `getCovStats()` + `createInputForestData()` in one call |
+| `setupDfRefRow()` | build the reference row(s) matched to a `setupDfCovs()` result |
+
+This vignette covers each in turn, then the handling of missing covariate values.
+The data set is the PK analysis data used in the
+[Walkthrough](Part2-walkthrough.html).
+
+```{r}
+dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+dfData   <- read.csv(dataFile)
+```
+
+# 1. `getCovStats()`
+
+`getCovStats()` returns a named list, one element per covariate. The element type
+depends on the number of unique values:
+
+* **continuous** (more than `minLevels` unique values) — a two-element numeric
+  vector of quantiles, by default the 5th and 95th percentiles;
+* **binary** — the two levels, sorted alphanumerically;
+* **multi-level categorical** — a nested list of one-hot vectors, first level as
+  the reference.
+
+```{r}
+covStats <- getCovStats(
+  data       = dfData,
+  covariates = c("WT", "AGE", "SEX", "GENO"),
+  idVar      = "ID"
+)
+covStats
+```
+
+## One record per subject
+
+Statistics are computed on the first record per `idVar`, so subjects with dense
+sampling do not pull the quantiles. Pass the identifier column that matches the
+data:
+
+```{r}
+nrow(dfData)                                   # all records
+nrow(distinct(dfData, ID))                     # subjects
+```
+
+## `minLevels`
+
+`minLevels` (default 10) is the threshold between categorical and continuous. A
+covariate coded with a small number of distinct numeric values — a dose level, an
+ordinal score — is treated as categorical unless `minLevels` is lowered.
+
+```{r}
+## GENO has 4 levels: categorical by default
+getCovStats(dfData, "GENO", idVar = "ID")
+
+## Force GENO to be treated as continuous
+getCovStats(dfData, "GENO", idVar = "ID", minLevels = 3)
+```
+
+## `probs` and `nsig`
+
+`probs` sets the quantiles for continuous covariates; `nsig` sets the rounding.
+
+```{r}
+getCovStats(dfData, "CRCL", idVar = "ID", probs = c(0.1, 0.9), nsig = 4)
+```
+
+::: {.callout-note}
+Binary levels are returned in alphanumeric order (`c(0, 1)`), not order of
+appearance in the data. Forest plot row order is therefore reproducible across
+data sets.
+:::
+
+# 2. `createInputForestData()`
+
+`createInputForestData()` turns a covariate list into the row structure. It is
+what you call directly when the covariate values are known literals rather than
+derived from data.
+
+```{r}
+dfCovsManual <- createInputForestData(
+  list(
+    "WT"   = c(60, 100),
+    "SEX"  = c(1, 2),
+    "GENO" = list("GENO_2" = c(0, 1, 0), "GENO_3" = c(0, 0, 1), "GENO_4" = c(0, 0, 0))
+  ),
+  iMiss = -99
+)
+dfCovsManual
+```
+
+The `COVARIATEGROUPS` column records which covariate each row belongs to;
+`getForestDFSCM()` uses it to group and space the rows on the y-axis, and drops it
+before calling the parameter function.
+
+A `getCovStats()` result can be passed straight in:
+
+```{r}
+createInputForestData(covStats, iMiss = -99)
+```
+
+# 3. `setupDfCovs()`
+
+`setupDfCovs()` runs `getCovStats()` and `createInputForestData()` together and
+adds control over how inactive cells are filled.
+
+```{r}
+covariates <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "GENO")
+
+dfCovs <- setupDfCovs(data = dfData, covariates = covariates, idVar = "ID")
+dfCovs
+```
+
+## `additionalCovs`
+
+Covariates listed in `additionalCovs` get their own rows, but on every *other*
+row they sit at their data reference (mode for categorical, median or mean for
+continuous) rather than at `-99`. This is for covariates that must hold a
+plausible value whenever they are not the covariate under study — for example a
+covariate carried through from a full random-effects (FREM) model.
+
+```{r}
+dfCovsAdd <- setupDfCovs(
+  data           = dfData,
+  covariates     = c("WT", "AGE", "SEX"),
+  additionalCovs = "CRCL",
+  idVar          = "ID"
+)
+dfCovsAdd
+```
+
+On the `WT`, `AGE`, and `SEX` rows, `CRCL` holds its median instead of `-99`.
+
+## `useMissVal`
+
+By default (`useMissVal = TRUE`) inactive *primary* covariates hold `-99`, and the
+parameter function is responsible for treating that as "no effect". With
+`useMissVal = FALSE`, inactive primary covariates are also set to their data
+reference, so the parameter function never sees `-99`.
+
+```{r}
+dfCovsFilled <- setupDfCovs(
+  data       = dfData,
+  covariates = c("WT", "AGE", "SEX"),
+  useMissVal = FALSE,
+  idVar      = "ID"
+)
+dfCovsFilled
+```
+
+## `contRef`
+
+`contRef` selects the reference statistic for continuous covariates, `"median"`
+(default) or `"mean"`. It applies to `additionalCovs`, to primary covariates when
+`useMissVal = FALSE`, and to `setupDfRefRow()`.
+
+# 4. `setupDfRefRow()`
+
+`setupDfRefRow()` builds the reference passed as `dfRefRow` to `getForestDFSCM()`.
+It computes the reference state from the data — mode for categorical, median or
+mean for continuous, on one record per subject — and maps it onto the geometry of
+a `setupDfCovs()` result.
+
+## `singleRef = TRUE`
+
+A one-row data frame with every covariate at its reference value.
+
+```{r}
+refSingle <- setupDfRefRow(
+  dfCovs     = dfCovs,
+  data       = dfData,
+  covariates = covariates,
+  idVar      = "ID"
+)
+refSingle
+```
+
+## `singleRef = FALSE`
+
+A data frame the same shape as `dfCovs`: active cells are replaced with the
+reference value, inactive cells keep `-99`. Use this when the reference should
+track the covariate that varies on each row — an age-specific reference for the
+age rows, for instance.
+
+```{r}
+refMatrix <- setupDfRefRow(
+  dfCovs     = dfCovs,
+  data       = dfData,
+  covariates = covariates,
+  singleRef  = FALSE,
+  idVar      = "ID"
+)
+refMatrix
+```
+
+::: {.callout-warning}
+`setupDfRefRow()` keys the reference values by the column names `setupDfCovs()`
+produces (`GENO_2`, `GENO_3`, …). Pass it a `dfCovs` built by `setupDfCovs()`. For
+a hand-built `createInputForestData()` structure, construct `dfRefRow` directly as
+a one-row data frame.
+:::
+
+# 5. Missing covariate values
+
+`getCovStats()` and the setup functions exclude `missVal` before computing
+statistics, so a covariate that is missing for some subjects is summarised from
+the subjects who have it.
+
+```{r}
+dfMiss <- data.frame(
+  ID  = 1:8,
+  WT  = c(60.5, 70.2, 70.5, 80.8, 65.1, 90.0, 77.4, 68.9),
+  SEX = c(0, 1, 1, 0, 1, 0, 1, 0),
+  BMI = c(22.1, 24.4, -99, 27.3, 23.5, 28.9, -99, 25.1)
+)
+
+getCovStats(dfMiss, c("WT", "SEX", "BMI"), idVar = "ID", minLevels = 4)
+```
+
+The `BMI` quantiles are computed from the six non-missing values. The parameter
+function still has to handle `-99` in the `BMI` column of `dfCovs`, because that
+is what marks the rows where `BMI` is inactive.
+
+# 6. Feeding the result forward
+
+The data frame from `setupDfCovs()` (or `createInputForestData()`) is the `dfCovs`
+argument of `getForestDFSCM()`; the data frame from `setupDfRefRow()` is its
+`dfRefRow` argument. See the [Walkthrough](Part2-walkthrough.html) for the full
+call. For empirical Forest plots, `getForestDFemp()` takes a list of covariate
+expressions instead of `dfCovs` — the setup functions in this vignette are not
+used there.

@@ -1,2 +1,28 @@
+url: https://rpkgs-docs.pmx.one/PMXForest/
 template:
   bootstrap: 5
+  light-switch: true
+home:
+  sidebar:
+    structure: [links, license, community, authors, dev]
+navbar:
+  components:
+    back_to_versions:
+      text: "All Versions"
+      href: ../
+      icon: fa-arrow-left
+  structure:
+    left:  [intro, reference, articles, tutorials, news]
+    right: [back_to_versions, search, github, lightswitch]
+articles:
+- title: Tutorials
+  navbar: ~
+  contents:
+  - Part1-quick-start
+  - Part2-walkthrough
+- title: Deep dives
+  navbar: Deep dives
+  contents:
+  - Part3-deep-dive-covariate-data-prep
+  - Part3-deep-dive-r-coded-models
+  - Part3-deep-dive-tte-models

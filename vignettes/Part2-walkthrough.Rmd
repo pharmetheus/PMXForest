@@ -1,0 +1,428 @@
+---
+title: "2. Walkthrough: End-to-End Forest Plots for NONMEM Models"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
+vignette: >
+  %\VignetteIndexEntry{2. Walkthrough: End-to-End Forest Plots for NONMEM Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{css, echo=FALSE}
+.callout-note {
+  background-color: #e7f1ff;
+  border-left: 4px solid #0dcaf0;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+.callout-warning {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #664d03;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 12,
+  fig.height = 9
+)
+```
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(PMXForest)
+  library(dplyr)
+  library(ggplot2)
+})
+
+theme_set(theme_bw(base_size = 14))
+theme_update(plot.title = element_text(hjust = 0.5))
+
+set.seed(865765)
+```
+
+# Introduction
+
+This walkthrough covers the full process of building Forest plots from a NONMEM
+model and PsN output. It extends the [Quick-Start](Part1-quick-start.html) with:
+
+* two ways to build the covariate structure, and how to label the rows;
+* the parameter function in detail, including missing-value handling;
+* the four sources of parameter uncertainty `getSamples()` accepts;
+* an explicit reference subject with `setupDfRefRow()`;
+* *empirical* Forest plots with `getForestDFemp()`;
+* the formatting arguments of `forestPlot()`.
+
+The example is a PK model (`run7`) built with the stepwise covariate model (SCM)
+in PsN. Because SCM keeps only covariates that meet a significance criterion, some
+rows of a parametric Forest plot from an SCM model show no effect. An empirical
+Forest plot instead reads the covariate effect from the analysis data and can
+therefore show covariates that are not in the model.
+
+```{r}
+modDir   <- "SimVal"
+dataFile <- system.file("extdata", paste0(modDir, "/DAT-1-MI-PMX-2.csv"), package = "PMXForest")
+extFile  <- system.file("extdata", paste0(modDir, "/run7.ext"), package = "PMXForest")
+covFile  <- system.file("extdata", paste0(modDir, "/run7.cov"), package = "PMXForest")
+bsFile   <- system.file("extdata", paste0(modDir, "/bs7.dir/raw_results_run7bs.csv"), package = "PMXForest")
+sirFile  <- system.file("extdata", paste0(modDir, "/sir7.dir/raw_results_run7.csv"), package = "PMXForest")
+
+dfData <- read.csv(dataFile)
+```
+
+# 1. Build the covariate structure
+
+Each row of `dfCovs` becomes one row of the Forest plot. The covariate effect on
+that row is a function of the covariate values in that row. Cells that are not
+active on a row hold the missing-value indicator (`-99` by default).
+
+## 1.1 Explicit: `createInputForestData()`
+
+`createInputForestData()` turns a named list of covariate values into the row
+structure. A nested list defines a multi-level categorical covariate as a set of
+one-hot columns; the first entry is the reference level.
+
+```{r}
+dfCovs <- createInputForestData(
+  list(
+    "WT"     = c(65, 115),
+    "AGE"    = c(27, 62),
+    "CRCL"   = c(83, 150),
+    "SEX"    = c(1, 2),
+    "NCIL"   = c(0, 1),
+    "FORM"   = c(0, 1),
+    "FOOD"   = c(0, 1),
+    "GENO"   = list("GENO_2" = c(0, 1, 0), "GENO_3" = c(0, 0, 1), "GENO_4" = c(0, 0, 0))
+  ),
+  iMiss = -99
+)
+dfCovs
+```
+
+The `GENO` block above encodes three non-reference genotypes as `GENO_2`,
+`GENO_3`, `GENO_4`; the row with all three at zero is the `GENO == 1` reference.
+
+Row labels and covariate-group labels are supplied separately. Keep the label
+vector length locked to the number of rows so a miscount fails immediately rather
+than shifting every label below it.
+
+```{r}
+covnames <- c(
+  "WT 65 kg", "WT 115 kg",
+  "Age 27 y", "Age 62 y",
+  "CRCL 83 mL/min", "CRCL 150 mL/min",
+  "Male", "Female",
+  "NCI = 0", "NCI > 0",
+  "Oral tablet", "FDC",
+  "Fasted", "Fed",
+  "2D6 EM", "2D6 IM", "2D6 PM"
+)
+stopifnot(length(covnames) == nrow(dfCovs))
+
+covariateGroupNames <- c("Weight", "Age", "Creatinine\nclearance", "Sex",
+                         "NCI", "Formulation", "Food status", "2D6 genotype")
+```
+
+## 1.2 Streamlined: `setupDfCovs()`
+
+`setupDfCovs()` derives the covariate values from the data instead of taking them
+as literals. It summarises each covariate (`getCovStats()`) and reshapes the
+result (`createInputForestData()`) in one call. Continuous covariates are
+represented by their 5th and 95th percentiles; categorical covariates are
+expanded to one row per level.
+
+```{r}
+dfCovsAuto <- setupDfCovs(
+  data       = dfData,
+  covariates = c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO", "RACEL2"),
+  idVar      = "ID"
+)
+dfCovsAuto
+```
+
+`setupDfCovs()` names one-hot columns `GENO_2`, `GENO_3`, `GENO_4` — the naming
+used in Section 1.1 was chosen to match, so the same parameter function serves
+both. `setupDfCovs()` does not produce row labels; supply `cdfCovsNames` yourself,
+or leave it at its default to have each row labelled from its covariate values.
+The `additionalCovs`, `useMissVal`, and `contRef` arguments are covered in the
+[covariate data-preparation deep dive](Part3-deep-dive-covariate-data-prep.html).
+
+The rest of this walkthrough uses the explicit `dfCovs` from Section 1.1.
+
+# 2. Write the parameter function
+
+The parameter function receives a vector of `thetas`, in the order the THETAs
+appear in the NONMEM model, and a one-row data frame `df` of covariate values. It
+rebuilds the relevant part of the model and returns a list of the quantities to
+plot.
+
+Two defensive checks apply to every covariate:
+
+* `any(names(df) == "<cov>")` — the column may be absent entirely.
+* `df$<cov> != -99` — the cell may hold the missing-value indicator, which
+  `dfCovs` uses for covariates that are inactive on a row. This is needed even
+  when the original NONMEM data has no missing covariate values.
+
+The helper below resolves the genotype from either the one-hot columns produced
+by `createInputForestData()` / `setupDfCovs()` or the raw `GENO` column present in
+the analysis data. The second form is what the empirical Forest plot in Section 6
+passes.
+
+```{r}
+getGeno <- function(df) {
+  if ("GENO" %in% names(df) && df$GENO != -99) return(df$GENO)
+  oneHot  <- c(GENO_2 = 2, GENO_3 = 3, GENO_4 = 4)
+  present <- intersect(names(oneHot), names(df))
+  if (length(present) == 0) return(-99)
+  vals <- unlist(df[present])
+  if (any(vals == -99)) return(-99)
+  if (all(vals == 0))   return(1)
+  as.integer(oneHot[present][which(vals == 1)])
+}
+
+paramFunction <- function(thetas, df, ...) {
+
+  geno <- getGeno(df)
+
+  CLFOOD <- 1
+  if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) CLFOOD <- 1 + thetas[11]
+
+  FRELFORM <- 1
+  if (any(names(df) == "FORM") && df$FORM != -99 && df$FORM == 0) FRELFORM <- 1 + thetas[12]
+
+  FRELSEX <- 1
+  if (any(names(df) == "SEX") && df$SEX != -99 && df$SEX == 2) FRELSEX <- 1 + thetas[14]
+
+  FRELGENO4 <- if (geno == 4) 1 + thetas[13] else 1
+
+  FREL <- thetas[1] * FRELSEX * FRELFORM * FRELGENO4
+
+  if (any(names(df) == "WT") && df$WT != -99) {
+    TVCL <- thetas[4] * (df$WT / 75)^thetas[2]
+  } else {
+    TVCL <- thetas[4]
+  }
+  if (geno == 2) TVCL <- TVCL * (1 + thetas[8])
+  if (geno == 3) TVCL <- TVCL * (1 + thetas[9])
+  if (geno == 4) TVCL <- TVCL * (1 + thetas[10])
+  CL <- CLFOOD * TVCL
+
+  if (any(names(df) == "WT") && df$WT != -99) {
+    V <- thetas[5] * (df$WT / 75)^thetas[3]
+  } else {
+    V <- thetas[5]
+  }
+
+  ## Secondary parameter: AUC after an 80 mg dose
+  AUC <- 80 / (CL / FREL)
+
+  list(CL, FREL, AUC, V)
+}
+
+functionListName <- c("CL", "Frel", "AUC", "V")
+```
+
+# 3. Sample the parameter uncertainty
+
+`getSamples()` returns a data frame of parameter vectors in `.ext` column order.
+The confidence interval on each Forest plot row is the quantile of the parameter
+function evaluated over these vectors.
+
+```{r}
+## Covariance matrix: n draws from the multivariate normal implied by the .cov step
+dfSamplesCOV <- getSamples(covFile, extFile = extFile, n = 200)
+
+## Bootstrap: the non-zero-OFV resamples from a PsN bootstrap raw_results file
+dfSamplesBS <- getSamples(bsFile, extFile = extFile)
+
+## SIR: all resamples in a PsN SIR raw_results file
+dfSamplesSIR <- getSamples(sirFile, extFile = extFile)
+
+## Small bootstrap: build a covariance matrix from the bootstrap resamples,
+## then draw n vectors from it
+dfSamplesBSsmall <- getSamples(bsFile, extFile = extFile, n = 200)
+```
+
+Sampling from the covariance matrix or from a small bootstrap produces symmetric
+intervals. A full bootstrap or SIR file lets the interval be asymmetric.
+
+# 4. Define the reference subject
+
+Without a reference, `getForestDFSCM()` uses the model with every covariate effect
+switched off (all cells `-99`). To make the reference a typical subject instead,
+pass `dfRefRow`.
+
+`setupDfRefRow()` builds that row from the data, matched to the geometry of a
+`setupDfCovs()` result: the mode for categorical covariates, the median (or mean)
+for continuous covariates, computed on one record per subject.
+
+```{r}
+dfRefRow <- setupDfRefRow(
+  dfCovs     = dfCovsAuto,
+  data       = dfData,
+  covariates = c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO", "RACEL2"),
+  idVar      = "ID"
+)
+dfRefRow
+```
+
+For an explicit `dfCovs`, a one-row data frame works just as well:
+
+```{r}
+dfRefRowManual <- data.frame(
+  WT = 75, AGE = 45, CRCL = 100, SEX = 1,
+  NCIL = 0, FORM = 1, FOOD = 1,
+  GENO_2 = 0, GENO_3 = 0, GENO_4 = 0
+)
+```
+
+::: {.callout-note}
+The reference enters the relative scale as the denominator: each row is plotted as
+its parameter value divided by the reference-subject value. A reference subject
+that carries a large covariate effect shifts every other row. Choose it
+deliberately, and state it in the plot caption.
+:::
+
+# 5. Compute the parametric Forest plot data
+
+`getForestDFSCM()` evaluates `paramFunction` for every row of `dfCovs` and every
+parameter vector, then appends the summary columns `forestPlot()` reads.
+`noBaseThetas` is the number of THETAs in the model.
+
+```{r}
+dfresBS <- getForestDFSCM(
+  dfCovs           = dfCovs,
+  cdfCovsNames     = covnames,
+  functionList     = list(paramFunction),
+  functionListName = functionListName,
+  noBaseThetas     = 14,
+  dfParameters     = dfSamplesBS,
+  dfRefRow         = dfRefRowManual
+)
+head(dfresBS[, c("COVNUM", "COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
+```
+
+Switching the uncertainty source is a one-argument change:
+
+```{r}
+dfresCOV <- getForestDFSCM(
+  dfCovs           = dfCovs,
+  cdfCovsNames     = covnames,
+  functionList     = list(paramFunction),
+  functionListName = functionListName,
+  noBaseThetas     = 14,
+  dfParameters     = dfSamplesCOV,
+  dfRefRow         = dfRefRowManual
+)
+```
+
+```{r}
+forestPlot(dfresBS, parameters = "CL", groupNameLabels = covariateGroupNames)
+```
+
+# 6. Empirical Forest plots
+
+An empirical Forest plot reads each covariate effect from the analysis data. The
+covariate structure is a list of expressions that subset the data; the parameter
+function and its names are unchanged.
+
+```{r}
+lsExpr <- list(
+  "NCI"  = expression(NCIL == 0),
+  "NCI"  = expression(NCIL == 1),
+  "FORM" = expression(FORM == 0),
+  "FORM" = expression(FORM == 1),
+  "FOOD" = expression(FOOD == 0),
+  "FOOD" = expression(FOOD == 1),
+  "GENO" = expression(GENO == 1),
+  "GENO" = expression(GENO == 2),
+  "GENO" = expression(GENO == 3),
+  "GENO" = expression(GENO == 4),
+  "WT"   = expression(WT < 70),
+  "WT"   = expression(WT > 104),
+  "SEX"  = expression(SEX == 1),
+  "SEX"  = expression(SEX == 2)
+)
+
+covnamesEmp <- c("NCI = 0", "NCI > 0", "Oral tablet", "FDC", "Fasted", "Fed",
+                 "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
+                 "WT < 70 kg", "WT > 104 kg", "Male", "Female")
+stopifnot(length(covnamesEmp) == length(lsExpr))
+```
+
+`getForestDFemp()` needs the analysis data. Empirical plots are more expensive to
+compute than parametric ones, so a subset keeps the example quick; `ncores > 1`
+parallelises the calculation and `cstrPackages` names the packages the workers
+need.
+
+```{r}
+dfDataEmp <- read.csv(dataFile) %>%
+  distinct(ID, .keep_all = TRUE) %>%
+  slice(1:300)
+
+dfresEmp <- getForestDFemp(
+  dfData             = dfDataEmp,
+  covExpressionsList = lsExpr,
+  cdfCovsNames       = covnamesEmp,
+  functionList       = list(paramFunction),
+  functionListName   = functionListName,
+  noBaseThetas       = 14,
+  dfParameters       = dfSamplesCOV,
+  ncores             = 1,
+  cstrPackages       = "dplyr"
+)
+```
+
+```{r}
+forestPlot(dfresEmp, parameters = "CL", noVar = FALSE)
+```
+
+`noVar = FALSE` keeps the parameter-uncertainty interval. `noVar = TRUE` (the
+default for empirical data) drops it and shows only the covariate effect.
+
+# 7. Customise the plot
+
+`forestPlot()` returns a `ggplot` object (or a list of them). Common arguments:
+
+| Argument | Effect |
+| --- | --- |
+| `parameters` | which of `functionListName` to draw, and in what order |
+| `groupNameLabels` | replace the covariate-group strip labels |
+| `plotRelative` | `TRUE` (default) plots relative to the reference; `FALSE` plots the absolute value |
+| `noVar` | drop the parameter-uncertainty interval |
+| `xlim` | x-axis limits |
+| `statisticsLabel` | prefix for the statistics-panel strip labels |
+| `return` | `"plot"` (default) or `"plotList"` for the panel list |
+
+```{r}
+forestPlot(
+  dfresBS,
+  parameters      = c("CL", "Frel"),
+  groupNameLabels = covariateGroupNames,
+  statisticsLabel = "Estimate:",
+  xlim            = c(0.5, 1.6)
+)
+```
+
+# Where to next
+
+* [Covariate data preparation](Part3-deep-dive-covariate-data-prep.html) —
+  `getCovStats()`, `setupDfCovs()`, and `setupDfRefRow()` in full, including
+  additional covariates and missing data.
+* [R-coded models](Part3-deep-dive-r-coded-models.html) — Forest plots for models
+  fitted outside NONMEM, with the plot data assembled by hand.
+* [Time-to-event models](Part3-deep-dive-tte-models.html) — hazard ratios, event
+  probabilities, and distribution reparameterisation.
