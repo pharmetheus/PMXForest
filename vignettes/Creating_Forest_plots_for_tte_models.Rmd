@@ -1,8 +1,11 @@
 ---
 title: "Creating Forest plots for tte models"
-output: 
-  bookdown::html_document2:
+output:
+  rmarkdown::html_document:
     toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
 vignette: >
   %\VignetteIndexEntry{Creating Forest plots for tte models}
   %\VignetteEngine{knitr::rmarkdown}
@@ -13,12 +16,10 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  cache=TRUE,
-  fig.path="Creating_Forest_plots_for_tte_models_figures/html"
+  warning = FALSE,
+  message = FALSE
 )
 ```
-
-<!-- output: rmarkdown::html_vignette -->
 
 ```{r setup}
 packageName <- "PMXForest"
@@ -46,14 +47,14 @@ In this example, the forest plot will be of the SCM parametric type and the unce
 
 Overall, there are three sets of required specifications needed:
 
-1. The covariate values of interest needs to be specified (Section \@ref(sec:dfCovs)).
-2. The model for the primary and/or secondary parameters need to be implemented in R functions (Section \@ref(sec:paramFunction)).
-3. The multivariate distribution of the primary parameters needs to be derived (Section \@ref(sec:multivariateDist)).
+1. The covariate values of interest need to be specified.
+2. The model for the primary and/or secondary parameters need to be implemented in R functions.
+3. The multivariate distribution of the primary parameters needs to be derived.
 
-With these specifications the data for the Forest plot can be setup (using the function `getForestDFSCM`, see Section \@ref(sec:setUpDataPar)) and the Forest plot created (see Section \@ref(sec:createForest)).
+With these specifications the data for the Forest plot can be assembled with `getForestDFSCM` and the Forest plot created. The remaining sections work through each step in turn.
 
 
-### Define the covariates to include in the Forest plot {#sec:dfCovs}
+### Define the covariates to include in the Forest plot
 
 This specification has one required and two optional components.
 
@@ -84,7 +85,7 @@ dfRefRow <- data.frame("AGE"=50,"EXP"=0)
 ```
 
 
-### Define the model function {#sec:paramFunction}
+### Define the model function
 
 The `functionList` argument to `getForestDFSCM` is a list of functions that computes the parameters to plot in the Forest plot from the NONMEM parameter estimates. More than one function can be provided but only the case with one function is covered in this document. However, in this example two different functions are used in order to easily provide different x-scales for the HR versus and probability of events.
 
@@ -163,7 +164,7 @@ functionListNameCDF <- c("Probability of an event within 1 year")
 ```
 
 
-### Obtain the multivariate distribution of the primary parameters {#sec:multivariateDist}
+### Obtain the multivariate distribution of the primary parameters
 
 The `getForestDFSCM` package supports several methods for obtaining the uncertainties in the predicted parameter values. Most of them require information from the .ext file. 
 
@@ -193,7 +194,7 @@ bootFile    <- system.file("extdata","tte","bootstrap_tte_weibull_n500",paste0("
 dfSamplesBS <- getSamples(bootFile,extFile=extFile)
 ```
 
-### Set up the data for the Forest plot {#sec:setUpDataPar}
+### Set up the data for the Forest plot
 
 The actual data to be plotted is assembled by the `getForestDFSCM` function. In addition to the information assembled above one additional argument is required - the number of fixed effects in the NONMEM model (`noBaseThetas`).
 
@@ -226,7 +227,7 @@ Below is the call to calculate the forest plot data using the samples from the b
 ```
 
 
-### Create the Forest plot {#sec:createForest}
+### Create the Forest plot
 
 #### Forest plot over hazard ratios
 

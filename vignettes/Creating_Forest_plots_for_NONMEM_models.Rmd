@@ -1,8 +1,11 @@
 ---
 title: "Creating Forest plots for NONMEM models"
-output: 
-  bookdown::html_document2:
+output:
+  rmarkdown::html_document:
     toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
 vignette: >
   %\VignetteIndexEntry{Creating Forest plots for NONMEM models}
   %\VignetteEngine{knitr::rmarkdown}
@@ -12,11 +15,11 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
 )
 ```
-
-<!-- output: rmarkdown::html_vignette -->
 
 ```{r setup}
 suppressPackageStartupMessages(library("PMXForest",character.only = TRUE))

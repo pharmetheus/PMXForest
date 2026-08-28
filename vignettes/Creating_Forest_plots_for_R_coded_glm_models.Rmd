@@ -1,8 +1,11 @@
 ---
 title: "Creating Forest plots for R coded logistic regression models"
-output: 
-  bookdown::html_document2:
+output:
+  rmarkdown::html_document:
     toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
 vignette: >
   %\VignetteIndexEntry{Creating Forest plots for R coded logistic regression models}
   %\VignetteEngine{knitr::rmarkdown}
@@ -12,11 +15,11 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
 )
 ```
-
-<!-- output: rmarkdown::html_vignette -->
 
 ```{r setup,cache=F}
 packageName <- "PMXForest"
@@ -61,14 +64,14 @@ for (i in 1:nrow(dfT)) {
 
 Overall, there are three sets of required specifications needed:
 
-1. The covariate values of interest needs to be specified (Section \@ref(sec:dfCovs)).
-2. The model for the primary and/or secondary parameters need to be implemented in R functions (Section \@ref(sec:paramFunction)).
-3. The multivariate distribution of the primary parameters needs to be derived (Section \@ref(sec:multivariateDist)).
+1. The covariate values of interest need to be specified.
+2. The model for the primary and/or secondary parameters need to be implemented in R functions.
+3. The multivariate distribution of the primary parameters needs to be derived.
 
-With these specifications the data for the Forest plot can be setup (see Section \@ref(sec:setUpDataPar)) and the Forest plot created (see Section \@ref(sec:createForest)).
+With these specifications the data for the Forest plot can be assembled and the Forest plot created. The remaining sections work through each step in turn.
 
 
-### Define a fit and prediction function for a general linearized model (GLM) using a logistic regression model {#sec:paramFunction}
+### Define a fit and prediction function for a general linearized model (GLM) using a logistic regression model
 
 ```{r}
 
@@ -105,7 +108,7 @@ glmfitpredfunc <- function(fitdata,indicies,strDV,strCovs,strInteraction = "",pr
 ```
 
 
-### Define the covariates to include in the Forest plot {#sec:dfCovs}
+### Define the covariates to include in the Forest plot
 
 This specification has one required and two optional components.
 
@@ -140,7 +143,7 @@ dfRefRow <- data.frame("Age"="3rd","Sex"="Male","Class"="Child")
 ```
 
 
-### Create the Forest plot data {#sec:setUpDataPar}
+### Create the Forest plot data
 
 
 The actual data to be plotted is assembled manually in this vignette.
@@ -177,7 +180,7 @@ dfres$GROUPNAME<-dfres$COVARIATEGROUPS
 dfres$PARAMETER="Chance of surviving Titanic %"
 dfres$COVEFF=F
 ```
-### Create the Forest plot {#sec:createForest}
+### Create the Forest plot
 
 #### Forest plot over survival
 

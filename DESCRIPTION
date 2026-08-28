@@ -28,7 +28,6 @@ Suggests:
     boot,
     deSolve,
     mrgsolve,
-    bookdown,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
