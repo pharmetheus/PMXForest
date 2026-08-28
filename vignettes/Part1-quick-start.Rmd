@@ -70,23 +70,23 @@ subject, and the formatting arguments of `forestPlot()`.
 
 `setupDfCovs()` reads an analysis data set, summarises each covariate, and returns
 a data frame in which every row is one row of the Forest plot. Continuous
-covariates are represented by their 5th and 95th percentiles; categorical
-covariates are expanded to one row per level (the first level is the reference).
+covariates are represented by their 5th and 95th percentiles; binary covariates
+are expanded to one row per level.
 
 ```{r}
 dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 dfData   <- read.csv(dataFile)
 
-covariates <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO", "RACEL2")
+covariates <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "RACEL2")
 
 dfCovs <- setupDfCovs(data = dfData, covariates = covariates, idVar = "ID")
 dfCovs
 ```
 
-Multi-level covariates are one-hot encoded with the level appended to the name.
-`GENO` has four levels, so `setupDfCovs()` creates `GENO_2`, `GENO_3`, and `GENO_4`
-(the row with all three set to zero is the `GENO == 1` reference). The parameter
-function in the next step refers to these column names.
+Cells that are inactive on a row hold the missing-value indicator `-99`; the
+parameter function in the next step treats that as "no effect". Multi-level
+categorical covariates (one-hot encoding, reference level) are covered in the
+[Walkthrough](Part2-walkthrough.html).
 
 # 2. Write the parameter function
 
@@ -110,19 +110,13 @@ paramFunction <- function(thetas, df, ...) {
   FRELSEX <- 1
   if (any(names(df) == "SEX") && df$SEX != -99 && df$SEX == 2) FRELSEX <- 1 + thetas[14]
 
-  FRELGENO4 <- 1
-  if (any(names(df) == "GENO_4") && df$GENO_4 != -99 && df$GENO_4 == 1) FRELGENO4 <- 1 + thetas[13]
-
-  FREL <- thetas[1] * FRELSEX * FRELFORM * FRELGENO4
+  FREL <- thetas[1] * FRELSEX * FRELFORM
 
   if (any(names(df) == "WT") && df$WT != -99) {
     TVCL <- thetas[4] * (df$WT / 75)^thetas[2]
   } else {
     TVCL <- thetas[4]
   }
-  if (any(names(df) == "GENO_2") && df$GENO_2 != -99 && df$GENO_2 == 1) TVCL <- TVCL * (1 + thetas[8])
-  if (any(names(df) == "GENO_3") && df$GENO_3 != -99 && df$GENO_3 == 1) TVCL <- TVCL * (1 + thetas[9])
-  if (any(names(df) == "GENO_4") && df$GENO_4 != -99 && df$GENO_4 == 1) TVCL <- TVCL * (1 + thetas[10])
   CL <- CLFOOD * TVCL
 
   if (any(names(df) == "WT") && df$WT != -99) {
@@ -159,7 +153,7 @@ parameter vector in `dfSamples`, then summarises the results into the columns
 `forestPlot()` needs. `noBaseThetas` is the number of THETAs in the model.
 
 With `cdfCovsNames` left at its default, each row is labelled from its own
-covariate values (`WT=58.5`, `GENO_4=1`, and so on). The
+covariate values (`WT=58.5`, `SEX=2`, and so on). The
 [Walkthrough](Part2-walkthrough.html) shows how to supply publication-quality row
 labels and covariate group names.
 
