@@ -11,7 +11,9 @@ getCovStats(
   probs = c(0.05, 0.95),
   idVar = "ID",
   missVal = -99,
-  nsig = 3
+  nsig = 3,
+  refLevels = NULL,
+  sep = "_"
 )
 }
 \arguments{
@@ -36,6 +38,15 @@ calculations. Defaults to -99.}
 
 \item{nsig}{The number of significant digits (passed to the `signif`
 function) for rounding the summary of continuous covariates. Defaults to 3.}
+
+\item{refLevels}{An optional named list (or named vector) giving the reference
+level for individual multi-level categorical covariates, e.g.
+`list(GENO = 2)`. Covariates not named here use their lowest level as the
+reference. Has no effect on continuous or binary covariates.}
+
+\item{sep}{The separator between the covariate name and the level in the
+one-hot column names for multi-level categorical covariates. Defaults to
+`"_"`, matching the NONMEM FREM convention.}
 }
 \value{
 A list where each element corresponds to a covariate.
@@ -45,7 +56,8 @@ A list where each element corresponds to a covariate.
     \item For **binary** covariates, the element is a sorted vector of the two
       unique values.
     \item For **multi-level categorical** covariates, the element is a nested
-      list of one-hot encoded vectors, with the first level used as the reference.
+      list of one-hot encoded vectors. The reference level (the lowest level,
+      or the one named in `refLevels`) is represented by all vectors being 0.
   }
 }
 \description{

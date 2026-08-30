@@ -38,6 +38,13 @@
 #'   states. Defaults to -99.
 #' @param nsig The number of significant digits for rounding continuous covariates.
 #'   Defaults to 3.
+#' @param refLevels An optional named list giving the reference level for
+#'   individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Use
+#'   this to align the one-hot columns with a model whose reference genotype (or
+#'   race, etc.) is not the lowest level. Covariates not named here use their
+#'   lowest level as the reference. Passed through to `getCovStats()`.
+#' @param sep The separator between the covariate name and the level in the
+#'   one-hot column names. Defaults to `"_"`.
 #'
 #' @return A data frame formatted for use in empirical and SCM forest plot functions.
 #' @export
@@ -86,7 +93,7 @@
 setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TRUE,
                         contRef = c("median", "mean"), minLevels = 10,
                         probs = c(0.05, 0.95), idVar = "ID",
-                        missVal = -99, nsig = 3) {
+                        missVal = -99, nsig = 3, refLevels = NULL, sep = "_") {
 
   contRef <- match.arg(contRef)
   all_covs <- unique(c(covariates, additionalCovs))
@@ -99,7 +106,9 @@ setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TR
     probs = probs,
     idVar = idVar,
     missVal = missVal,
-    nsig = nsig
+    nsig = nsig,
+    refLevels = refLevels,
+    sep = sep
   )
 
   # 2. Reshape into the basic forest plot data.frame structure
@@ -140,10 +149,11 @@ setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TR
         if (n_levs == 2) {
           df_covs[[acov]][df_covs[[acov]] == missVal] <- mode_val
         } else {
-          levs <- sort(unique(v))
-          for (i in 2:n_levs) {
-            col_name <- paste0(acov, "_", levs[i])
-            ref_val <- ifelse(mode_val == levs[i], 1, 0)
+          levs   <- sort(unique(v))
+          refLev <- if (!is.null(refLevels[[acov]])) refLevels[[acov]] else levs[1]
+          for (lev in setdiff(levs, refLev)) {
+            col_name <- paste0(acov, sep, lev)
+            ref_val  <- ifelse(mode_val == lev, 1, 0)
             if (col_name %in% names(df_covs)) {
               df_covs[[col_name]][df_covs[[col_name]] == missVal] <- ref_val
             }

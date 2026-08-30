@@ -14,7 +14,9 @@ setupDfRefRow(
   minLevels = 10,
   idVar = "ID",
   missVal = -99,
-  nsig = 3
+  nsig = 3,
+  refLevels = NULL,
+  sep = "_"
 )
 }
 \arguments{
@@ -46,6 +48,15 @@ treated as categorical. Default is 10.}
 
 \item{nsig}{The number of significant digits for rounding continuous covariates.
 Defaults to 3.}
+
+\item{refLevels}{An optional named list giving the reference level for
+individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Must
+match the `refLevels` passed to `setupDfCovs()` so the reference column
+names line up. Covariates not named here use their lowest level as the
+reference.}
+
+\item{sep}{The separator between the covariate name and the level in the
+one-hot column names. Defaults to `"_"`; must match `setupDfCovs()`.}
 }
 \value{
 A data frame formatted to be passed as the `dfRefRow` argument.

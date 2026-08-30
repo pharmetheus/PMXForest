@@ -14,7 +14,9 @@ setupDfCovs(
   probs = c(0.05, 0.95),
   idVar = "ID",
   missVal = -99,
-  nsig = 3
+  nsig = 3,
+  refLevels = NULL,
+  sep = "_"
 )
 }
 \arguments{
@@ -50,6 +52,15 @@ states. Defaults to -99.}
 
 \item{nsig}{The number of significant digits for rounding continuous covariates.
 Defaults to 3.}
+
+\item{refLevels}{An optional named list giving the reference level for
+individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Use
+this to align the one-hot columns with a model whose reference genotype (or
+race, etc.) is not the lowest level. Covariates not named here use their
+lowest level as the reference. Passed through to `getCovStats()`.}
+
+\item{sep}{The separator between the covariate name and the level in the
+one-hot column names. Defaults to `"_"`.}
 }
 \value{
 A data frame formatted for use in empirical and SCM forest plot functions.

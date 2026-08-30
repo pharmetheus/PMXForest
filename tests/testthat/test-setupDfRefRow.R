@@ -46,3 +46,29 @@ test_that("setupDfRefRow generates correct singleRef = FALSE geometry", {
   expect_true(all(wt_block$WT == 70), info = "Active continuous cells were not overwritten with reference.")
   expect_true(all(wt_block$SEX == -99), info = "Inactive missVal cells were not preserved.")
 })
+
+test_that("setupDfRefRow honours refLevels so its columns match setupDfCovs", {
+  mock_data <- data.frame(
+    ID   = 1:8,
+    WT   = c(60, 70, 70, 80, 90, 65, 75, 72),
+    GENO = c(1, 2, 2, 3, 4, 2, 3, 2)   # mode is 2
+  )
+
+  df_covs <- setupDfCovs(
+    mock_data, covariates = c("WT", "GENO"), refLevels = list(GENO = 2)
+  )
+
+  ref <- setupDfRefRow(
+    dfCovs     = df_covs,
+    data       = mock_data,
+    covariates = c("WT", "GENO"),
+    refLevels  = list(GENO = 2)
+  )
+
+  # Column names must line up with df_covs (GENO_1, GENO_3, GENO_4)
+  expect_true(all(c("GENO_1", "GENO_3", "GENO_4") %in% names(ref)))
+  # Mode genotype is 2 (the reference) -> all GENO dummies at 0
+  expect_equal(ref$GENO_1, 0)
+  expect_equal(ref$GENO_3, 0)
+  expect_equal(ref$GENO_4, 0)
+})
