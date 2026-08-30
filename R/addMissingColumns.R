@@ -9,6 +9,8 @@
 #'
 #' @return A data frame with a structure similar to a NONMEM ext file.
 #'
+#' @keywords internal
+#'
 #' @examples
 #' \dontrun{
 #' dfParameters <- read.csv(file = input, header = TRUE)

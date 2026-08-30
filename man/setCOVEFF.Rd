@@ -36,3 +36,4 @@ lsTrue <- list(
 newDfres <- setCOVEFF(dfresCOVscm,lsTrue)
 }
 }
+\keyword{internal}

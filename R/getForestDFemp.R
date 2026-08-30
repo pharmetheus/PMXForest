@@ -17,50 +17,45 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#'lsExpr<-list("NCI" = expression(NCIL==0),
-#'             "NCI" = expression(NCIL==1),
-#'             "FORM"= expression(FORM==0),
-#'             "FORM"= expression(FORM==1),
-#'             "FOOD"= expression(FOOD==0),
-#'             "FOOD"= expression(FOOD==1),
-#'             "GENO"= expression(GENO==1),
-#'             "GENO"= expression(GENO==2),
-#'             "GENO"= expression(GENO==3),
-#'             "GENO"= expression(GENO==4),
-#'             "RACE"= expression(RACEL2==0),
-#'             "RACE"= expression(RACEL2==1),
-#'             "WT"  = expression(WT<70),
-#'             "WT"  = expression(WT>104),
-#'             "AGE" = expression(AGE<35),
-#'             "AGE" = expression(AGE>=57),
-#'             "CRCL"= expression(CRCL<94),
-#'             "CRCL"= expression(CRCL>=146),
-#'             "SEX" = expression(SEX==1),
-#'             "SEX" = expression(SEX==2)
-#')
+#' dfData  <- read.csv(
+#'   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+#' )
+#' extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+#' covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
 #'
-#'## The names associated with the entries in lsExpr
-#'covnamesEmp <- c("NCI=0","NCI>0","Oral tablets","FDC","Fasted","Fed",
-#'                  "2D6 UM","2D6 EM","2D6 IM","2D6 PM",
-#'                 "Caucasian","Other","WT<70 kg","WT>104 kg",
-#'                 "Age<35 y","Age>57 y","CRCL<94 mL/min","CRCL>146 mL/min",
-#'                 "Male","Female")
+#' # One record per subject, a subset to keep the example quick
+#' dfDataEmp <- dfData[!duplicated(dfData$ID), ][1:100, ]
+#' dfSamples <- getSamples(covFile, extFile, n = 50)
 #'
-#'dfresEmp <- getForestDFemp(
-#'  dfData             = dfData,
-#'  covExpressionsList = lsExpr,
-#'  cdfCovsNames       = covnamesEmp,
-#'  functionList       = list(paramFunction),
-#'  functionListName   = functionListName,
-#'  metricFunction     = median,
-#'  noBaseThetas       = 14,
-#'  dfParameters       = dfSamplesCOV,
-#'  dfRefRow           = NULL,
-#'  ncores             = 6,
-#'  cstrPackages       = "dplyr"
-#')
+#' # Each expression selects the subjects that make up one Forest plot row
+#' lsExpr <- list(
+#'   "WT"   = expression(WT < 70),
+#'   "WT"   = expression(WT > 100),
+#'   "FOOD" = expression(FOOD == 0),
+#'   "FOOD" = expression(FOOD == 1)
+#' )
+#'
+#' paramFunction <- function(thetas, df, ...) {
+#'   TVCL <- thetas[4]
+#'   if (any(names(df) == "WT") && df$WT != -99) {
+#'     TVCL <- thetas[4] * (df$WT / 75)^thetas[2]
+#'   }
+#'   if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) {
+#'     TVCL <- TVCL * (1 + thetas[11])
+#'   }
+#'   list(CL = TVCL)
 #' }
+#'
+#' dfresEmp <- getForestDFemp(
+#'   dfData             = dfDataEmp,
+#'   covExpressionsList = lsExpr,
+#'   functionList       = list(paramFunction),
+#'   functionListName   = "CL",
+#'   noBaseThetas       = 14,
+#'   dfParameters       = dfSamples,
+#'   ncores             = 1
+#' )
+#' head(dfresEmp[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
 getForestDFemp <- function(dfData,
                           covExpressionsList,
                           noBaseThetas,

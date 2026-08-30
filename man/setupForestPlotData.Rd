@@ -67,7 +67,19 @@ COVEFF will be set to TRUE else be set to FALSE. This will override the existing
 Creates the data.frame that is actually used for generating the Forest plots. Used by \code{forestPlot}.
 }
 \examples{
-\dontrun{
-plotData<- setupForestPlotData(dfres)
+dfData  <- read.csv(
+  system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+)
+extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
+
+dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "AGE"), idVar = "ID")
+dfSamples <- getSamples(covFile, extFile, n = 50)
+dfres <- getForestDFSCM(dfCovs,
+                        functionList     = list(function(thetas, df, ...) list(CL = thetas[4])),
+                        functionListName = "CL", noBaseThetas = 14,
+                        dfParameters     = dfSamples)
+
+PMXForest:::setupForestPlotData(dfres)
 }
-}
+\keyword{internal}

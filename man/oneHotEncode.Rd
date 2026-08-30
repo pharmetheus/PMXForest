@@ -47,7 +47,8 @@ them as missing.}
 after its dummy columns have been added. Defaults to `FALSE`.}
 }
 \value{
-`data` with the dummy columns added. If a `COVARIATEGROUPS` column is
+`data` with the dummy columns added (numeric `0`/`1`, or `missVal` on
+  missing rows when `imputeMissing = FALSE`). If a `COVARIATEGROUPS` column is
   present it is moved back to the last position.
 }
 \description{
@@ -72,20 +73,20 @@ For a covariate `GENO` with non-missing levels `1, 2, 3, 4` and the default
   that already carry FREM dummy columns.
 }
 \examples{
-df <- data.frame(
-  ID   = 1:6,
-  GENO = c(1, 2, 3, 4, 2, -99),
-  RACE = c(1, 1, 2, 3, 2, 1)
+dfData <- read.csv(
+  system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
+# One record per subject, a few categorical covariates
+d <- dfData[!duplicated(dfData$ID), c("ID", "GENO", "RACE", "SEX")]
 
-# Default: lowest level is the reference, missing rows kept as missVal
-oneHotEncode(df, spec = c("GENO", "RACE"))
+# Default: lowest level is the reference
+head(oneHotEncode(d, spec = c("GENO", "RACE")))
 
 # Explicit reference level for GENO (level 2), and drop the raw column
-oneHotEncode(df, spec = list(GENO = list(ref = 2)), dropOriginal = TRUE)
+head(oneHotEncode(d, spec = list(GENO = list(ref = 2)), dropOriginal = TRUE))
 
-# Impute missing GENO to the reference category
-oneHotEncode(df, spec = "GENO", imputeMissing = TRUE)
+# "" separator -> GENO1, GENO2, ... (matching typical NONMEM indicator names)
+head(oneHotEncode(d, spec = "GENO", sep = ""))
 }
 \seealso{
 \code{\link{setupDfCovs}}, \code{\link{getCovStats}}

@@ -7,6 +7,8 @@
 #'
 #' @return A list of parameter positions THETA for thetas, SIGMA for sigmas and OMEGA for omegas.
 #'
+#' @keywords internal
+#'
 getParamPositions <- function(fileName) {
 
   con <- file(fileName, "r")

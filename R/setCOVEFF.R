@@ -7,6 +7,8 @@
 #'
 #' @return A data frame similar to \code{dfres} except that the COVEFF column has been modified.
 #'
+#' @keywords internal
+#'
 #' @examples
 #' \dontrun{
 #' lsTrue <- list(

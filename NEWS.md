@@ -18,6 +18,10 @@
 
 ## Documentation
 * Restructured the vignettes into a three-tier set: a Quick-Start, an end-to-end Walkthrough, and three deep dives (covariate data preparation, R-coded models, time-to-event models). The vignettes now build with `rmarkdown::html_document` instead of `bookdown`.
+* Every exported function now has a runnable `@examples` section that works on the bundled `SimVal` model output (`inst/extdata/SimVal`) rather than synthetic data or `\dontrun` snippets. Documented the previously undocumented `forestPlot()` arguments `setSignEff`, `size`, and `xlim`.
+
+## Internal
+* `setupForestPlotData()` is no longer exported (`@keywords internal`). It is an implementation detail of `forestPlot()`, which is unaffected.
 
 # PMXForest 1.2.15
 

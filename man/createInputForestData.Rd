@@ -32,51 +32,23 @@ This function transforms a specially formatted list of covariates
   It is designed to work with the output of the `getCovStats` function.
 }
 \examples{
-# --- Example 1: Simple (Univariate) Covariates ---
-# Each element in the list becomes its own group in the output data frame.
-simple_covs <- list(
-  SEX = c(0, 1),
-  WT = c(70, 110)
-)
-df_simple <- createInputForestData(simple_covs)
-print(df_simple)
-
-
-# --- Example 2: Grouped (Multivariate) Covariates ---
-# A nested list is used to group related effects. The outer list name ("GENO")
-# becomes the value in the COVARIATEGROUPS column for all derived rows.
-# This is the standard format for multi-level categorical variables.
-grouped_covs <- list(
-  GENO = list(
-    GENO_2 = c(0, 1, 0), # Represents 3 levels, with level 1 as reference (0,0)
-    GENO_3 = c(0, 0, 1)
+# --- Example 1: covariate values given as literals ---
+# Each element becomes its own group. A nested list encodes a multi-level
+# categorical covariate as one-hot columns (the all-zero row is the reference).
+dfCovs <- createInputForestData(
+  list(
+    WT   = c(65, 115),
+    SEX  = c(1, 2),
+    GENO = list(GENO_2 = c(0, 1, 0), GENO_3 = c(0, 0, 1))
   )
 )
-df_grouped <- createInputForestData(grouped_covs)
-print(df_grouped)
+dfCovs
 
-
-# --- Example 3: Full Workflow with getCovStats ---
-# The primary use case is to transform the output of getCovStats into a
-# data frame ready for plotting.
-
-# 1. Create sample data
-sample_data <- data.frame(
-  ID = c(1, 1, 2, 3, 4, 5),
-  WT = c(60.5, 61.0, 70.2, 80.8, 65.1, 90.3),
-  SEX = c(0, 0, 1, 0, 1, 0),
-  RACE = c(1, 1, 2, 3, 1, 2)
+# --- Example 2: from getCovStats() on the SimVal analysis data ---
+dfData <- read.csv(
+  system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
-
-# 2. Get covariate statistics using getCovStats. This creates a list
-# containing both simple (WT, SEX) and nested (RACE) elements.
-stats_list <- getCovStats(
-  data = sample_data,
-  covariates = c("WT", "SEX", "RACE"),
-  minLevels = 4 # Ensure WT is continuous and RACE is categorical
-)
-
-# 3. Use the output from getCovStats to create the final data frame.
-forest_plot_data <- createInputForestData(stats_list)
-print(forest_plot_data)
+covStats <- getCovStats(dfData, covariates = c("WT", "AGE", "SEX", "GENO"),
+                        idVar = "ID")
+createInputForestData(covStats)
 }

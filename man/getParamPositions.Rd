@@ -15,3 +15,4 @@ A list of parameter positions THETA for thetas, SIGMA for sigmas and OMEGA for o
 \description{
 Figure out the parameter positions in a PsN raw_results file.
 }
+\keyword{internal}

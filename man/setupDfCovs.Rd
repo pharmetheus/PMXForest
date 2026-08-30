@@ -82,44 +82,26 @@ A high-level wrapper that streamlines the creation of the covariate
   dataset before passing it to this function or post-process the output data.frame.
 }
 \examples{
-# 1. Create a sample dataset
-sample_data <- data.frame(
-  ID = c(1, 2, 3, 4, 5, 6),
-  WT = c(60.5, 70.2, 70.5, 80.8, 65.1, 90.0), # 6 unique values
-  SEX = c(0, 1, 1, 0, 1, 0),                  # 2 levels
-  RACE = c(1, 2, 2, 3, 1, 3),                 # 3 levels
-  FOOD = c(1, 0, 0, 1, 1, 0)                  # 2 levels (Mode is 1)
+dfData <- read.csv(
+  system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
 
-# 2. Generate the formatted covariate data frame
-# WT, SEX, and RACE are primary covariates.
-# FOOD is a supplementary additional covariate.
-# Setting minLevels = 4 ensures WT (6 unique values) remains continuous,
-# while RACE (3 unique values) is correctly routed to the multi-level pathway.
+# Continuous covariates -> 5th/95th percentiles; GENO -> one row per level.
+# Inactive cells hold missVal (-99); the parameter function handles that.
+setupDfCovs(dfData, covariates = c("WT", "AGE", "SEX", "GENO"), idVar = "ID")
 
-# Default. Relying on the parameter function to handle missing covariates.
-# Inactive primary covariates hold missVal (-99).
-# The additional covariate (FOOD) holds its baseline mode (1) in the background.
-df_def <- setupDfCovs(
-  data = sample_data,
-  covariates = c("WT", "SEX", "RACE"),
-  additionalCovs = "FOOD",
-  useMissVal = TRUE,
-  minLevels = 4
-)
-print(df_def)
+# CRCL as an additionalCov: it sits at its median on the WT/SEX rows
+# instead of at missVal.
+setupDfCovs(dfData, covariates = c("WT", "SEX"), additionalCovs = "CRCL",
+            idVar = "ID")
 
-# Alternative: All covariate values are handled by dfCovs.
-# Inactive primary covariates are ALSO replaced with their computed baseline references.
-# When WT is the active varying covariate, SEX sits at 0, RACE_2 at 0, RACE_3 at 0, etc.
-df_alt <- setupDfCovs(
-  data = sample_data,
-  covariates = c("WT", "SEX", "RACE"),
-  additionalCovs = "FOOD",
-  useMissVal = FALSE,
-  minLevels = 4
-)
-print(df_alt)
+# useMissVal = FALSE: inactive primary covariates also hold their reference
+setupDfCovs(dfData, covariates = c("WT", "SEX"), useMissVal = FALSE,
+            idVar = "ID")
+
+# Align the GENO one-hot columns with a model whose reference genotype is 2
+setupDfCovs(dfData, covariates = c("WT", "GENO"), refLevels = list(GENO = 2),
+            idVar = "ID")
 }
 \seealso{
 \code{\link{getCovStats}}, \code{\link{createInputForestData}}

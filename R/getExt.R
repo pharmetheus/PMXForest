@@ -8,10 +8,13 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' ## To extract the final parameter estimates
-#' dfext    <- subset(getExt(extFile = "myExtFile.ext"),ITERATION=="-1000000000")
-#' }
+#' extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+#'
+#' dfExt <- getExt(extFile = extFile)
+#' head(dfExt)
+#'
+#' ## The final parameter estimates
+#' subset(dfExt, ITERATION == "-1000000000")
 getExt <- function(extFile,set=NULL) {
 
   tmp   <- scan(extFile,what="character",sep="\n",quiet=TRUE)

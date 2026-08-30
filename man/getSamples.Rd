@@ -52,33 +52,27 @@ Function that gets samples, either from a regular bootstrap (PsN
   provide a manually aligned data.frame to `extFile`.
 }
 \examples{
-\dontrun{
-
 covFile  <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
 extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
-bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
-sirFile  <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
+bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv",
+                        package = "PMXForest")
+sirFile  <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv",
+                        package = "PMXForest")
 
-# Covariance matrix
-mySamplesCov <- getSamples(covFile,extFile,n=175)
+# Covariance matrix: n draws from the implied multivariate normal
+mySamplesCov <- getSamples(covFile, extFile, n = 50)
 
-# Non-parametric bootstrap. Derive percentiles from the samples in the bootFile.
-mySamplesBS  <- getSamples(bootFile,extFile)
+# Non-parametric bootstrap: the resamples themselves
+mySamplesBS <- getSamples(bootFile, extFile)
 
-# "Small bootstrap". Derive a var-cov matrix using the samples in the botFile and draw n
-# new samples from this matrix. Derive percentiles from the new samples.
-mySamplesSmallBS <- getSamples(bootFile,extFile,n=175)
+# "Small bootstrap": build a covariance matrix from the resamples, draw n from it
+mySamplesSmallBS <- getSamples(bootFile, extFile, n = 50)
 
-# SIR. Derive percentiles from the samples in the sirFile.
-mySamplesSir <- getSamples(sirFile,extFile)
+# SIR
+mySamplesSir <- getSamples(sirFile, extFile)
 
-# Use data frame as input
-dfParameters <- read.csv(bootFile) \%>\% select(X4..TVCL:X1..RUV)
-
-# Use all rows in the data frame.
-mySamplesDF <- getSamples(dfParameters)
-
-# Use the data in the data frame to generate a var-cov matrix and draw n new samples from it.
-mySamplesDFmvnorm <- getSamples(dfParameters,n=175)
-}
+# A plain numeric data frame of parameter vectors is also a valid input
+dfParameters <- getSamples(bootFile, extFile)
+getSamples(dfParameters)          # use the rows as-is
+getSamples(dfParameters, n = 50)  # or resample from their covariance
 }
