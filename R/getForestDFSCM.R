@@ -31,6 +31,13 @@
 #' @param cstrPackages a character vector with package names needed to run the calculations in parallel, default = NULL
 #' @param cstrExports a character vector with variables needed to run the calculations in parallel, default = NULL
 #' @param iMiss The missing value number. -99 by default.
+#' @param oneHot An optional one-hot encoding specification (see
+#' \code{\link{oneHotEncode}}). When supplied, raw multi-level categorical columns
+#' are one-hot encoded before the parameter functions are evaluated - in `dfCovs`
+#' and `dfRefRow` for `getForestDFSCM()`, in `dfData` for `getForestDFemp()` - so
+#' a single parameter function written against the dummy columns can serve both
+#' the parametric and empirical workflows. The separator is `"_"`. Default `NULL`
+#' (no encoding). For `getForestDFSCM()` the raw column is dropped after encoding.
 #' @param ... additional variables to be forwarded to the the functionList functions
 #'
 #'
@@ -68,6 +75,7 @@ getForestDFSCM <- function(dfCovs,
                            cstrPackages = NULL,
                            cstrExports = NULL,
                            iMiss = -99,
+                           oneHot = NULL,
                            ...) {
 
   if (!is.null(dfRefRow) && nrow(dfRefRow)!=1 && nrow(dfRefRow)!=nrow(dfCovs)) {
@@ -82,6 +90,19 @@ getForestDFSCM <- function(dfCovs,
     dfCovs <- createInputForestData(dfCovs)
   }
   dfCovs[is.na(dfCovs)] <- iMiss
+
+  ## Optionally one-hot encode raw multi-level categorical columns so a single
+  ## parameter function can be written against the dummy columns.
+  if (!is.null(oneHot)) {
+    dfCovs <- oneHotEncode(dfCovs, spec = oneHot, missVal = iMiss, dropOriginal = TRUE)
+    if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
+      ## A reference row built by setupDfRefRow() may already carry the dummy
+      ## columns and not the raw one; encoding is then a no-op bar the warning.
+      dfRefRow <- suppressWarnings(
+        oneHotEncode(dfRefRow, spec = oneHot, missVal = iMiss, dropOriginal = TRUE)
+      )
+    }
+  }
 
   groupnames<-NULL #Store the temp groupnames
   if (any(names(dfCovs)=="COVARIATEGROUPS")) {

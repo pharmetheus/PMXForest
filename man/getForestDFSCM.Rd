@@ -22,6 +22,7 @@ getForestDFSCM(
   cstrPackages = NULL,
   cstrExports = NULL,
   iMiss = -99,
+  oneHot = NULL,
   ...
 )
 }
@@ -65,6 +66,14 @@ If NULL (default) an educated guess of the grouping will be set}
 \item{cstrExports}{a character vector with variables needed to run the calculations in parallel, default = NULL}
 
 \item{iMiss}{The missing value number. -99 by default.}
+
+\item{oneHot}{An optional one-hot encoding specification (see
+\code{\link{oneHotEncode}}). When supplied, raw multi-level categorical columns
+are one-hot encoded before the parameter functions are evaluated - in `dfCovs`
+and `dfRefRow` for `getForestDFSCM()`, in `dfData` for `getForestDFemp()` - so
+a single parameter function written against the dummy columns can serve both
+the parametric and empirical workflows. The separator is `"_"`. Default `NULL`
+(no encoding). For `getForestDFSCM()` the raw column is dropped after encoding.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
 }

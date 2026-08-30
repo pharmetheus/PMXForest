@@ -81,6 +81,7 @@ getForestDFemp <- function(dfData,
                           cstrPackages = NULL,
                           cstrExports = NULL,
                           iMiss=-99,
+                          oneHot = NULL,
                           ...) {
 
   ## Check input
@@ -99,6 +100,18 @@ getForestDFemp <- function(dfData,
 
   resList <- list()
   dfData$TMPINDEX1 <- 1:nrow(dfData) # Add a temp index to row evaluate later on
+
+  ## Optionally one-hot encode raw multi-level categorical columns in the data so
+  ## the same parameter function used for the parametric workflow also works here.
+  ## The raw columns are kept because covExpressionsList filters on them.
+  if (!is.null(oneHot)) {
+    dfData <- oneHotEncode(dfData, spec = oneHot, missVal = iMiss, dropOriginal = FALSE)
+    if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
+      dfRefRow <- suppressWarnings(
+        oneHotEncode(dfRefRow, spec = oneHot, missVal = iMiss, dropOriginal = FALSE)
+      )
+    }
+  }
 
   if (is.null(cGrouping)) cGrouping <- 1:length(covExpressionsList)
 

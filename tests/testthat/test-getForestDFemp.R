@@ -163,3 +163,56 @@ test_that("getForestDFemp covers data frame reference logic (Lines 142-148)", {
   # Verifies that both expressions were processed
   expect_equal(nrow(res_multi), 2)
 })
+
+# --- oneHot argument ---
+
+test_that("getForestDFemp oneHot matches manually pre-encoded dfData", {
+  df_params <- data.frame(THETA1 = c(10, 11, 9, 12), THETA2 = c(0.3, 0.35, 0.28, 0.31))
+
+  df_data <- data.frame(
+    ID   = 1:8,
+    WT   = c(60, 70, 80, 90, 65, 75, 72, 68),
+    GENO = c(1, 2, 3, 4, 2, 3, 1, 4)
+  )
+
+  ls_expr <- list(
+    "GENO" = expression(GENO == 1),
+    "GENO" = expression(GENO == 3),
+    "GENO" = expression(GENO == 4)
+  )
+
+  p_func <- function(thetas, df, ...) {
+    x <- thetas[1]
+    if (isTRUE(df$GENO_1 == 1)) x <- x * (1 + thetas[2])
+    if (isTRUE(df$GENO_3 == 1)) x <- x * (1 - thetas[2])
+    if (isTRUE(df$GENO_4 == 1)) x <- x * (1 + 2 * thetas[2])
+    x
+  }
+
+  spec <- list(GENO = list(ref = 2))
+
+  res_onehot <- getForestDFemp(
+    dfData = df_data, covExpressionsList = ls_expr, noBaseThetas = 2,
+    dfParameters = df_params, functionList = list(p_func), oneHot = spec
+  )
+
+  res_manual <- getForestDFemp(
+    dfData = oneHotEncode(df_data, spec = spec), covExpressionsList = ls_expr,
+    noBaseThetas = 2, dfParameters = df_params, functionList = list(p_func)
+  )
+
+  expect_equal(res_onehot, res_manual)
+})
+
+test_that("getForestDFemp oneHot = NULL leaves the result unchanged", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_data <- data.frame(ID = 1:4, WT = c(60, 70, 80, 90), SEX = c(1, 1, 2, 2))
+  ls_expr <- list("Sex" = expression(SEX == 1), "Sex" = expression(SEX == 2))
+  p_func <- function(thetas, df, ...) thetas[1] * (df$WT / 70)
+
+  a <- getForestDFemp(dfData = df_data, covExpressionsList = ls_expr, noBaseThetas = 2,
+                      dfParameters = df_params, functionList = list(p_func))
+  b <- getForestDFemp(dfData = df_data, covExpressionsList = ls_expr, noBaseThetas = 2,
+                      dfParameters = df_params, functionList = list(p_func), oneHot = NULL)
+  expect_equal(a, b)
+})
