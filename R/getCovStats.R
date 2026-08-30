@@ -20,6 +20,13 @@
 #'   calculations. Defaults to -99.
 #' @param nsig The number of significant digits (passed to the `signif`
 #'   function) for rounding the summary of continuous covariates. Defaults to 3.
+#' @param refLevels An optional named list (or named vector) giving the reference
+#'   level for individual multi-level categorical covariates, e.g.
+#'   `list(GENO = 2)`. Covariates not named here use their lowest level as the
+#'   reference. Has no effect on continuous or binary covariates.
+#' @param sep The separator between the covariate name and the level in the
+#'   one-hot column names for multi-level categorical covariates. Defaults to
+#'   `"_"`, matching the NONMEM FREM convention.
 #'
 #' @return A list where each element corresponds to a covariate.
 #'   \itemize{
@@ -28,7 +35,8 @@
 #'     \item For **binary** covariates, the element is a sorted vector of the two
 #'       unique values.
 #'     \item For **multi-level categorical** covariates, the element is a nested
-#'       list of one-hot encoded vectors, with the first level used as the reference.
+#'       list of one-hot encoded vectors. The reference level (the lowest level,
+#'       or the one named in `refLevels`) is represented by all vectors being 0.
 #'   }
 #' @export
 #'
@@ -60,7 +68,8 @@
 #' # 3. View the output list structure
 #' print(cov_stats)
 getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95),
-                         idVar = "ID", missVal = -99, nsig = 3) {
+                         idVar = "ID", missVal = -99, nsig = 3,
+                         refLevels = NULL, sep = "_") {
 
   # REFACTORED: Use sym() instead of ensym() to allow programmatic wrapping.
   data <- data %>% distinct(!!sym(idVar), .keep_all = TRUE)
@@ -78,14 +87,26 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
         retList[[myCov]] <- sort(unique(dataTmp[[myCov]]))
       }
       else {
-        levs <- sort(unique(dataTmp[[myCov]]))
-        covList <- list()
-        for (i in 2:numLevs) {
-          vec <- rep(0, numLevs)
-          vec[i] <- 1
-          covList[[paste0(myCov, "_", levs[i])]] <- vec
+        levs    <- sort(unique(dataTmp[[myCov]]))
+        numLevs <- length(levs)
+        if (numLevs < 2) {
+          ## Degenerate: fewer than two non-missing levels, no contrast to form.
+          retList[[myCov]] <- levs
+        } else {
+          refLev <- if (!is.null(refLevels[[myCov]])) refLevels[[myCov]] else levs[1]
+          if (!refLev %in% levs) {
+            stop("Reference level ", refLev, " for covariate '", myCov,
+                 "' is not present in the data.")
+          }
+          covList <- list()
+          for (i in seq_len(numLevs)) {
+            if (levs[i] == refLev) next
+            vec <- rep(0, numLevs)
+            vec[i] <- 1
+            covList[[paste0(myCov, sep, levs[i])]] <- vec
+          }
+          retList[[myCov]] <- covList
         }
-        retList[[myCov]] <- covList
       }
     }
     else {

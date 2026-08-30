@@ -163,3 +163,47 @@ test_that("setupDfCovs handles alternative explicit references (useMissVal = FAL
   expect_true(all(sex_rows$WT == 70),
               info = "Alternative primary continuous covariate did not backfill with median.")
 })
+
+# --- refLevels / sep passthrough ---
+
+test_that("setupDfCovs passes refLevels through to the one-hot column names", {
+  mock_data <- data.frame(
+    ID   = 1:6,
+    WT   = c(60, 70, 80, 90, 65, 75),
+    GENO = c(1, 2, 3, 4, 2, 3)
+  )
+
+  # Default: lowest level (1) is the reference
+  df_default <- setupDfCovs(mock_data, covariates = c("WT", "GENO"))
+  expect_true(all(c("GENO_2", "GENO_3", "GENO_4") %in% names(df_default)))
+  expect_false("GENO_1" %in% names(df_default))
+
+  # refLevels: level 2 is the reference
+  df_ref2 <- setupDfCovs(
+    mock_data, covariates = c("WT", "GENO"), refLevels = list(GENO = 2)
+  )
+  expect_true(all(c("GENO_1", "GENO_3", "GENO_4") %in% names(df_ref2)))
+  expect_false("GENO_2" %in% names(df_ref2))
+})
+
+test_that("setupDfCovs sep passthrough and additionalCovs backfill honour refLevels", {
+  mock_data <- data.frame(
+    ID   = 1:8,
+    WT   = c(60, 70, 80, 90, 65, 75, 72, 68),
+    RACE = c(1, 2, 2, 3, 2, 2, 1, 2)   # mode is 2
+  )
+
+  df <- setupDfCovs(
+    mock_data,
+    covariates     = "WT",
+    additionalCovs = "RACE",
+    refLevels      = list(RACE = 1),
+    sep            = "."
+  )
+
+  # RACE (ref = 1) -> RACE.2, RACE.3 ; mode is 2 -> background RACE.2 = 1, RACE.3 = 0
+  expect_true(all(c("RACE.2", "RACE.3") %in% names(df)))
+  wt_rows <- df$COVARIATEGROUPS == "WT"
+  expect_true(all(df$RACE.2[wt_rows] == 1))
+  expect_true(all(df$RACE.3[wt_rows] == 0))
+})

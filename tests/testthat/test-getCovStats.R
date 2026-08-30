@@ -114,3 +114,34 @@ test_that("getCovStats consistently sorts binary covariates regardless of appear
   expect_equal(as.numeric(stats$TRT), c(0, 1),
                info = "Binary covariates are not being properly sorted.")
 })
+
+# --- refLevels and sep (added for the one-hot encoding refinement) ---
+
+test_that("getCovStats default multi-level output is unchanged by the new arguments", {
+  # Regression lock: omitting refLevels/sep must reproduce the historical output.
+  stats <- getCovStats(test_data, covariates = "RACE")
+  expect_identical(stats$RACE, list(RACE_2 = c(0, 1, 0), RACE_3 = c(0, 0, 1)))
+})
+
+test_that("getCovStats refLevels selects a non-lowest reference level", {
+  # RACE has levels 1, 2, 3. Make level 2 the reference.
+  stats <- getCovStats(test_data, covariates = "RACE", refLevels = list(RACE = 2))
+
+  expect_identical(names(stats$RACE), c("RACE_1", "RACE_3"))
+  # Level order in the vectors is still sorted 1, 2, 3; the reference (2) is the
+  # all-zero row.
+  expect_equal(stats$RACE$RACE_1, c(1, 0, 0))
+  expect_equal(stats$RACE$RACE_3, c(0, 0, 1))
+})
+
+test_that("getCovStats sep controls the one-hot name separator", {
+  stats <- getCovStats(test_data, covariates = "RACE", sep = "")
+  expect_identical(names(stats$RACE), c("RACE2", "RACE3"))
+})
+
+test_that("getCovStats errors on a reference level that is not in the data", {
+  expect_error(
+    getCovStats(test_data, covariates = "RACE", refLevels = list(RACE = 9)),
+    "not present in the data"
+  )
+})

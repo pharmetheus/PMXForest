@@ -28,6 +28,13 @@
 #' @param missVal The numeric value indicating missing data in `dfCovs`. Defaults to -99.
 #' @param nsig The number of significant digits for rounding continuous covariates.
 #'   Defaults to 3.
+#' @param refLevels An optional named list giving the reference level for
+#'   individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Must
+#'   match the `refLevels` passed to `setupDfCovs()` so the reference column
+#'   names line up. Covariates not named here use their lowest level as the
+#'   reference.
+#' @param sep The separator between the covariate name and the level in the
+#'   one-hot column names. Defaults to `"_"`; must match `setupDfCovs()`.
 #'
 #' @return A data frame formatted to be passed as the `dfRefRow` argument.
 #' @export
@@ -81,7 +88,8 @@
 #' print(ref_matrix)
 setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
                           singleRef = TRUE, contRef = c("median", "mean"),
-                          minLevels = 10, idVar = "ID", missVal = -99, nsig = 3) {
+                          minLevels = 10, idVar = "ID", missVal = -99, nsig = 3,
+                          refLevels = NULL, sep = "_") {
 
   contRef <- match.arg(contRef)
   all_covs <- unique(c(covariates, additionalCovs))
@@ -106,10 +114,11 @@ setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
       if (n_levs == 2) {
         ref_map[[cov]] <- mode_val
       } else {
-        levs <- sort(unique(v))
-        for (i in 2:n_levs) {
-          col_name <- paste0(cov, "_", levs[i])
-          ref_map[[col_name]] <- ifelse(mode_val == levs[i], 1, 0)
+        levs   <- sort(unique(v))
+        refLev <- if (!is.null(refLevels[[cov]])) refLevels[[cov]] else levs[1]
+        for (lev in setdiff(levs, refLev)) {
+          col_name <- paste0(cov, sep, lev)
+          ref_map[[col_name]] <- ifelse(mode_val == lev, 1, 0)
         }
       }
     } else {
