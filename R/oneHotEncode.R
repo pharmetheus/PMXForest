@@ -45,7 +45,8 @@
 #' @param dropOriginal Logical. If `TRUE`, the raw categorical column is removed
 #'   after its dummy columns have been added. Defaults to `FALSE`.
 #'
-#' @return `data` with the dummy columns added. If a `COVARIATEGROUPS` column is
+#' @return `data` with the dummy columns added (numeric `0`/`1`, or `missVal` on
+#'   missing rows when `imputeMissing = FALSE`). If a `COVARIATEGROUPS` column is
 #'   present it is moved back to the last position.
 #' @export
 #'
@@ -83,9 +84,9 @@ oneHotEncode <- function(data, spec, sep = "_", missVal = -99,
       col <- paste0(cov, sep, lev)
 
       newVal <- if (imputeMissing) {
-        as.integer(!isMiss & raw == lev)
+        as.numeric(!isMiss & raw == lev)
       } else {
-        ifelse(isMiss, missVal, as.integer(raw == lev))
+        ifelse(isMiss, missVal, as.numeric(raw == lev))
       }
 
       if (col %in% names(data)) {
