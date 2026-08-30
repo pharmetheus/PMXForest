@@ -26,6 +26,7 @@ getForestDFemp(
   cstrExports = NULL,
   iMiss = -99,
   oneHot = NULL,
+  oneHotSep = "_",
   ...
 )
 }
@@ -78,8 +79,12 @@ This function is also used for the reference covariate combination}
 are one-hot encoded before the parameter functions are evaluated - in `dfCovs`
 and `dfRefRow` for `getForestDFSCM()`, in `dfData` for `getForestDFemp()` - so
 a single parameter function written against the dummy columns can serve both
-the parametric and empirical workflows. The separator is `"_"`. Default `NULL`
-(no encoding). For `getForestDFSCM()` the raw column is dropped after encoding.}
+the parametric and empirical workflows. Default `NULL` (no encoding). For
+`getForestDFSCM()` the raw column is dropped after encoding.}
+
+\item{oneHotSep}{The separator between the covariate name and the level in the
+dummy column names created when `oneHot` is used. Defaults to `"_"`. Set to
+`""` to match dummy columns named like `GENO1`, `GENO2`.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
 }

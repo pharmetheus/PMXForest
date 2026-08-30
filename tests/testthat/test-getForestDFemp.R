@@ -216,3 +216,24 @@ test_that("getForestDFemp oneHot = NULL leaves the result unchanged", {
                       dfParameters = df_params, functionList = list(p_func), oneHot = NULL)
   expect_equal(a, b)
 })
+
+test_that("getForestDFemp oneHotSep controls the dummy column separator", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(0.3, 0.32))
+  df_data <- data.frame(ID = 1:8, WT = c(60,70,80,90,65,75,72,68),
+                        GENO = c(1, 2, 3, 4, 2, 3, 1, 4))
+  ls_expr <- list("GENO" = expression(GENO == 1), "GENO" = expression(GENO == 3))
+  p_func <- function(thetas, df, ...) {
+    x <- thetas[1]
+    if (isTRUE(df$GENO1 == 1)) x <- x * (1 + thetas[2])
+    if (isTRUE(df$GENO3 == 1)) x <- x * (1 - thetas[2])
+    x
+  }
+  spec <- list(GENO = list(ref = 2))
+  res <- getForestDFemp(dfData = df_data, covExpressionsList = ls_expr,
+                        functionList = list(p_func), noBaseThetas = 2,
+                        dfParameters = df_params, oneHot = spec, oneHotSep = "")
+  ref <- getForestDFemp(dfData = oneHotEncode(df_data, spec = spec, sep = ""),
+                        covExpressionsList = ls_expr, functionList = list(p_func),
+                        noBaseThetas = 2, dfParameters = df_params)
+  expect_equal(res, ref)
+})

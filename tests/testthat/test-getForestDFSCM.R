@@ -160,3 +160,25 @@ test_that("getForestDFSCM oneHot = NULL leaves the result unchanged", {
                       oneHot = NULL)
   expect_equal(a, b)
 })
+
+test_that("getForestDFSCM oneHotSep controls the dummy column separator", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(0.3, 0.32))
+  df_covs   <- data.frame(GENO = c(1, 3, 4), COVARIATEGROUPS = "GENO",
+                          stringsAsFactors = FALSE)
+  p_func <- function(thetas, df, ...) {
+    x <- thetas[1]
+    if (isTRUE(df$GENO1 == 1)) x <- x * (1 + thetas[2])
+    x
+  }
+  res <- getForestDFSCM(dfCovs = df_covs, functionList = list(p_func),
+                        functionListName = "CL", noBaseThetas = 2,
+                        dfParameters = df_params,
+                        oneHot = list(GENO = list(ref = 2)), oneHotSep = "")
+  ref <- getForestDFSCM(
+    dfCovs = oneHotEncode(df_covs, spec = list(GENO = list(ref = 2)),
+                          sep = "", dropOriginal = TRUE),
+    functionList = list(p_func), functionListName = "CL", noBaseThetas = 2,
+    dfParameters = df_params
+  )
+  expect_equal(res, ref)
+})

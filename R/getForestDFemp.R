@@ -82,6 +82,7 @@ getForestDFemp <- function(dfData,
                           cstrExports = NULL,
                           iMiss=-99,
                           oneHot = NULL,
+                          oneHotSep = "_",
                           ...) {
 
   ## Check input
@@ -105,10 +106,12 @@ getForestDFemp <- function(dfData,
   ## the same parameter function used for the parametric workflow also works here.
   ## The raw columns are kept because covExpressionsList filters on them.
   if (!is.null(oneHot)) {
-    dfData <- oneHotEncode(dfData, spec = oneHot, missVal = iMiss, dropOriginal = FALSE)
+    dfData <- oneHotEncode(dfData, spec = oneHot, sep = oneHotSep,
+                           missVal = iMiss, dropOriginal = FALSE)
     if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
       dfRefRow <- suppressWarnings(
-        oneHotEncode(dfRefRow, spec = oneHot, missVal = iMiss, dropOriginal = FALSE)
+        oneHotEncode(dfRefRow, spec = oneHot, sep = oneHotSep,
+                     missVal = iMiss, dropOriginal = FALSE)
       )
     }
   }
