@@ -22,6 +22,7 @@ Imports:
     utils,
     tools
 Suggests:
+    covr,
     vdiffr,
     tibble,
     scales,

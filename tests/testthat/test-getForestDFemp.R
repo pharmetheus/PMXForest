@@ -237,3 +237,77 @@ test_that("getForestDFemp oneHotSep controls the dummy column separator", {
                         noBaseThetas = 2, dfParameters = df_params)
   expect_equal(res, ref)
 })
+
+# --- coverage: dfRefRow validation, expression-ref errors, oneHot + data.frame ref ---
+
+test_that("getForestDFemp errors on a data.frame dfRefRow with an invalid number of rows", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_data   <- data.frame(ID = 1:4, WT = c(60, 70, 80, 90), SEX = c(1, 1, 2, 2))
+  ls_expr   <- list("Sex" = expression(SEX == 1), "Sex" = expression(SEX == 2))
+  bad_ref   <- data.frame(WT = c(70, 80, 90))   # 3 rows, expr list has 2
+
+  expect_error(
+    getForestDFemp(dfData = df_data, covExpressionsList = ls_expr, dfRefRow = bad_ref,
+                   functionList = list(function(thetas, df, ...) thetas[1]),
+                   noBaseThetas = 2, dfParameters = df_params),
+    "number of reference rows/expressions"
+  )
+})
+
+test_that("getForestDFemp errors when an expression reference selects no subjects", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_data   <- data.frame(ID = 1:4, WT = c(60, 70, 80, 90), SEX = c(1, 1, 2, 2))
+  ls_expr   <- list("Sex" = expression(SEX == 1), "Sex" = expression(SEX == 2))
+
+  expect_error(
+    getForestDFemp(dfData = df_data, covExpressionsList = ls_expr,
+                   dfRefRow = list(expression(WT > 1000)),
+                   functionList = list(function(thetas, df, ...) thetas[1] * (df$WT / 70)),
+                   noBaseThetas = 2, dfParameters = df_params),
+    "no available data for reference subset"
+  )
+})
+
+test_that("getForestDFemp oneHot also encodes a data.frame dfRefRow", {
+  df_params <- data.frame(THETA1 = c(10, 11, 9, 12), THETA2 = c(0.3, 0.35, 0.28, 0.31))
+  df_data   <- data.frame(ID = 1:8, WT = c(60, 70, 80, 90, 65, 75, 72, 68),
+                          GENO = c(1, 2, 3, 4, 2, 3, 1, 4))
+  ls_expr   <- list("GENO" = expression(GENO == 1), "GENO" = expression(GENO == 3))
+  df_ref    <- data.frame(GENO = 2, WT = 70)   # >1 column so row-subsetting stays a data.frame
+
+  p_func <- function(thetas, df, ...) {
+    x <- thetas[1]
+    if (isTRUE(df$GENO_1 == 1)) x <- x * (1 + thetas[2])
+    if (isTRUE(df$GENO_3 == 1)) x <- x * (1 - thetas[2])
+    list(CL = x)
+  }
+  spec <- list(GENO = list(ref = 2))
+
+  res_onehot <- getForestDFemp(
+    dfData = df_data, covExpressionsList = ls_expr, dfRefRow = df_ref,
+    functionList = list(p_func), functionListName = "CL",
+    noBaseThetas = 2, dfParameters = df_params, oneHot = spec
+  )
+  res_manual <- getForestDFemp(
+    dfData   = oneHotEncode(df_data, spec = spec),
+    covExpressionsList = ls_expr,
+    dfRefRow = oneHotEncode(df_ref, spec = spec),
+    functionList = list(p_func), functionListName = "CL",
+    noBaseThetas = 2, dfParameters = df_params
+  )
+  expect_equal(res_onehot, res_manual)
+})
+
+test_that("getForestDFemp uses supplied cdfCovsNames for the row labels", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_data   <- data.frame(ID = 1:4, WT = c(60, 70, 80, 90), SEX = c(1, 1, 2, 2))
+  ls_expr   <- list("Sex" = expression(SEX == 1), "Sex" = expression(SEX == 2))
+
+  res <- getForestDFemp(
+    dfData = df_data, covExpressionsList = ls_expr,
+    cdfCovsNames = c("Men", "Women"),
+    functionList = list(function(thetas, df, ...) thetas[1] * (df$WT / 70)),
+    functionListName = "CL", noBaseThetas = 2, dfParameters = df_params
+  )
+  expect_setequal(unique(res$COVNAME), c("Men", "Women"))
+})

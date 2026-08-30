@@ -94,3 +94,20 @@ test_that("setupForestPlotData hits remaining logical branches", {
   # Check if the override flipped COVEFF to TRUE for the second row
   expect_true(res_override$COVEFF[2])
 })
+
+test_that("setupForestPlotData accepts groupNameLabels as a per-row vector", {
+  df_mock <- data.frame(
+    PARAMETER = c("CL", "CL", "CL"),
+    GROUPNAME = c("Sex", "Sex", "Weight"),   # 2 unique groups, 3 rows
+    COVNAME   = c("Male", "Female", "70kg"),
+    COVNUM    = 1:3,
+    COVEFF    = TRUE,
+    REFROW    = "NO",
+    REFFUNC   = 10,
+    POINT_REL_REFFUNC = 1.2, Q1_REL_REFFUNC = 1.1, Q2_REL_REFFUNC = 1.3,
+    stringsAsFactors = FALSE
+  )
+
+  res <- setupForestPlotData(df_mock, groupNameLabels = c("A", "B", "C"))
+  expect_equal(as.character(res$GROUPNAMELABEL), c("A", "B", "C"))
+})

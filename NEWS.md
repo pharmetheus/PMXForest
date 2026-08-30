@@ -22,6 +22,7 @@
 
 ## Internal
 * `setupForestPlotData()` is no longer exported (`@keywords internal`). It is an implementation detail of `forestPlot()`, which is unaffected.
+* Test coverage raised from 94.9% to 98.3% (every source file now at or above 94%). Added a `make coverage` target that fails below a 95% floor. The remaining gaps are the parallel (`ncores > 1`) branches, a few unreachable defensive guards, and the SIR-specific branch of `getSamples()` (the bundled SIR fixture lacks a `samples_order` column, so it currently exercises the bootstrap path).
 
 # PMXForest 1.2.15
 
