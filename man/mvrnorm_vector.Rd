@@ -26,20 +26,17 @@ A vector if iSampleIndex==1 otherwise a matrix with iSampleIndex rows
 Samples vectors of values from a vector of means and a varcov matrix
 }
 \examples{
-\dontrun{
-## Read the ext-file
-extFile <- getExt(system.file("extdata","run1.ext",package="PMXForest"))
-
-## Read the cov-file and extract the covmatrix
-dfcov     <- read.table(system.file("extdata","run1.cov",package="PMXForest"),
-                        fill = TRUE, header = TRUE, sep = "",
-                                                skip = 1, stringsAsFactors = FALSE)
-sigma     <- data.matrix(dfcov[, 2:ncol(dfcov)])
-
-## Get the final parameter estimates
+## Final parameter estimates from the SimVal run7 .ext file
+extFile <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
 finPar  <- subset(extFile, ITERATION == "-1000000000")
 mu      <- as.numeric(finPar[, -(c(1, ncol(finPar)))])
 
-dfParameters <- as.data.frame(mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 10))
-}
+## Covariance matrix from the run7 .cov file
+dfcov <- read.table(system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
+                    fill = TRUE, header = TRUE, sep = "", skip = 1,
+                    stringsAsFactors = FALSE)
+sigma <- data.matrix(dfcov[, 2:ncol(dfcov)])
+
+samples <- PMXForest:::mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 10)
+dim(samples)
 }

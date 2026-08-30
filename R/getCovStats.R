@@ -41,32 +41,19 @@
 #' @export
 #'
 #' @examples
-#' # --- Basic Example ---
-#'
-#' # 1. Create a sample dataset
-#' # This data includes duplicate IDs, continuous (WT), binary (SEX),
-#' # multi-level categorical (RACE), and a variable with a missing value (BMI).
-#' sample_data <- data.frame(
-#'   ID = c(1, 1, 2, 3, 4, 5),
-#'   WT = c(60.5, 61.0, 70.2, 80.8, 65.1, 90.3),
-#'   SEX = c(0, 0, 1, 0, 1, 0),
-#'   RACE = c(1, 1, 2, 3, 1, 2),
-#'   BMI = c(22.1, 22.4, 25.3, -99, 23.5, 28.9)
+#' dfData <- read.csv(
+#'   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 #' )
 #'
-#' # 2. Define covariates and get statistics
-#' covariates_to_summarize <- c("WT", "SEX", "RACE")
+#' # Continuous covariates -> quantiles; binary -> the two levels;
+#' # GENO (4 levels) -> a one-hot list with level 1 as the reference.
+#' getCovStats(dfData, covariates = c("WT", "AGE", "SEX", "GENO"), idVar = "ID")
 #'
-#' # Note: WT has 5 unique values in the distinct-ID dataset.
-#' # To ensure it's treated as continuous, we set minLevels to be less than 5.
-#' cov_stats <- getCovStats(
-#'   data = sample_data,
-#'   covariates = covariates_to_summarize,
-#'   minLevels = 4
-#' )
+#' # Non-default quantiles and rounding for a continuous covariate
+#' getCovStats(dfData, "CRCL", idVar = "ID", probs = c(0.1, 0.9), nsig = 4)
 #'
-#' # 3. View the output list structure
-#' print(cov_stats)
+#' # Use genotype level 2 as the reference instead of the lowest level
+#' getCovStats(dfData, "GENO", idVar = "ID", refLevels = list(GENO = 2))
 getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95),
                          idVar = "ID", missVal = -99, nsig = 3,
                          refLevels = NULL, sep = "_") {

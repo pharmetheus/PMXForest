@@ -18,8 +18,11 @@ A data.frame.
 Extracts the NONMEM iteration information from a NONMEM .ext file.
 }
 \examples{
-\dontrun{
-## To extract the final parameter estimates
-dfext    <- subset(getExt(extFile = "myExtFile.ext"),ITERATION=="-1000000000")
-}
+extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+
+dfExt <- getExt(extFile = extFile)
+head(dfExt)
+
+## The final parameter estimates
+subset(dfExt, ITERATION == "-1000000000")
 }

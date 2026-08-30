@@ -49,16 +49,37 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' dfresCOVscm <- getForestDFSCM(dfCovs           = dfCovs,
-#'                               cdfCovsNames     = covnames,
-#'                               functionList     = list(paramFunction),
-#'                               functionListName = functionListName,
-#'                               noBaseThetas     = noBaseThetas,
-#'                               dfParameters     = dfSamplesCOVscm,
-#'                               dfRefRow         = NULL
+#' dfData  <- read.csv(
+#'   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 #' )
-#'}
+#' extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+#' covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
+#'
+#' # Covariate rows and uncertainty samples (run7 has 14 THETAs)
+#' dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "AGE", "CRCL", "FOOD"),
+#'                          idVar = "ID")
+#' dfSamples <- getSamples(covFile, extFile, n = 50)
+#'
+#' # Rebuild the part of the model needed for CL
+#' paramFunction <- function(thetas, df, ...) {
+#'   TVCL <- thetas[4]
+#'   if (any(names(df) == "WT") && df$WT != -99) {
+#'     TVCL <- thetas[4] * (df$WT / 75)^thetas[2]
+#'   }
+#'   if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) {
+#'     TVCL <- TVCL * (1 + thetas[11])
+#'   }
+#'   list(CL = TVCL)
+#' }
+#'
+#' dfres <- getForestDFSCM(
+#'   dfCovs           = dfCovs,
+#'   functionList     = list(paramFunction),
+#'   functionListName = "CL",
+#'   noBaseThetas     = 14,
+#'   dfParameters     = dfSamples
+#' )
+#' head(dfres[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
 getForestDFSCM <- function(dfCovs,
                            cdfCovsNames = NULL,
                            functionList = list(

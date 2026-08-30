@@ -164,7 +164,13 @@ the Forest plot (see Details). "data" returns a \code{data.frame} with the actua
 
 \item{onlySignificantErrorBars}{Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).}
 
+\item{setSignEff}{Passed to \code{setupForestPlotData()}. \code{NULL} (default) or a list of two-element character vectors \code{c(PARAMETER, GROUPNAME)}. When supplied, the \code{COVEFF} column is set \code{TRUE} for the matching parameter/covariate-group combinations and \code{FALSE} otherwise, overriding any existing \code{COVEFF} values.}
+
+\item{size}{Base font size (points) for the plot text. Defaults to 80\% of the current \code{ggplot2} theme font size.}
+
 \item{addcodeErr}{A string of code to be applied to each of the panels with error bars.}
+
+\item{xlim}{Numeric length-2 vector giving the x-axis limits for the error-bar panels. Default \code{c(NA, NA)} lets the data set the range.}
 
 \item{...}{Arguments passed on to \code{ggpubr::text_grob}.}
 }
@@ -205,27 +211,34 @@ is necessary to have \code{keepYlabs} set to \code{TRUE} and \code{keepRightStri
 The graphical settings use standard \code{ggplot} syntax.
 }
 \examples{
-\dontrun{
-# Create a Forest plot, including the table part, for all parameters in dfres.
+# Build a small dfres from the SimVal PK model (run7, 14 THETAs)
+dfData  <- read.csv(
+  system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+)
+extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
 
-forestPlot(dfres)
+dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "AGE", "CRCL"),
+                         idVar = "ID")
+dfSamples <- getSamples(covFile, extFile, n = 50)
 
-# Exclude the table part of the plot
-
-forestPlot(dfres,table=FALSE)
-
-# Create a Forest plot for the specified parameter (which need to be included in dfres).
-
-forestPlot(dfres,parameters="CL")
-
-# Specify group name labels, the size of the table text and x-axis label
-
-forestPlot(dfres,parameters=c("CL"),groupNameLabels = c("Age (y)","Sex","Weight (kg)"),
-           tabTextSize = 20,xlb="Relative parameter value")
-
-# Stack the plots instead of plot them horizontally
-
-forestPlot(dfres,parameters = c("CL","Frel"),stackedPlots = TRUE,
-           keepYlabs = TRUE,keepRightStrip = TRUE)
+paramFunction <- function(thetas, df, ...) {
+  TVCL <- thetas[4]
+  if (any(names(df) == "WT") && df$WT != -99) {
+    TVCL <- thetas[4] * (df$WT / 75)^thetas[2]
+  }
+  list(CL = TVCL)
 }
+
+dfres <- getForestDFSCM(dfCovs, functionList = list(paramFunction),
+                        functionListName = "CL", noBaseThetas = 14,
+                        dfParameters = dfSamples)
+
+# Default Forest plot (error bars + statistics table)
+forestPlot(dfres, parameters = "CL")
+
+# Without the table, and with custom covariate-group labels and x-axis label
+forestPlot(dfres, parameters = "CL", table = FALSE,
+           groupNameLabels = c("Weight (kg)", "Age (y)", "Creatinine clearance"),
+           xlb = "Relative CL")
 }

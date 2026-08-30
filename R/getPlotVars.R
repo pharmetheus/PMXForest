@@ -13,15 +13,13 @@
 #'
 #'
 #' @examples
-#' # Get the relative variables with uncertainty in the reference:
+#' # Relative variables, with uncertainty in the reference:
 #' # "POINT_REL_REFFUNC" "Q1_REL_REFFUNC" "Q2_REL_REFFUNC" "REFFUNC"
+#' PMXForest:::getPlotVars()
 #'
-#' getPlotVars()
-#'
-#' # Get the relative variables without uncertainty in the reference:
+#' # Relative variables, without uncertainty in the reference:
 #' # "POINT_NOVAR_REL_REFFUNC" "Q1_NOVAR_REL_REFFUNC" "Q2_NOVAR_REL_REFFUNC" "REFFUNC"
-#'
-#' getPlotVars(noVar=TRUE)
+#' PMXForest:::getPlotVars(noVar = TRUE)
 #'
 getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
 
