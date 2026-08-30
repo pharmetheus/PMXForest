@@ -10,6 +10,8 @@
 #' @param iSampleIndex Number of samples to draw
 #' @return A vector if iSampleIndex==1 otherwise a matrix with iSampleIndex rows
 #'
+#' @keywords internal
+#'
 #' @examples
 #' ## Final parameter estimates from the SimVal run7 .ext file
 #' extFile <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))

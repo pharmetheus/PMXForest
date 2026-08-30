@@ -40,3 +40,4 @@ sigma <- data.matrix(dfcov[, 2:ncol(dfcov)])
 samples <- PMXForest:::mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 10)
 dim(samples)
 }
+\keyword{internal}
