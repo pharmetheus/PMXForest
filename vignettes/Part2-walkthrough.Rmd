@@ -93,7 +93,11 @@ active on a row hold the missing-value indicator (`-99` by default).
 
 `createInputForestData()` turns a named list of covariate values into the row
 structure. A nested list defines a multi-level categorical covariate as a set of
-one-hot columns; the first entry is the reference level.
+one-hot columns.
+
+The `run7` model uses genotype level 2 (2D6 EM) as its reference and estimates
+effects for levels 1, 3, and 4, so the one-hot columns here are `GENO_1`,
+`GENO_3`, `GENO_4` and the all-zero row is level 2.
 
 ```{r}
 dfCovs <- createInputForestData(
@@ -105,15 +109,14 @@ dfCovs <- createInputForestData(
     "NCIL"   = c(0, 1),
     "FORM"   = c(0, 1),
     "FOOD"   = c(0, 1),
-    "GENO"   = list("GENO_2" = c(0, 1, 0), "GENO_3" = c(0, 0, 1), "GENO_4" = c(0, 0, 0))
+    "GENO"   = list("GENO_1" = c(1, 0, 0, 0),
+                    "GENO_3" = c(0, 0, 1, 0),
+                    "GENO_4" = c(0, 0, 0, 1))
   ),
   iMiss = -99
 )
 dfCovs
 ```
-
-The `GENO` block above encodes three non-reference genotypes as `GENO_2`,
-`GENO_3`, `GENO_4`; the row with all three at zero is the `GENO == 1` reference.
 
 Row labels and covariate-group labels are supplied separately. Keep the label
 vector length locked to the number of rows so a miscount fails immediately rather
@@ -128,7 +131,7 @@ covnames <- c(
   "NCI = 0", "NCI > 0",
   "Oral tablet", "FDC",
   "Fasted", "Fed",
-  "2D6 EM", "2D6 IM", "2D6 PM"
+  "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM"
 )
 stopifnot(length(covnames) == nrow(dfCovs))
 
@@ -148,16 +151,20 @@ expanded to one row per level.
 dfCovsAuto <- setupDfCovs(
   data       = dfData,
   covariates = c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO", "RACEL2"),
+  refLevels  = list(GENO = 2),
   idVar      = "ID"
 )
 dfCovsAuto
 ```
 
-`setupDfCovs()` names one-hot columns `GENO_2`, `GENO_3`, `GENO_4` — the naming
-used in Section 1.1 was chosen to match, so the same parameter function serves
-both. `setupDfCovs()` does not produce row labels; supply `cdfCovsNames` yourself,
-or leave it at its default to have each row labelled from its covariate values.
-The `additionalCovs`, `useMissVal`, and `contRef` arguments are covered in the
+By default `setupDfCovs()` drops the lowest level of a categorical covariate as
+the reference. `refLevels = list(GENO = 2)` overrides that for `GENO`, so the
+one-hot columns are `GENO_1`, `GENO_3`, `GENO_4` — matching the `run7` reference
+(2D6 EM) and the explicit `dfCovs` from Section 1.1. The same parameter function
+then serves both. `setupDfCovs()` does not produce row labels; supply
+`cdfCovsNames` yourself, or leave it at its default to have each row labelled from
+its covariate values. The `additionalCovs`, `useMissVal`, and `contRef` arguments
+are covered in the
 [covariate data-preparation deep dive](Part3-deep-dive-covariate-data-prep.html).
 
 The rest of this walkthrough uses the explicit `dfCovs` from Section 1.1.
@@ -176,26 +183,14 @@ Two defensive checks apply to every covariate:
   `dfCovs` uses for covariates that are inactive on a row. This is needed even
   when the original NONMEM data has no missing covariate values.
 
-The helper below resolves the genotype from either the one-hot columns produced
-by `createInputForestData()` / `setupDfCovs()` or the raw `GENO` column present in
-the analysis data. The second form is what the empirical Forest plot in Section 6
-passes.
+Genotype is read from the one-hot columns `GENO_1`, `GENO_3`, `GENO_4`. The
+parametric `dfCovs` carries them by construction; the empirical Forest plot in
+Section 6 gets them from the `oneHot` argument of `getForestDFemp()`, which
+encodes the raw `GENO` column on the fly. One parameter function therefore serves
+both workflows.
 
 ```{r}
-getGeno <- function(df) {
-  if ("GENO" %in% names(df) && df$GENO != -99) return(df$GENO)
-  oneHot  <- c(GENO_2 = 2, GENO_3 = 3, GENO_4 = 4)
-  present <- intersect(names(oneHot), names(df))
-  if (length(present) == 0) return(-99)
-  vals <- unlist(df[present])
-  if (any(vals == -99)) return(-99)
-  if (all(vals == 0))   return(1)
-  as.integer(oneHot[present][which(vals == 1)])
-}
-
 paramFunction <- function(thetas, df, ...) {
-
-  geno <- getGeno(df)
 
   CLFOOD <- 1
   if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) CLFOOD <- 1 + thetas[11]
@@ -206,7 +201,8 @@ paramFunction <- function(thetas, df, ...) {
   FRELSEX <- 1
   if (any(names(df) == "SEX") && df$SEX != -99 && df$SEX == 2) FRELSEX <- 1 + thetas[14]
 
-  FRELGENO4 <- if (geno == 4) 1 + thetas[13] else 1
+  FRELGENO4 <- 1
+  if (any(names(df) == "GENO_4") && df$GENO_4 != -99 && df$GENO_4 == 1) FRELGENO4 <- 1 + thetas[13]
 
   FREL <- thetas[1] * FRELSEX * FRELFORM * FRELGENO4
 
@@ -215,9 +211,9 @@ paramFunction <- function(thetas, df, ...) {
   } else {
     TVCL <- thetas[4]
   }
-  if (geno == 2) TVCL <- TVCL * (1 + thetas[8])
-  if (geno == 3) TVCL <- TVCL * (1 + thetas[9])
-  if (geno == 4) TVCL <- TVCL * (1 + thetas[10])
+  if (any(names(df) == "GENO_1") && df$GENO_1 != -99 && df$GENO_1 == 1) TVCL <- TVCL * (1 + thetas[8])
+  if (any(names(df) == "GENO_3") && df$GENO_3 != -99 && df$GENO_3 == 1) TVCL <- TVCL * (1 + thetas[9])
+  if (any(names(df) == "GENO_4") && df$GENO_4 != -99 && df$GENO_4 == 1) TVCL <- TVCL * (1 + thetas[10])
   CL <- CLFOOD * TVCL
 
   if (any(names(df) == "WT") && df$WT != -99) {
@@ -274,18 +270,21 @@ dfRefRow <- setupDfRefRow(
   dfCovs     = dfCovsAuto,
   data       = dfData,
   covariates = c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO", "RACEL2"),
+  refLevels  = list(GENO = 2),
   idVar      = "ID"
 )
 dfRefRow
 ```
 
-For an explicit `dfCovs`, a one-row data frame works just as well:
+Pass the same `refLevels` here as to `setupDfCovs()` so the reference row's
+one-hot columns line up. For an explicit `dfCovs`, a one-row data frame works just
+as well:
 
 ```{r}
 dfRefRowManual <- data.frame(
   WT = 75, AGE = 45, CRCL = 100, SEX = 1,
   NCIL = 0, FORM = 1, FOOD = 1,
-  GENO_2 = 0, GENO_3 = 0, GENO_4 = 0
+  GENO_1 = 0, GENO_3 = 0, GENO_4 = 0
 )
 ```
 
@@ -300,7 +299,9 @@ deliberately, and state it in the plot caption.
 
 `getForestDFSCM()` evaluates `paramFunction` for every row of `dfCovs` and every
 parameter vector, then appends the summary columns `forestPlot()` reads.
-`noBaseThetas` is the number of THETAs in the model.
+`noBaseThetas` is the number of THETAs in the model. `dfCovs` here already carries
+the `GENO_*` columns; a `dfCovs` with a raw categorical column can be encoded on
+the fly with the same `oneHot` argument shown for `getForestDFemp()` below.
 
 ```{r}
 dfresBS <- getForestDFSCM(
@@ -336,8 +337,10 @@ forestPlot(dfresBS, parameters = "CL", groupNameLabels = covariateGroupNames)
 # 6. Empirical Forest plots
 
 An empirical Forest plot reads each covariate effect from the analysis data. The
-covariate structure is a list of expressions that subset the data; the parameter
-function and its names are unchanged.
+covariate structure is a list of expressions that subset the data. The parameter
+function is the same one used above; the raw `GENO` column in the analysis data
+is turned into `GENO_1`/`GENO_3`/`GENO_4` by the `oneHot` argument of
+`getForestDFemp()`.
 
 ```{r}
 lsExpr <- list(
@@ -381,6 +384,7 @@ dfresEmp <- getForestDFemp(
   functionListName   = functionListName,
   noBaseThetas       = 14,
   dfParameters       = dfSamplesCOV,
+  oneHot             = list(GENO = list(ref = 2)),
   ncores             = 1,
   cstrPackages       = "dplyr"
 )

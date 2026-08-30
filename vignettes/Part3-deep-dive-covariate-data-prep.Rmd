@@ -52,7 +52,7 @@ set.seed(865765)
 
 The covariate structure passed to `getForestDFSCM()` is a data frame in which each
 row is one row of the Forest plot, with inactive cells set to a missing-value
-indicator (`-99` by default). Four functions build that structure:
+indicator (`-99` by default). These functions build that structure:
 
 | Function | Role |
 | --- | --- |
@@ -60,6 +60,7 @@ indicator (`-99` by default). Four functions build that structure:
 | `createInputForestData()` | reshape a covariate list into the row structure |
 | `setupDfCovs()` | `getCovStats()` + `createInputForestData()` in one call |
 | `setupDfRefRow()` | build the reference row(s) matched to a `setupDfCovs()` result |
+| `oneHotEncode()` | add one-hot dummy columns to a data frame |
 
 This vignette covers each in turn, then the handling of missing covariate values.
 The data set is the PK analysis data used in the
@@ -78,8 +79,8 @@ depends on the number of unique values:
 * **continuous** (more than `minLevels` unique values) — a two-element numeric
   vector of quantiles, by default the 5th and 95th percentiles;
 * **binary** — the two levels, sorted alphanumerically;
-* **multi-level categorical** — a nested list of one-hot vectors, first level as
-  the reference.
+* **multi-level categorical** — a nested list of one-hot vectors. The reference
+  level (the lowest level, or the one named in `refLevels`) is the all-zero row.
 
 ```{r}
 covStats <- getCovStats(
@@ -122,6 +123,26 @@ getCovStats(dfData, "GENO", idVar = "ID", minLevels = 3)
 ```{r}
 getCovStats(dfData, "CRCL", idVar = "ID", probs = c(0.1, 0.9), nsig = 4)
 ```
+
+## `refLevels` and `sep`
+
+By default the lowest level of a multi-level categorical is the reference (the
+all-zero row) and the one-hot columns are named `<covariate>_<level>`.
+`refLevels` overrides the reference level per covariate; `sep` changes the
+separator.
+
+```{r}
+## GENO reference is level 1 by default -> columns GENO_2, GENO_3, GENO_4
+getCovStats(dfData, "GENO", idVar = "ID")
+
+## Make level 2 the reference -> columns GENO_1, GENO_3, GENO_4
+getCovStats(dfData, "GENO", idVar = "ID", refLevels = list(GENO = 2))
+```
+
+Use `refLevels` when the model's reference category is not the lowest level —
+otherwise the one-hot columns will not line up with the model's coefficients. The
+`"_"` separator matches NONMEM FREM data sets and `PMXFrem::createFREMModel()`;
+change it only if you have a reason to.
 
 ::: {.callout-note}
 Binary levels are returned in alphanumeric order (`c(0, 1)`), not order of
@@ -253,12 +274,51 @@ refMatrix
 
 ::: {.callout-warning}
 `setupDfRefRow()` keys the reference values by the column names `setupDfCovs()`
-produces (`GENO_2`, `GENO_3`, …). Pass it a `dfCovs` built by `setupDfCovs()`. For
-a hand-built `createInputForestData()` structure, construct `dfRefRow` directly as
-a one-row data frame.
+produces. Pass it a `dfCovs` built by `setupDfCovs()`, and the **same**
+`refLevels` and `sep`, so the columns line up. For a hand-built
+`createInputForestData()` structure, construct `dfRefRow` directly as a one-row
+data frame.
 :::
 
-# 5. Missing covariate values
+# 5. `oneHotEncode()`
+
+`getCovStats()` produces one-hot vectors from a *summary* of the data.
+`oneHotEncode()` does the same job on a *data frame*: it adds
+`<covariate><sep><level>` dummy columns to whatever data frame you give it. This
+is what the `oneHot` argument of `getForestDFSCM()` and `getForestDFemp()` calls
+internally, and it follows the same convention as NONMEM FREM data sets.
+
+```{r}
+raw <- data.frame(
+  ID   = 1:6,
+  GENO = c(1, 2, 3, 4, 2, -99),
+  RACE = c(1, 1, 2, 3, 2, 1)
+)
+
+## Lowest level as reference; missing rows kept as missVal
+oneHotEncode(raw, spec = c("GENO", "RACE"))
+```
+
+The reference level is set the same way as in `getCovStats()`:
+
+```{r}
+oneHotEncode(raw, spec = list(GENO = list(ref = 2)), dropOriginal = TRUE)
+```
+
+Other arguments:
+
+| Argument | Effect |
+| --- | --- |
+| `includeReference` | also create a dummy column for the reference level |
+| `imputeMissing` | `TRUE` sets missing rows to `0` (the reference); `FALSE` (default) keeps `missVal` |
+| `dropOriginal` | remove the raw column after encoding |
+| `sep` | separator in the new column names (default `"_"`) |
+
+`oneHotEncode()` is idempotent: a dummy column that already exists and agrees with
+the requested encoding is left untouched; one that disagrees raises an error. This
+makes it safe to run on data that already carries FREM dummy columns.
+
+# 6. Missing covariate values
 
 `getCovStats()` and the setup functions exclude `missVal` before computing
 statistics, so a covariate that is missing for some subjects is summarised from
@@ -279,11 +339,12 @@ The `BMI` quantiles are computed from the six non-missing values. The parameter
 function still has to handle `-99` in the `BMI` column of `dfCovs`, because that
 is what marks the rows where `BMI` is inactive.
 
-# 6. Feeding the result forward
+# 7. Feeding the result forward
 
 The data frame from `setupDfCovs()` (or `createInputForestData()`) is the `dfCovs`
 argument of `getForestDFSCM()`; the data frame from `setupDfRefRow()` is its
 `dfRefRow` argument. See the [Walkthrough](Part2-walkthrough.html) for the full
 call. For empirical Forest plots, `getForestDFemp()` takes a list of covariate
-expressions instead of `dfCovs` — the setup functions in this vignette are not
-used there.
+expressions instead of `dfCovs`; pass its `oneHot` argument the same spec you
+would give `oneHotEncode()` so the analysis data gains the dummy columns the
+parameter function expects.
