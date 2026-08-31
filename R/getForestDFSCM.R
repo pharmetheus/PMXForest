@@ -147,7 +147,7 @@ getForestDFSCM <- function(dfCovs,
     cUnique <- c()
     iGroup <- 0
     for (i in 1:nrow(df)) {
-      tmp <- paste0(names(dfCovs[i, ])[as.numeric(dfCovs[i, ]) != iMiss], collapse = ",")
+      tmp <- paste0(names(dfCovs[i, , drop = FALSE])[as.numeric(dfCovs[i, , drop = FALSE]) != iMiss], collapse = ",")
       if (tmp %in% cUnique) {
         tmpl <- which(tmp == cUnique)
         cGroups <- c(cGroups, tmpl)
@@ -232,7 +232,7 @@ getForestDFSCM <- function(dfCovs,
   dfret <- data.frame()
   for (i in 1:nrow(dfCovs)) {
     if (is.null(cdfCovsNames)) {
-      covname <- getCovNameString(dfCovs[i, ])
+      covname <- getCovNameString(dfCovs[i, , drop = FALSE])
     }
     else {
       covname <- cdfCovsNames[i]
@@ -264,7 +264,7 @@ getForestDFSCM <- function(dfCovs,
       quant_reffinal <- if (is.na(true_base)) quant/true_base else quantile(dft$VALUE/true_base, probs = probs, names = FALSE, na.rm = T)
       groupname<-group
       if (!is.null(groupnames)) groupname<-groupnames[i]
-      dfrow <- cbind(dfCovs[i, ], data.frame(
+      dfrow <- cbind(dfCovs[i, , drop = FALSE], data.frame(
         GROUP = group,
         GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],

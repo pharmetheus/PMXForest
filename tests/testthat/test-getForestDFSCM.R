@@ -246,3 +246,26 @@ test_that("getForestDFSCM accepts a tibble dfCovs / dfRefRow (issue: tibble `[` 
 
   expect_equal(tbl, ref)
 })
+
+test_that("getForestDFSCM works with a single covariate (old ticket: column named 'dfCovs[i, ]')", {
+  df_params <- data.frame(THETA1 = c(10, 11, 9), THETA2 = c(2, 2.1, 1.9))
+  df_covs   <- createInputForestData(list(LIVSTBL = c(0, 1)))   # one covariate only
+  p_func    <- function(thetas, df, ...) list(CL = thetas[1])
+
+  res <- getForestDFSCM(df_covs, functionList = list(p_func), functionListName = "CL",
+                        noBaseThetas = 2, dfParameters = df_params)
+
+  expect_s3_class(res, "data.frame")
+  expect_equal(nrow(res), 2)
+  # The covariate column keeps its name, not "dfCovs[i, ]"
+  expect_true("LIVSTBL" %in% names(res))
+  expect_false(any(grepl("dfCovs", names(res))))
+  expect_equal(as.character(unique(res$GROUPNAME)), "LIVSTBL")
+  expect_setequal(res$COVNAME, c("LIVSTBL=0", "LIVSTBL=1"))
+
+  # supplied cdfCovsNames are used
+  res2 <- getForestDFSCM(df_covs, cdfCovsNames = c("Normal", "Impaired"),
+                         functionList = list(p_func), functionListName = "CL",
+                         noBaseThetas = 2, dfParameters = df_params)
+  expect_setequal(res2$COVNAME, c("Normal", "Impaired"))
+})
