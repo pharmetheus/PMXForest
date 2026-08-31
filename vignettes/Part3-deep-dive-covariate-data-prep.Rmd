@@ -60,6 +60,7 @@ indicator (`-99` by default). These functions build that structure:
 | `createInputForestData()` | reshape a covariate list into the row structure |
 | `setupDfCovs()` | `getCovStats()` + `createInputForestData()` in one call |
 | `setupDfRefRow()` | build the reference row(s) matched to a `setupDfCovs()` result |
+| `setupCovExpressionsList()` | build the `covExpressionsList` for `getForestDFemp()` |
 | `oneHotEncode()` | add one-hot dummy columns to a data frame |
 
 This vignette covers each in turn, then the handling of missing covariate values.
@@ -280,7 +281,65 @@ produces. Pass it a `dfCovs` built by `setupDfCovs()`, and the **same**
 data frame.
 :::
 
-# 5. `oneHotEncode()`
+# 5. `setupCovExpressionsList()`
+
+The parametric `getForestDFSCM()` takes a `dfCovs` data frame; the empirical
+`getForestDFemp()` instead takes `covExpressionsList`, a named list of
+`expression()` objects, one per Forest plot row, each selecting the subjects it
+summarises. `setupCovExpressionsList()` builds that list — and the matching
+`cdfCovsNames` labels — from the same deduplicated statistics `setupDfCovs()`
+uses.
+
+```{r}
+emp <- setupCovExpressionsList(
+  data       = dfData,
+  covariates = c("WT", "SEX", "GENO"),
+  idVar      = "ID"
+)
+emp$covExpressionsList
+emp$cdfCovsNames
+```
+
+Continuous covariates become two rows at the `probs` quantile tails
+(`WT < q_05`, `WT >= q_95`); `contSplit = "median"` splits at the median instead
+so every subject falls in one row. Binary and multi-level categorical covariates
+become one `== level` row per level; `includeReference = FALSE` drops the
+reference level, as in the parametric `dfCovs`.
+
+## `additionalCovs`
+
+An `additionalCovs` entry gets its own rows *and* contributes a fixed condition
+that is combined with `&` into every other covariate's expression: a level for a
+categorical covariate, or a `prob` / `value` split with a direction for a
+continuous one. Use it to restrict the empirical contrast to a sub-population —
+the analogue of holding a covariate at its reference in the parametric plot.
+
+```{r}
+setupCovExpressionsList(
+  data           = dfData,
+  covariates     = c("WT", "SEX"),
+  contSplit      = "median",
+  additionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
+  idVar          = "ID"
+)$covExpressionsList
+```
+
+## `minSubjects`
+
+Every generated expression is evaluated against the deduplicated data. If any
+selects fewer than `minSubjects` subjects (default 10) the function stops, so an
+empty or near-empty subset never reaches `getForestDFemp()`. Widen `probs`, relax
+`minSubjects`, or loosen the `additionalCovs` conditions if this happens.
+
+```{r, error = TRUE}
+setupCovExpressionsList(dfData, "WT", probs = c(0.001, 0.999), idVar = "ID")
+```
+
+The reference for an empirical plot stays deterministic: build it with
+`setupDfCovs()` and `setupDfRefRow(singleRef = TRUE)` and pass the one-row data
+frame to `getForestDFemp(dfRefRow = )`, exactly as for a parametric plot.
+
+# 6. `oneHotEncode()`
 
 `getCovStats()` produces one-hot vectors from a *summary* of the data.
 `oneHotEncode()` does the same job on a *data frame*: it adds
@@ -318,7 +377,7 @@ Other arguments:
 the requested encoding is left untouched; one that disagrees raises an error. This
 makes it safe to run on data that already carries FREM dummy columns.
 
-# 6. Missing covariate values
+# 7. Missing covariate values
 
 `getCovStats()` and the setup functions exclude `missVal` before computing
 statistics, so a covariate that is missing for some subjects is summarised from
@@ -339,12 +398,20 @@ The `BMI` quantiles are computed from the six non-missing values. The parameter
 function still has to handle `-99` in the `BMI` column of `dfCovs`, because that
 is what marks the rows where `BMI` is inactive.
 
-# 7. Feeding the result forward
+# 8. Feeding the result forward
 
 The data frame from `setupDfCovs()` (or `createInputForestData()`) is the `dfCovs`
 argument of `getForestDFSCM()`; the data frame from `setupDfRefRow()` is its
 `dfRefRow` argument. See the [Walkthrough](Part2-walkthrough.html) for the full
-call. For empirical Forest plots, `getForestDFemp()` takes a list of covariate
-expressions instead of `dfCovs`; pass its `oneHot` argument the same spec you
-would give `oneHotEncode()` so the analysis data gains the dummy columns the
-parameter function expects.
+call.
+
+For empirical Forest plots, `getForestDFemp()` takes `covExpressionsList` in place
+of `dfCovs`. Build it with `setupCovExpressionsList()` and pass the returned
+`$covExpressionsList` and `$cdfCovsNames` to the arguments of the same name.
+
+If the parameter function is written against one-hot dummy columns (`GENO_2`,
+`GENO_3`, ...) rather than the raw `GENO`, give `getForestDFemp()` its own
+`oneHot` argument — the same spec `oneHotEncode()` takes — so those columns are
+added to the analysis data before the parameter function runs. The expressions
+from `setupCovExpressionsList()` always filter on the raw column, so this choice
+is independent of how the expression list is built.
