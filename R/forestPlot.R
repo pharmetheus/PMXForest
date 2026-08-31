@@ -1,6 +1,6 @@
 #'Forest plots
 #'
-#' @import dplyr ggplot2 ggpubr table1
+#' @import dplyr ggplot2 ggpubr
 #'
 #' @description Create Forest plots consisting of alternating columns of errorbar plots and tabulated numerical statistics.
 #' @inheritParams setupForestPlotData

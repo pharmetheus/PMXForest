@@ -162,3 +162,15 @@ test_that("setupForestPlotData honours explicit sigdigits / decimals on either s
     "either .sigdigits. or .decimals."
   )
 })
+
+test_that("signifPad rounds to significant digits half-up and pads trailing zeros", {
+  sp <- PMXForest:::signifPad
+
+  expect_equal(sp(c(0.976, 1.234, 2.244, 12.3, 0.08), digits = 3),
+               c("0.976", "1.23", "2.24", "12.3", "0.0800"))
+  expect_equal(sp(c(1.2, 1.234, 1.15), digits = 2), c("1.2", "1.2", "1.2"))
+  expect_equal(sp(c(16.4, 15.62, 17.284), digits = 2), c("16", "16", "17"))
+  expect_equal(sp(-0.5, digits = 2), "-0.50")
+  expect_equal(sp(100, digits = 2), "100")          # no bare trailing "."
+  expect_true(is.na(sp(NA_real_, digits = 2)))
+})

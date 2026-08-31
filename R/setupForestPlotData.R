@@ -80,7 +80,7 @@ setupForestPlotData <- function(dfres,
   fmtNum <- if (!is.null(decimals)) {
     function(x) formatC(x, format = "f", digits = decimals)
   } else {
-    function(x) table1::signif_pad(x, sigdigits)
+    function(x) signifPad(x, sigdigits)
   }
 
   ## Input checks
@@ -182,4 +182,24 @@ setupForestPlotData <- function(dfres,
     select(-meanlabel,-lowcilabel,-upcilabel,-COVNUM)
 
   return(plotData)
+}
+
+#' Round to significant digits and pad trailing zeros
+#'
+#' Base-R equivalent of the part of \code{table1::signif_pad()} that
+#' \code{setupForestPlotData()} relies on: round each value to \code{digits}
+#' significant figures and format it so that many significant figures are shown
+#' (trailing zeros kept). Rounding is half-up, matching NONMEM / typical
+#' reporting rather than R's round-half-to-even. \code{NA} stays \code{NA}.
+#'
+#' @param x A numeric vector.
+#' @param digits Number of significant digits.
+#' @return A character vector the same length as \code{x}.
+#' @noRd
+signifPad <- function(x, digits = 3) {
+  eps <- x * 10^(-(digits + 3))                       # nudge so .5 rounds up
+  rx  <- signif(x + eps, digits)
+  cx  <- formatC(rx, digits = digits, format = "fg", flag = "#")
+  cx  <- sub("[^0-9]+$", "", cx)                      # drop a bare trailing "." / spaces
+  ifelse(is.na(x), NA_character_, cx)
 }
