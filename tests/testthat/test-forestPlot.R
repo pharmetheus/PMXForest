@@ -344,3 +344,24 @@ test_that("forestPlot covers the remaining layout and reference-info branches", 
   expect_s3_class(forestPlot(df_mock, referenceInfo = NULL), "gg")
   expect_s3_class(forestPlot(df_mock, referenceInfo = "Reference: adult male"), "gg")
 })
+
+# ==============================================================================
+# BLOCK 6: statistics-table number format (sigdigits / decimals)
+# ==============================================================================
+test_that("forestPlot statistics table uses decimals on the relative scale by default", {
+  # df_mock$POINT_NOVAR_REL_REFFUNC = 1.2 -> at 2 decimals this stays "1.20"
+  d_default <- forestPlot(df_mock, return = "data")             # relative + noVar (defaults)
+  expect_match(d_default$STATISTIC[1], "^1\\.20 \\[")
+
+  # explicit decimals
+  d_dec3 <- forestPlot(df_mock, decimals = 3, return = "data")
+  expect_match(d_dec3$STATISTIC[1], "^1\\.200 \\[")
+
+  # explicit sigdigits still works
+  d_sig <- forestPlot(df_mock, sigdigits = 2, return = "data")
+  expect_match(d_sig$STATISTIC[1], "^1\\.2 \\[")
+
+  # absolute scale keeps significant digits
+  d_abs <- forestPlot(df_mock, plotRelative = FALSE, noVar = TRUE, return = "data")
+  expect_match(d_abs$STATISTIC[1], "^12 \\[")   # POINT = 12 -> 2 sig figs
+})

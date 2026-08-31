@@ -14,7 +14,8 @@ setupForestPlotData(
   plotRelative = TRUE,
   noVar = FALSE,
   reference = "func",
-  sigdigits = 2,
+  sigdigits = NULL,
+  decimals = NULL,
   onlySignificant = FALSE,
   setSignEff = NULL
 )
@@ -40,7 +41,14 @@ Is by default the same as \code{dfres$GROUPNAME}.}
 
 \item{reference}{Which reference should be used, the final parameter estimates (final) or the parameter function (func)}
 
-\item{sigdigits}{An integer number specifying the number of significant digits to use in the statistics tables.}
+\item{sigdigits}{Number of significant digits for the numbers in the statistics
+table. Mutually exclusive with \code{decimals}. If both \code{sigdigits} and
+\code{decimals} are \code{NULL} (the default), the number of decimals (2) is
+used on the relative scale and \code{sigdigits = 2} on the absolute scale.}
+
+\item{decimals}{Number of decimal places for the numbers in the statistics
+table. Mutually exclusive with \code{sigdigits}. See \code{sigdigits} for the
+default behaviour.}
 
 \item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).}
 }

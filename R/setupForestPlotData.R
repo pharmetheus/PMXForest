@@ -11,7 +11,13 @@
 #' @param groupNameLabels A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
 #'  Is by default the same as \code{dfres$GROUPNAME}.
 #' @param statisticsLabels A character string that will precede the \code{parameterLabels} in the facet labels for the statistics panels. Default is `Statistics:`.
-#' @param sigdigits An integer number specifying the number of significant digits to use in the statistics tables.
+#' @param sigdigits Number of significant digits for the numbers in the statistics
+#'   table. Mutually exclusive with \code{decimals}. If both \code{sigdigits} and
+#'   \code{decimals} are \code{NULL} (the default), the number of decimals (2) is
+#'   used on the relative scale and \code{sigdigits = 2} on the absolute scale.
+#' @param decimals Number of decimal places for the numbers in the statistics
+#'   table. Mutually exclusive with \code{sigdigits}. See \code{sigdigits} for the
+#'   default behaviour.
 #' @param onlySignificant Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).
 #'
 #' @return A processed data.frame to the used for creating the Forest plot. Only the columns used in the actual Forest plot is included:
@@ -57,9 +63,25 @@ setupForestPlotData <- function(dfres,
                                 plotRelative          = TRUE,
                                 noVar                 = FALSE,
                                 reference             = "func",
-                                sigdigits             = 2,
+                                sigdigits             = NULL,
+                                decimals              = NULL,
                                 onlySignificant       = FALSE,
                                 setSignEff            = NULL) {
+
+  ## Resolve the statistics-table number format. Explicit `sigdigits` or
+  ## `decimals` always wins; otherwise the default depends on the scale:
+  ## fixed decimals on the relative scale, significant digits on the absolute.
+  if (!is.null(sigdigits) && !is.null(decimals)) {
+    stop("Specify either `sigdigits` or `decimals`, not both.")
+  }
+  if (is.null(sigdigits) && is.null(decimals)) {
+    if (plotRelative) decimals <- 2L else sigdigits <- 2L
+  }
+  fmtNum <- if (!is.null(decimals)) {
+    function(x) formatC(x, format = "f", digits = decimals)
+  } else {
+    function(x) table1::signif_pad(x, sigdigits)
+  }
 
   ## Input checks
   if(!is.null(parameterLabels)) {
@@ -151,9 +173,9 @@ setupForestPlotData <- function(dfres,
     ungroup %>%
     #mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME))) %>%
     mutate(
-      meanlabel  = table1::signif_pad(point, sigdigits),
-      lowcilabel = table1::signif_pad(q1, sigdigits),
-      upcilabel  = table1::signif_pad(q2,sigdigits),
+      meanlabel  = fmtNum(point),
+      lowcilabel = fmtNum(q1),
+      upcilabel  = fmtNum(q2),
       STATISTIC  = paste0(meanlabel, " [", lowcilabel, "-", upcilabel,"]"),
       STATISTIC  = stringr::str_pad(STATISTIC,max(stringr::str_length(STATISTIC)),side="right",' ')
     ) %>%

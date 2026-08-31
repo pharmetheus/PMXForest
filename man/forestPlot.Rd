@@ -10,7 +10,8 @@ forestPlot(
   plotRelative = TRUE,
   noVar = TRUE,
   referenceParameters = "func",
-  sigdigits = 2,
+  sigdigits = NULL,
+  decimals = NULL,
   parameters = unique(dfres$PARAMETER),
   parameterLabels = parameters,
   parameterLabelsPrefix = NULL,
@@ -71,7 +72,9 @@ forestPlot(
 \item{referenceParameters}{Character string indicating how the reference parameter estimates were obtained.
 "final" means the final parameter estimates from the model. "func" means the mean parameter estimates across the posterior distribution.}
 
-\item{sigdigits}{An integer number specifying the number of significant digits to use in the statistics tables.}
+\item{sigdigits}{Number of significant digits for the numbers in the statistics table. Mutually exclusive with \code{decimals}. If both are \code{NULL} (the default), the number of decimals (2) is used when \code{plotRelative = TRUE} and \code{sigdigits = 2} when \code{plotRelative = FALSE}.}
+
+\item{decimals}{Number of decimal places for the numbers in the statistics table. Mutually exclusive with \code{sigdigits}. See \code{sigdigits} for the default behaviour.}
 
 \item{parameters}{A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.}
 
