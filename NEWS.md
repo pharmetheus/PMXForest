@@ -12,6 +12,7 @@
 * **`oneHot` in the forest-data functions:** `getForestDFSCM()` and `getForestDFemp()` gained optional `oneHot` and `oneHotSep` arguments. When `oneHot` is supplied, raw multi-level categorical columns are one-hot encoded before the parameter functions run - in `dfCovs`/`dfRefRow` for `getForestDFSCM()`, in `dfData` for `getForestDFemp()` - so a single parameter function written against the dummy columns serves both workflows. `oneHotSep` (default `"_"`) sets the name separator; use `""` for columns named like `GENO1`. `oneHot` defaults to `NULL` (no encoding, output unchanged).
 
 ## Bug Fixes
+* **SIR raw_results handling in `getSamples()`:** The SIR-detection check looked for a `samples_order` column that PsN does not produce (the column is `sample_order`), so SIR files were routed through the bootstrap code path. That path filters on `ofv != 0` and therefore returned the full SIR *proposal* distribution instead of the importance-resampled parameter vectors (`resamples == 1`). `getSamples()` now returns the resampled vectors, with the final estimates prepended as the first row (as for the other inputs). **Forest plots built from SIR files will change**: for a well-converged SIR run the confidence intervals shift by a few percent (and not systematically in one direction); for a poorly initialised run the change can be larger. `getSamples()` also gains a `quiet` argument (default `FALSE`) that prints a message when a SIR file is detected.
 * **Reversed relative confidence intervals:** Fixed a bug in `getForestDFSCM()` and `getForestDFemp()` where the `Q*_REL_REFFUNC` and `Q*_REL_REFFINAL` columns had their lower and upper limits swapped when the `functionList` function returned a negative reference value. The relative quantiles are now computed from the ratio directly instead of dividing the absolute quantiles by the (possibly negative) reference, so the interval endpoints stay correctly ordered.
 * **Programmatic Evaluation:** Fixed a Non-Standard Evaluation (NSE) bug in `getCovStats()`. The `idVar` argument is now safely evaluated using `rlang::sym()` instead of `rlang::ensym()`, allowing the function to be properly wrapped and called programmatically without scoping errors.
 * **Unexported helpers:** `setupDfCovs()` and `setupDfRefRow()` were added without a `NAMESPACE` entry or help page and were therefore not reachable as `PMXForest::setupDfCovs()` / `setupDfRefRow()`. Documentation has been regenerated so both functions are exported and documented.
@@ -22,7 +23,7 @@
 
 ## Internal
 * `setupForestPlotData()` is no longer exported (`@keywords internal`). It is an implementation detail of `forestPlot()`, which is unaffected.
-* Test coverage raised from 94.9% to 98.3% (every source file now at or above 94%). Added a `make coverage` target that fails below a 95% floor. The remaining gaps are the parallel (`ncores > 1`) branches, a few unreachable defensive guards, and the SIR-specific branch of `getSamples()` (the bundled SIR fixture lacks a `samples_order` column, so it currently exercises the bootstrap path).
+* Test coverage raised from 94.9% to 98.7% (every source file now at or above 98%). Added a `make coverage` target that fails below a 95% floor. The remaining gaps are the parallel (`ncores > 1`) branches and a few unreachable defensive guards.
 
 # PMXForest 1.2.15
 

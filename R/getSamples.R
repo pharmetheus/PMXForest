@@ -24,10 +24,16 @@
 #'   if a PsN `raw_results_structure` file is in the same directory.
 #' @param zerosindex A vector of indices indicating which parameters are
 #'   fixed to zero.
+#' @param quiet If `FALSE` (default), an informational message is printed when a
+#'   SIR raw_results file is detected (and when `n` is ignored for such a file).
+#'   Set to `TRUE` to silence these messages.
 #'
 #' @return A data frame with $n + 1$ rows (if $n$ is specified for file inputs)
 #'   or the full set of resamples. The first row contains the final parameter
-#'   estimates (ITERATION -1000000000), followed by the samples.
+#'   estimates (ITERATION -1000000000), followed by the samples. For a SIR
+#'   raw_results file the samples are the importance-resampled parameter vectors
+#'   (`resamples == 1`), again with the final estimates prepended as the first
+#'   row.
 #'   **Note:** If `input` is a data.frame, the function returns exactly $n$
 #'   samples (if $n$ is specified) or the exact input data.frame (if $n$ is NULL),
 #'   without appending a row of base estimates.
@@ -69,7 +75,8 @@ getSamples <- function(input,
                        extFile    = NULL,
                        n          = NULL,
                        indexvec   = NULL,
-                       zerosindex = NULL) {
+                       zerosindex = NULL,
+                       quiet      = FALSE) {
 
   ## Check the input argument.
   if(!is.character(input) && !is.data.frame(input)) stop("input needs to be a character string or a data frame")
@@ -212,11 +219,21 @@ getSamples <- function(input,
       }
     }
 
-    ## If its a SIR results file
-    if ("resamples" %in% names(dfParameters) & "samples_order" %in% names(dfParameters)) {
+    ## If it's a SIR raw_results file, keep the importance-resampled vectors.
+    ## PsN names the resample-order column `sample_order` (singular); require it
+    ## together with `resamples` so a bootstrap file never enters this branch.
+    if ("resamples" %in% names(dfParameters) && "sample_order" %in% names(dfParameters)) {
+      nResampled <- sum(dfParameters$resamples == 1, na.rm = TRUE)
+      if (!quiet) {
+        message("SIR raw_results detected: using the ", nResampled,
+                " importance-resampled parameter vectors (resamples == 1).")
+        if (!is.null(n)) message("`n` is ignored for SIR raw_results.")
+      }
       dfParameters <- subset(dfParameters, resamples == 1)[, indexvec]
       dfParameters <- addMissingColumns(dfParameters, dfExtSub, zerosindex)
       dfParameters <- cbind(dfParameters, OBJ = 0)
+      ## Prepend the final estimates so row 1 is the reference, as elsewhere.
+      dfParameters <- rbind(dfExtSub[, -1], dfParameters)
       return(dfParameters)
     }
 
