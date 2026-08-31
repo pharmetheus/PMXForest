@@ -311,3 +311,20 @@ test_that("getForestDFemp uses supplied cdfCovsNames for the row labels", {
   )
   expect_setequal(unique(res$COVNAME), c("Men", "Women"))
 })
+
+test_that("getForestDFemp accepts a tibble dfData", {
+  skip_if_not_installed("tibble")
+
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_data   <- data.frame(ID = 1:6, WT = c(55, 62, 68, 78, 85, 95), SEX = c(1, 1, 1, 2, 2, 2))
+  ls_expr   <- list("WT" = expression(WT < 70), "WT" = expression(WT >= 70))
+  p_func    <- function(thetas, df, ...) list(CL = thetas[1] * (df$WT / 70))
+
+  ref <- getForestDFemp(df_data, covExpressionsList = ls_expr, functionList = list(p_func),
+                        functionListName = "CL", noBaseThetas = 2, dfParameters = df_params)
+  tbl <- getForestDFemp(tibble::as_tibble(df_data), covExpressionsList = ls_expr,
+                        functionList = list(p_func), functionListName = "CL",
+                        noBaseThetas = 2, dfParameters = df_params)
+
+  expect_equal(tbl, ref)
+})

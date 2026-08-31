@@ -114,6 +114,10 @@ getForestDFSCM <- function(dfCovs,
   if (!is.data.frame(dfCovs)) {
     dfCovs <- createInputForestData(dfCovs)
   }
+  ## Coerce to a plain data.frame: the internal `[` code assumes base-R
+  ## drop-to-vector behaviour, which a tibble does not provide.
+  dfCovs <- as.data.frame(dfCovs)
+  if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) dfRefRow <- as.data.frame(dfRefRow)
   dfCovs[is.na(dfCovs)] <- iMiss
 
   ## Optionally one-hot encode raw multi-level categorical columns so a single

@@ -227,3 +227,22 @@ test_that("getForestDFSCM oneHot also encodes a data.frame dfRefRow", {
   # The reference row was encoded: reference genotype 2 -> all GENO_* dummies 0
   expect_equal(unique(res_onehot$REFROW), "YES")
 })
+
+test_that("getForestDFSCM accepts a tibble dfCovs / dfRefRow (issue: tibble `[` does not drop)", {
+  skip_if_not_installed("tibble")
+
+  df_params <- data.frame(THETA1 = c(10, 11, 9), THETA2 = c(2, 2.1, 1.9))
+  df_covs   <- createInputForestData(list(WT = c(60, 115), AGE = c(30, 60)))
+  df_ref    <- data.frame(WT = 75, AGE = 45)
+  p_func    <- function(thetas, df, ...) list(CL = thetas[1] * (df$WT / 70))
+
+  ref <- getForestDFSCM(df_covs, dfRefRow = df_ref, functionList = list(p_func),
+                        functionListName = "CL", noBaseThetas = 2, dfParameters = df_params)
+
+  tbl <- getForestDFSCM(tibble::as_tibble(df_covs),
+                        dfRefRow = tibble::as_tibble(df_ref),
+                        functionList = list(p_func), functionListName = "CL",
+                        noBaseThetas = 2, dfParameters = df_params)
+
+  expect_equal(tbl, ref)
+})

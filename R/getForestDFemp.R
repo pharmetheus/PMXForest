@@ -86,6 +86,11 @@ getForestDFemp <- function(dfData,
   ## Remove samples with problems. Will use THETA1 == NA as an indicator for a problematic samples
   dfParameters <- dfParameters %>% filter(!is.na(THETA1))
 
+  ## Coerce to a plain data.frame: rows of `dfData` are handed to the parameter
+  ## functions, and a tibble's `[` does not drop to a vector the way base R does.
+  dfData <- as.data.frame(dfData)
+  if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) dfRefRow <- as.data.frame(dfRefRow)
+
   ## Create a fake dfCovs
   dfCovs <- data.frame(COV=rep(iMiss,length(covExpressionsList)))
 
