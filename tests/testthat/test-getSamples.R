@@ -46,10 +46,13 @@ test_that("getSamples handles SIR and Missing Columns", {
   sirFile  <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
   extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 
-  # SIR logic (Line 203)
-  tmp_sir <- getSamples(sirFile, extFile = extFile)
+  raw <- read.csv(sirFile)
+  n_resampled <- sum(raw$resamples == 1, na.rm = TRUE)
+
+  # SIR branch: the importance-resampled vectors, plus the estimates as row 1
+  tmp_sir <- getSamples(sirFile, extFile = extFile, quiet = TRUE)
   expect_s3_class(tmp_sir, "data.frame")
-  expect_true(nrow(tmp_sir) > 0)
+  expect_equal(nrow(tmp_sir), n_resampled + 1)
 })
 
 test_that("getSamples handles TTE models (Missing SIGMA/OMEGA logic)", {
@@ -104,11 +107,12 @@ test_that("getSamples comprehensive coverage", {
   expect_equal(nrow(res_df_samp), 5) # n + 1 (final estimates)
   expect_true("OBJ" %in% names(res_df_samp))
 
-  # 3. Trigger SIR Path (Lines 205-208)
+  # 3. SIR path: row 1 is the final estimates (OBJ = final OFV), the rest OBJ = 0
   sirFile <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
-  res_sir <- getSamples(sirFile, extFile = extFile)
+  res_sir <- getSamples(sirFile, extFile = extFile, quiet = TRUE)
   expect_s3_class(res_sir, "data.frame")
-  expect_equal(res_sir$OBJ[1], 0)
+  expect_true(res_sir$OBJ[1] != 0)
+  expect_true(all(res_sir$OBJ[-1] == 0))
 
   # 4. Trigger Missing OMEGA logic (Lines 194-195)
   # Using the TTE model which lacks OMEGAs in raw results
@@ -254,4 +258,40 @@ test_that("getSamples accepts an explicit indexvec for a csv input", {
   idx  <- getSamples(bootFile, extFile = extFile,
                      indexvec = c(21:34, 40, 35:39))
   expect_equal(idx, auto)
+})
+
+# --- SIR raw_results handling (bug fix: sample_order column, resampled vectors) ---
+
+test_that("getSamples returns the SIR importance-resampled vectors with the estimates as row 1", {
+  sirFile <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
+  extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+
+  raw         <- read.csv(sirFile)
+  n_resampled <- sum(raw$resamples == 1, na.rm = TRUE)
+  ext_fin     <- subset(getExt(extFile), ITERATION == "-1000000000")
+  n_theta     <- length(grep("^THETA", names(ext_fin)))
+
+  expect_message(
+    getSamples(sirFile, extFile = extFile),
+    "importance-resampled"
+  )
+
+  res <- getSamples(sirFile, extFile = extFile, quiet = TRUE)
+
+  # 1 estimates row + the resamples == 1 vectors (not the full proposal set)
+  expect_equal(nrow(res), n_resampled + 1)
+  expect_lt(nrow(res), sum(!is.na(raw$resamples)) + 1)   # fewer than all proposals
+
+  # Row 1 is the .ext final estimates
+  expect_equal(as.numeric(res[1, seq_len(n_theta)]),
+               as.numeric(ext_fin[1, 1 + seq_len(n_theta)]))
+
+  # quiet = TRUE silences the message but returns the same data
+  expect_no_message(getSamples(sirFile, extFile = extFile, quiet = TRUE))
+  expect_equal(getSamples(sirFile, extFile = extFile, quiet = TRUE), res)
+
+  # n is ignored for a SIR file (and says so)
+  expect_message(getSamples(sirFile, extFile = extFile, n = 25), "ignored for SIR")
+  expect_equal(nrow(getSamples(sirFile, extFile = extFile, n = 25, quiet = TRUE)),
+               n_resampled + 1)
 })

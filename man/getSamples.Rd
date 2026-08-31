@@ -4,7 +4,14 @@
 \alias{getSamples}
 \title{getSamples}
 \usage{
-getSamples(input, extFile = NULL, n = NULL, indexvec = NULL, zerosindex = NULL)
+getSamples(
+  input,
+  extFile = NULL,
+  n = NULL,
+  indexvec = NULL,
+  zerosindex = NULL,
+  quiet = FALSE
+)
 }
 \arguments{
 \item{input}{The input file name (character string). If the file name
@@ -29,11 +36,18 @@ if a PsN `raw_results_structure` file is in the same directory.}
 
 \item{zerosindex}{A vector of indices indicating which parameters are
 fixed to zero.}
+
+\item{quiet}{If `FALSE` (default), an informational message is printed when a
+SIR raw_results file is detected (and when `n` is ignored for such a file).
+Set to `TRUE` to silence these messages.}
 }
 \value{
 A data frame with $n + 1$ rows (if $n$ is specified for file inputs)
   or the full set of resamples. The first row contains the final parameter
-  estimates (ITERATION -1000000000), followed by the samples.
+  estimates (ITERATION -1000000000), followed by the samples. For a SIR
+  raw_results file the samples are the importance-resampled parameter vectors
+  (`resamples == 1`), again with the final estimates prepended as the first
+  row.
   **Note:** If `input` is a data.frame, the function returns exactly $n$
   samples (if $n$ is specified) or the exact input data.frame (if $n$ is NULL),
   without appending a row of base estimates.
