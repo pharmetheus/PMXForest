@@ -131,3 +131,29 @@ test_that("character-valued categorical levels are supported", {
 test_that("non-data.frame input errors", {
   expect_error(oneHotEncode(list(a = 1), spec = "a"), "data.frame")
 })
+
+test_that("a spec that is neither a character vector nor a named list is an error", {
+  d <- make_data()
+  expect_error(oneHotEncode(d, spec = 5), "character vector .* or a named list")
+  expect_error(oneHotEncode(d, spec = list(1, 2)), "character vector .* or a named list")
+})
+
+test_that("a spec element that is a multi-value vector is an error", {
+  d <- make_data()
+  expect_error(
+    oneHotEncode(d, spec = list(GENO = c(1, 2))),
+    "must be NULL, a single reference value, or a list"
+  )
+})
+
+test_that("includeReference adds the reference to an explicit levels sub-spec", {
+  d <- make_data()
+  out <- oneHotEncode(
+    d, spec = list(GENO = list(ref = 1, levels = c(3, 4))),
+    includeReference = TRUE
+  )
+  # ref (1) prepended to c(3, 4)
+  expect_true(all(c("GENO_1", "GENO_3", "GENO_4") %in% names(out)))
+  expect_false("GENO_2" %in% names(out))
+  expect_equal(out$GENO_1, c(1, 0, 0, 0, 0, -99))
+})

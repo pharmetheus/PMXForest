@@ -182,3 +182,48 @@ test_that("getForestDFSCM oneHotSep controls the dummy column separator", {
   )
   expect_equal(res, ref)
 })
+
+# --- coverage: dfRefRow validation and oneHot + data.frame dfRefRow ---
+
+test_that("getForestDFSCM errors on a dfRefRow with an invalid number of rows", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_covs   <- data.frame(WT = c(70, 100), COVARIATEGROUPS = "WT",
+                          stringsAsFactors = FALSE)
+  bad_ref   <- data.frame(WT = c(70, 80, 90))   # 3 rows, dfCovs has 2
+
+  expect_error(
+    getForestDFSCM(dfCovs = df_covs, dfRefRow = bad_ref,
+                   functionList = list(function(thetas, df, ...) thetas[1]),
+                   functionListName = "CL", noBaseThetas = 2, dfParameters = df_params),
+    "number of reference rows"
+  )
+})
+
+test_that("getForestDFSCM oneHot also encodes a data.frame dfRefRow", {
+  df_params <- data.frame(THETA1 = c(10, 11, 9, 12), THETA2 = c(0.3, 0.35, 0.28, 0.31))
+  df_covs   <- data.frame(GENO = c(1, 3, 4), COVARIATEGROUPS = "GENO",
+                          stringsAsFactors = FALSE)
+  df_ref    <- data.frame(GENO = 2)             # raw column, needs encoding too
+
+  p_func <- function(thetas, df, ...) {
+    x <- thetas[1]
+    if (isTRUE(df$GENO_1 == 1)) x <- x * (1 + thetas[2])
+    if (isTRUE(df$GENO_3 == 1)) x <- x * (1 - thetas[2])
+    list(CL = x)
+  }
+  spec <- list(GENO = list(ref = 2))
+
+  res_onehot <- getForestDFSCM(
+    dfCovs = df_covs, dfRefRow = df_ref, functionList = list(p_func),
+    functionListName = "CL", noBaseThetas = 2, dfParameters = df_params, oneHot = spec
+  )
+  res_manual <- getForestDFSCM(
+    dfCovs   = oneHotEncode(df_covs, spec = spec, dropOriginal = TRUE),
+    dfRefRow = oneHotEncode(df_ref, spec = spec, dropOriginal = TRUE),
+    functionList = list(p_func), functionListName = "CL",
+    noBaseThetas = 2, dfParameters = df_params
+  )
+  expect_equal(res_onehot, res_manual)
+  # The reference row was encoded: reference genotype 2 -> all GENO_* dummies 0
+  expect_equal(unique(res_onehot$REFROW), "YES")
+})

@@ -216,3 +216,42 @@ THETA2    0.01        0.1"
 
   unlink(tmp_cov)
 })
+
+# --- coverage: data.frame guards and explicit indexvec paths ---
+
+test_that("getSamples rejects a non-numeric data.frame", {
+  df_bad <- data.frame(THETA1 = c(1, 1.1), LABEL = c("a", "b"),
+                       stringsAsFactors = FALSE)
+  expect_error(
+    getSamples(df_bad),
+    "all columns must be numeric"
+  )
+})
+
+test_that("getSamples requires n when the input is a .cov file", {
+  covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
+  extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+  expect_error(
+    getSamples(covFile, extFile = extFile, n = NULL),
+    "number of samples"
+  )
+})
+
+test_that("getSamples applies indexvec to a data.frame input", {
+  df_in <- data.frame(A = c(1, 2, 3), B = c(4, 5, 6), C = c(7, 8, 9))
+  res <- getSamples(df_in, indexvec = c(1, 3))   # keep A and C
+  expect_equal(names(res), c("A", "C"))
+  expect_equal(nrow(res), 3)
+})
+
+test_that("getSamples accepts an explicit indexvec for a csv input", {
+  bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv",
+                          package = "PMXForest")
+  extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+
+  # Parameter columns in this raw_results file: THETA 21-34, SIGMA 40, OMEGA 35-39
+  auto <- getSamples(bootFile, extFile = extFile)
+  idx  <- getSamples(bootFile, extFile = extFile,
+                     indexvec = c(21:34, 40, 35:39))
+  expect_equal(idx, auto)
+})

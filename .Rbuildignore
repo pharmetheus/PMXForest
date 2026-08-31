@@ -11,5 +11,7 @@ RawExampleFiles
 ^BuildVignettesHere/.*figures$
 ^\.github$
 ^Makefile$
+^\.covrignore$
 ^_pkgdown\.yml$
 ^docs$
+^\.claude$

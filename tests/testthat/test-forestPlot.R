@@ -309,3 +309,38 @@ test_that("Final coverage gaps for Reference Info and COVEFF overrides", {
   expect_s3_class(forestPlot(df_mock, return = "data"), "data.frame")
   expect_type(forestPlot(df_mock, return = "plotList"), "list")
 })
+
+# ==============================================================================
+# BLOCK 5: Display-mode branches (layout / strip / reference-info)
+# ==============================================================================
+test_that("forestPlot covers the remaining layout and reference-info branches", {
+
+  # plotData supplied directly -> "ignore dfres" message branch
+  pd <- forestPlot(df_mock, return = "data")
+  expect_message(
+    forestPlot(df_mock, plotData = pd),
+    "ignore dfres"
+  )
+
+  # table = FALSE with the (default) right strip kept
+  expect_s3_class(forestPlot(df_mock, table = FALSE), "gg")
+
+  # right strip switched off, with the table
+  expect_s3_class(forestPlot(df_mock, rightStrip = FALSE), "gg")
+
+  # keep the right strip on every table panel (multi-parameter)
+  expect_s3_class(
+    forestPlot(df_mock, parameters = c("CL", "V"),
+               keepRightStrip = TRUE, rightStrip = TRUE),
+    "gg"
+  )
+
+  # stacked layout *with* the table (the /2, ncol = 2 ggarrange branch)
+  fp_stacked_tab <- forestPlot(df_mock, parameters = c("CL", "V"),
+                               stackedPlots = TRUE)
+  expect_s3_class(fp_stacked_tab, "gg")
+
+  # referenceInfo = NULL (no annotation) and a custom reference string
+  expect_s3_class(forestPlot(df_mock, referenceInfo = NULL), "gg")
+  expect_s3_class(forestPlot(df_mock, referenceInfo = "Reference: adult male"), "gg")
+})

@@ -39,3 +39,18 @@ test_that("getPlotVars returns correct values and handles errors", {
 
 
 
+
+test_that("getPlotVars rejects impossible combinations", {
+  expect_error(
+    PMXForest:::getPlotVars(plotRelative = FALSE, noVar = FALSE, reference = "func"),
+    "not possible"
+  )
+  expect_error(
+    PMXForest:::getPlotVars(plotRelative = FALSE, noVar = FALSE, reference = "final"),
+    "not possible"
+  )
+  expect_error(
+    PMXForest:::getPlotVars(plotRelative = TRUE, noVar = TRUE, reference = "final"),
+    "not possible"
+  )
+})

@@ -72,3 +72,18 @@ test_that("setupDfRefRow honours refLevels so its columns match setupDfCovs", {
   expect_equal(ref$GENO_3, 0)
   expect_equal(ref$GENO_4, 0)
 })
+
+test_that("setupDfRefRow errors when a covariate is entirely missing", {
+  mock_data <- data.frame(
+    ID  = 1:4,
+    WT  = c(60, 70, 80, 90),
+    GONE = c(-99, -99, -99, -99)
+  )
+  df_covs <- setupDfCovs(mock_data, covariates = "WT", idVar = "ID")
+
+  expect_error(
+    setupDfRefRow(df_covs, data = mock_data, covariates = c("WT", "GONE"),
+                  idVar = "ID"),
+    "contains only missing values"
+  )
+})
