@@ -1,6 +1,6 @@
 #'Forest plots
 #'
-#' @import dplyr ggplot2 ggpubr table1
+#' @import dplyr ggplot2 ggpubr
 #'
 #' @description Create Forest plots consisting of alternating columns of errorbar plots and tabulated numerical statistics.
 #' @inheritParams setupForestPlotData
@@ -51,6 +51,8 @@
 #' @param tabplotscale Scaling factor for the width of the rightmost column (usually a table plot) to adjust for the size of the right strip.
 #' @param onlySignificantErrorBars Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).
 #' @param setSignEff Passed to \code{setupForestPlotData()}. \code{NULL} (default) or a list of two-element character vectors \code{c(PARAMETER, GROUPNAME)}. When supplied, the \code{COVEFF} column is set \code{TRUE} for the matching parameter/covariate-group combinations and \code{FALSE} otherwise, overriding any existing \code{COVEFF} values.
+#' @param sigdigits Number of significant digits for the numbers in the statistics table. Mutually exclusive with \code{decimals}. If both are \code{NULL} (the default), the number of decimals (2) is used when \code{plotRelative = TRUE} and \code{sigdigits = 2} when \code{plotRelative = FALSE}.
+#' @param decimals Number of decimal places for the numbers in the statistics table. Mutually exclusive with \code{sigdigits}. See \code{sigdigits} for the default behaviour.
 #' @param size Base font size (points) for the plot text. Defaults to 80\% of the current \code{ggplot2} theme font size.
 #' @param addcodeErr A string of code to be applied to each of the panels with error bars.
 #' @param xlim Numeric length-2 vector giving the x-axis limits for the error-bar panels. Default \code{c(NA, NA)} lets the data set the range.
@@ -124,7 +126,8 @@ forestPlot <- function(dfres,
                        plotRelative=TRUE,
                        noVar = TRUE,
                        referenceParameters = "func",
-                       sigdigits = 2,
+                       sigdigits = NULL,
+                       decimals = NULL,
                        parameters=unique(dfres$PARAMETER), #Labels
                        parameterLabels=parameters,
                        parameterLabelsPrefix = NULL,
@@ -185,6 +188,7 @@ forestPlot <- function(dfres,
                                    statisticsLabel       = statisticsLabel,
                                    noVar                 = noVar,
                                    sigdigits             = sigdigits,
+                                   decimals              = decimals,
                                    onlySignificant       = onlySignificant,
                                    setSignEff            = setSignEff)
   } else {

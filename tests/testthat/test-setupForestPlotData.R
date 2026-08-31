@@ -111,3 +111,66 @@ test_that("setupForestPlotData accepts groupNameLabels as a per-row vector", {
   res <- setupForestPlotData(df_mock, groupNameLabels = c("A", "B", "C"))
   expect_equal(as.character(res$GROUPNAMELABEL), c("A", "B", "C"))
 })
+
+# --- statistics-table number format: sigdigits vs decimals ---
+
+test_that("setupForestPlotData chooses decimals on the relative scale, sigdigits on the absolute", {
+  df_mock <- data.frame(
+    PARAMETER = "CL", GROUPNAME = "Weight", COVNAME = "115 kg",
+    COVNUM = 1, COVEFF = TRUE, REFROW = "NO", REFFUNC = 10, REFFINAL = 10,
+    POINT = 16.401, Q1 = 15.62, Q2 = 17.284,
+    POINT_NOVAR_REL_REFFUNC = 1.234, Q1_NOVAR_REL_REFFUNC = 1.151,
+    Q2_NOVAR_REL_REFFUNC = 1.357,
+    stringsAsFactors = FALSE
+  )
+
+  # relative, default -> 2 decimals (1.234 keeps the second decimal, not "1.2")
+  rel <- setupForestPlotData(df_mock, plotRelative = TRUE, noVar = TRUE)
+  expect_equal(trimws(rel$STATISTIC[1]), "1.23 [1.15-1.36]")
+
+  # absolute, default -> 2 significant digits (unchanged behaviour)
+  abs <- setupForestPlotData(df_mock, plotRelative = FALSE, noVar = TRUE,
+                             reference = "func")
+  expect_equal(trimws(abs$STATISTIC[1]), "16 [16-17]")
+})
+
+test_that("setupForestPlotData honours explicit sigdigits / decimals on either scale", {
+  df_mock <- data.frame(
+    PARAMETER = "CL", GROUPNAME = "Weight", COVNAME = "115 kg",
+    COVNUM = 1, COVEFF = TRUE, REFROW = "NO", REFFUNC = 10, REFFINAL = 10,
+    POINT = 16.401, Q1 = 15.62, Q2 = 17.284,
+    POINT_NOVAR_REL_REFFUNC = 1.234, Q1_NOVAR_REL_REFFUNC = 1.151,
+    Q2_NOVAR_REL_REFFUNC = 1.357,
+    stringsAsFactors = FALSE
+  )
+
+  # explicit sigdigits on the relative scale
+  expect_equal(
+    trimws(setupForestPlotData(df_mock, plotRelative = TRUE, noVar = TRUE,
+                               sigdigits = 3)$STATISTIC[1]),
+    "1.23 [1.15-1.36]"
+  )
+  # explicit decimals on the absolute scale
+  expect_equal(
+    trimws(setupForestPlotData(df_mock, plotRelative = FALSE, noVar = TRUE,
+                               reference = "func", decimals = 1)$STATISTIC[1]),
+    "16.4 [15.6-17.3]"
+  )
+  # both is an error
+  expect_error(
+    setupForestPlotData(df_mock, sigdigits = 2, decimals = 2),
+    "either .sigdigits. or .decimals."
+  )
+})
+
+test_that("signifPad rounds to significant digits half-up and pads trailing zeros", {
+  sp <- PMXForest:::signifPad
+
+  expect_equal(sp(c(0.976, 1.234, 2.244, 12.3, 0.08), digits = 3),
+               c("0.976", "1.23", "2.24", "12.3", "0.0800"))
+  expect_equal(sp(c(1.2, 1.234, 1.15), digits = 2), c("1.2", "1.2", "1.2"))
+  expect_equal(sp(c(16.4, 15.62, 17.284), digits = 2), c("16", "16", "17"))
+  expect_equal(sp(-0.5, digits = 2), "-0.50")
+  expect_equal(sp(100, digits = 2), "100")          # no bare trailing "."
+  expect_true(is.na(sp(NA_real_, digits = 2)))
+})

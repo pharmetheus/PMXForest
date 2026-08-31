@@ -18,7 +18,6 @@ Imports:
     foreach,
     ggpubr,
     MASS,
-    table1,
     utils,
     tools
 Suggests:
