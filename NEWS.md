@@ -1,4 +1,4 @@
-# PMXForest (development version)
+# PMXForest 1.2.15.9005 (development version)
 
 ## Breaking Changes
 * **`refLevels` is deprecated, replaced by `catRef`.** `getCovStats()`, `setupDfCovs()`, `setupDfRefRow()` and `setupCovExpressionsList()` all gain `catRef`, symmetric with `contRef`. `refLevels` still works and forwards to `catRef`, with a deprecation warning; supplying both is an error.
