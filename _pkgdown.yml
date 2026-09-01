@@ -23,6 +23,6 @@ articles:
 - title: Deep dives
   navbar: Deep dives
   contents:
-  - Part3-deep-dive-covariate-data-prep
+  - Part3-deep-dive-forest-plot-inputs
   - Part3-deep-dive-r-coded-models
   - Part3-deep-dive-tte-models

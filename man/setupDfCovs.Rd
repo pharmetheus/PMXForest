@@ -9,13 +9,15 @@ setupDfCovs(
   covariates,
   additionalCovs = NULL,
   useMissVal = TRUE,
-  contRef = c("median", "mean"),
+  contRef = "median",
+  catRef = NULL,
+  model = NULL,
+  refLevels = NULL,
   minLevels = 10,
   probs = c(0.05, 0.95),
   idVar = "ID",
   missVal = -99,
   nsig = 3,
-  refLevels = NULL,
   sep = "_"
 )
 }
@@ -35,9 +37,24 @@ for continuous) rather than `missVal`. Defaults to `NULL`.}
 retain `missVal`. If `FALSE`, inactive primary covariates are replaced with
 their computed baseline references.}
 
-\item{contRef}{A character string indicating how to calculate the reference
-value for continuous covariates. Must be either `"median"` or `"mean"`.
-Defaults to `"median"`.}
+\item{contRef}{Reference setting for continuous covariates: a number,
+`"mean"`, `"median"` (default) or `"model"`, or a named list of those with
+an optional `default` component, e.g.
+`list(WT = 75, AGE = "mean", default = "median")`. Applies to
+`additionalCovs`, and to the primary covariates when `useMissVal = FALSE`.}
+
+\item{catRef}{Reference setting for categorical covariates: a level,
+`"mode"`, `"lowest"` or `"model"`, or a named list of those with an optional
+`default` component, e.g. `list(GENO = 2)`. It selects both the level
+represented by the all-zero one-hot row and, for background cells, the
+reference level. Pass the same `catRef` to [setupDfRefRow()] so the columns
+line up. Replaces `refLevels`.}
+
+\item{model}{The NONMEM control stream, required when a reference is set to
+`"model"`. Either a path to the `.mod` file or the list returned by
+[createParamFunction()].}
+
+\item{refLevels}{Deprecated. Use `catRef`.}
 
 \item{minLevels}{The maximum number of unique values a covariate can have to be
 treated as categorical. Default is 10.}
@@ -52,12 +69,6 @@ states. Defaults to -99.}
 
 \item{nsig}{The number of significant digits for rounding continuous covariates.
 Defaults to 3.}
-
-\item{refLevels}{An optional named list giving the reference level for
-individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Use
-this to align the one-hot columns with a model whose reference genotype (or
-race, etc.) is not the lowest level. Covariates not named here use their
-lowest level as the reference. Passed through to `getCovStats()`.}
 
 \item{sep}{The separator between the covariate name and the level in the
 one-hot column names. Defaults to `"_"`.}
@@ -100,7 +111,7 @@ setupDfCovs(dfData, covariates = c("WT", "SEX"), useMissVal = FALSE,
             idVar = "ID")
 
 # Align the GENO one-hot columns with a model whose reference genotype is 2
-setupDfCovs(dfData, covariates = c("WT", "GENO"), refLevels = list(GENO = 2),
+setupDfCovs(dfData, covariates = c("WT", "GENO"), catRef = list(GENO = 2),
             idVar = "ID")
 }
 \seealso{

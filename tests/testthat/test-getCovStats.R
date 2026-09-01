@@ -125,7 +125,7 @@ test_that("getCovStats default multi-level output is unchanged by the new argume
 
 test_that("getCovStats refLevels selects a non-lowest reference level", {
   # RACE has levels 1, 2, 3. Make level 2 the reference.
-  stats <- getCovStats(test_data, covariates = "RACE", refLevels = list(RACE = 2))
+  stats <- getCovStats(test_data, covariates = "RACE", catRef = list(RACE = 2))
 
   expect_identical(names(stats$RACE), c("RACE_1", "RACE_3"))
   # Level order in the vectors is still sorted 1, 2, 3; the reference (2) is the
@@ -141,7 +141,7 @@ test_that("getCovStats sep controls the one-hot name separator", {
 
 test_that("getCovStats errors on a reference level that is not in the data", {
   expect_error(
-    getCovStats(test_data, covariates = "RACE", refLevels = list(RACE = 9)),
+    getCovStats(test_data, covariates = "RACE", catRef = list(RACE = 9)),
     "not present in the data"
   )
 })

@@ -16,6 +16,8 @@ setupCovExpressionsList(
   idVar = "ID",
   missVal = -99,
   nsig = 3,
+  catRef = NULL,
+  model = NULL,
   refLevels = NULL
 )
 }
@@ -58,10 +60,17 @@ covariate before any calculation. Defaults to -99.}
 \item{nsig}{The number of significant digits for rounding continuous split
 thresholds. Defaults to 3.}
 
-\item{refLevels}{An optional named list giving the reference level for
-individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Only
-consulted when `includeReference = FALSE`. Covariates not named here use their
-lowest level as the reference.}
+\item{catRef}{The reference level for multi-level categorical covariates,
+e.g. `list(GENO = 2)`; also accepts `"lowest"` (the default), `"mode"` or
+`"model"`, either as a single setting or in a named list with a `default`
+component. Only consulted when `includeReference = FALSE`. Replaces
+`refLevels`.}
+
+\item{model}{The NONMEM control stream, required when `catRef` is `"model"`.
+Either a path to the `.mod` file or the list returned by
+[createParamFunction()].}
+
+\item{refLevels}{Deprecated. Use `catRef`.}
 }
 \value{
 A list of two elements, named for the [getForestDFemp()] arguments they
@@ -102,7 +111,7 @@ Statistics are computed on **deduplicated baseline data** (one record per
   `includeReference = TRUE` (default) every level gets a row, since in an
   empirical plot each level is a real subject subset. With
   `includeReference = FALSE` the reference level is dropped (from
-  `refLevels[[cov]]` if named, otherwise the lowest level), mirroring the
+  `catRef[[cov]]` if named, otherwise the lowest level), mirroring the
   parametric `dfCovs`.
 
   **Additional covariates.** Each entry of `additionalCovs` gets its own rows,
@@ -148,7 +157,7 @@ setupCovExpressionsList(dfData, covariates = "WT", contSplit = "median",
 
 # Drop the reference genotype (level 2) from the GENO rows
 setupCovExpressionsList(dfData, covariates = "GENO", includeReference = FALSE,
-                        refLevels = list(GENO = 2),
+                        catRef = list(GENO = 2),
                         idVar = "ID")$covExpressionsList
 
 # FOOD as a categorical additional covariate and CRCL as a continuous one:

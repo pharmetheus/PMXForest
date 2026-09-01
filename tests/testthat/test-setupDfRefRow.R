@@ -55,14 +55,18 @@ test_that("setupDfRefRow honours refLevels so its columns match setupDfCovs", {
   )
 
   df_covs <- setupDfCovs(
-    mock_data, covariates = c("WT", "GENO"), refLevels = list(GENO = 2)
+    mock_data, covariates = c("WT", "GENO"), catRef = list(GENO = 2)
   )
 
-  ref <- setupDfRefRow(
-    dfCovs     = df_covs,
-    data       = mock_data,
-    covariates = c("WT", "GENO"),
-    refLevels  = list(GENO = 2)
+  # refLevels is deprecated; it must still work and forward to catRef.
+  expect_warning(
+    ref <- setupDfRefRow(
+      dfCovs     = df_covs,
+      data       = mock_data,
+      covariates = c("WT", "GENO"),
+      refLevels  = list(GENO = 2)
+    ),
+    "`refLevels` is deprecated"
   )
 
   # Column names must line up with df_covs (GENO_1, GENO_3, GENO_4)

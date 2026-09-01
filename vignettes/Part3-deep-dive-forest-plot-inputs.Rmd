@@ -1,0 +1,623 @@
+---
+title: "3. Deep Dive: Preparing Forest Plot Inputs"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
+vignette: >
+  %\VignetteIndexEntry{3. Deep Dive: Preparing Forest Plot Inputs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{css, echo=FALSE}
+.callout-note {
+  background-color: #e7f1ff;
+  border-left: 4px solid #0dcaf0;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+.callout-warning {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #664d03;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  warning  = FALSE,
+  message  = FALSE
+)
+```
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(PMXForest)
+  library(dplyr)
+})
+
+set.seed(865765)
+```
+
+# Introduction
+
+`getForestDFSCM()` takes four inputs. This vignette covers how each is built, and
+— just as important — how to keep them consistent with one another.
+
+| Input | What it is | Built by |
+| --- | --- | --- |
+| `dfCovs` | one row per Forest plot row, inactive cells at `-99` | `setupDfCovs()`, `createInputForestData()` |
+| `functionList` | the parameter function, typical values from thetas and covariates | `createParamFunction()`, or written by hand |
+| `dfRefRow` | the reference subject the other rows are expressed relative to | `setupDfRefRow()` |
+| `dfParameters` | parameter uncertainty samples | `getSamples()` |
+
+The empirical entry point `getForestDFemp()` takes a `covExpressionsList` in place
+of `dfCovs`; that is covered in Section 7.
+
+The data set throughout is the PK analysis data used in the
+[Walkthrough](Part2-walkthrough.html), and the model is the `run7` control stream
+bundled with the package.
+
+```{r}
+dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+modFile  <- system.file("extdata", "SimVal/run7.mod",           package = "PMXForest")
+dfData   <- read.csv(dataFile)
+```
+
+# 1. Covariate values: `dfCovs`
+
+## `getCovStats()`
+
+`getCovStats()` returns a named list, one element per covariate. The element type
+depends on the number of unique values:
+
+* **continuous** (more than `minLevels` unique values) — a two-element numeric
+  vector of quantiles, by default the 5th and 95th percentiles;
+* **binary** — the two levels, sorted alphanumerically;
+* **multi-level categorical** — a nested list of one-hot vectors. The reference
+  level (the lowest level, or the one named in `catRef`) is the all-zero row.
+
+```{r}
+covStats <- getCovStats(
+  data       = dfData,
+  covariates = c("WT", "AGE", "SEX", "GENO"),
+  idVar      = "ID"
+)
+covStats
+```
+
+Statistics are computed on the first record per `idVar`, so subjects with dense
+sampling do not pull the quantiles.
+
+```{r}
+nrow(dfData)                                   # all records
+nrow(distinct(dfData, ID))                     # subjects
+```
+
+`minLevels` (default 10) is the threshold between categorical and continuous. A
+covariate coded with a small number of distinct numeric values — a dose level, an
+ordinal score — is treated as categorical unless `minLevels` is lowered.
+
+```{r}
+## GENO has 4 levels: categorical by default
+getCovStats(dfData, "GENO", idVar = "ID")
+
+## Force GENO to be treated as continuous
+getCovStats(dfData, "GENO", idVar = "ID", minLevels = 3)
+```
+
+`probs` sets the quantiles for continuous covariates; `nsig` sets the rounding.
+
+```{r}
+getCovStats(dfData, "CRCL", idVar = "ID", probs = c(0.1, 0.9), nsig = 4)
+```
+
+## `catRef` and `sep`
+
+By default the lowest level of a multi-level categorical is the reference (the
+all-zero row) and the one-hot columns are named `<covariate>_<level>`.
+`catRef` overrides the reference level per covariate; `sep` changes the
+separator. (`catRef` replaces `refLevels`, which still works but is deprecated.)
+
+```{r}
+## GENO reference is level 1 by default -> columns GENO_2, GENO_3, GENO_4
+getCovStats(dfData, "GENO", idVar = "ID")
+
+## Make level 2 the reference -> columns GENO_1, GENO_3, GENO_4
+getCovStats(dfData, "GENO", idVar = "ID", catRef = list(GENO = 2))
+```
+
+Use `catRef` when the model's reference category is not the lowest level —
+otherwise the one-hot columns will not line up with the model's coefficients. The
+`"_"` separator matches NONMEM FREM data sets and `PMXFrem::createFREMModel()`;
+change it only if you have a reason to.
+
+::: {.callout-note}
+Binary levels are returned in alphanumeric order (`c(0, 1)`), not order of
+appearance in the data. Forest plot row order is therefore reproducible across
+data sets.
+:::
+
+## `createInputForestData()`
+
+`createInputForestData()` turns a covariate list into the row structure. It is
+what you call directly when the covariate values are known literals rather than
+derived from data.
+
+```{r}
+dfCovsManual <- createInputForestData(
+  list(
+    "WT"   = c(60, 100),
+    "SEX"  = c(1, 2),
+    "GENO" = list("GENO_2" = c(0, 1, 0), "GENO_3" = c(0, 0, 1), "GENO_4" = c(0, 0, 0))
+  ),
+  iMiss = -99
+)
+dfCovsManual
+```
+
+The `COVARIATEGROUPS` column records which covariate each row belongs to;
+`getForestDFSCM()` uses it to group and space the rows on the y-axis, and drops it
+before calling the parameter function.
+
+A `getCovStats()` result can be passed straight in:
+
+```{r}
+createInputForestData(covStats, iMiss = -99)
+```
+
+## `setupDfCovs()`
+
+`setupDfCovs()` runs `getCovStats()` and `createInputForestData()` together and
+adds control over how inactive cells are filled.
+
+```{r}
+covariates <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "GENO")
+
+dfCovs <- setupDfCovs(data = dfData, covariates = covariates, idVar = "ID")
+dfCovs
+```
+
+Covariates listed in `additionalCovs` get their own rows, but on every *other*
+row they sit at their reference rather than at `-99`. This is for covariates that
+must hold a plausible value whenever they are not the covariate under study — for
+example one carried through from a full random-effects (FREM) model.
+
+```{r}
+setupDfCovs(
+  data           = dfData,
+  covariates     = c("WT", "AGE", "SEX"),
+  additionalCovs = "CRCL",
+  idVar          = "ID"
+)
+```
+
+On the `WT`, `AGE`, and `SEX` rows, `CRCL` holds its median instead of `-99`.
+
+With `useMissVal = FALSE`, inactive *primary* covariates are also set to their
+reference, so the parameter function never sees `-99`.
+
+```{r}
+setupDfCovs(
+  data       = dfData,
+  covariates = c("WT", "AGE", "SEX"),
+  useMissVal = FALSE,
+  idVar      = "ID"
+)
+```
+
+## `oneHotEncode()`
+
+`getCovStats()` produces one-hot vectors from a *summary* of the data.
+`oneHotEncode()` does the same job on a *data frame*: it adds
+`<covariate><sep><level>` dummy columns to whatever data frame you give it. This
+is what the `oneHot` argument of `getForestDFSCM()` and `getForestDFemp()` calls
+internally, and it follows the same convention as NONMEM FREM data sets.
+
+```{r}
+raw <- data.frame(
+  ID   = 1:6,
+  GENO = c(1, 2, 3, 4, 2, -99),
+  RACE = c(1, 1, 2, 3, 2, 1)
+)
+
+## Lowest level as reference; missing rows kept as missVal
+oneHotEncode(raw, spec = c("GENO", "RACE"))
+```
+
+The reference level is set the same way as in `getCovStats()`:
+
+```{r}
+oneHotEncode(raw, spec = list(GENO = list(ref = 2)), dropOriginal = TRUE)
+```
+
+| Argument | Effect |
+| --- | --- |
+| `includeReference` | also create a dummy column for the reference level |
+| `imputeMissing` | `TRUE` sets missing rows to `0` (the reference); `FALSE` (default) keeps `missVal` |
+| `dropOriginal` | remove the raw column after encoding |
+| `sep` | separator in the new column names (default `"_"`) |
+
+`oneHotEncode()` is idempotent: a dummy column that already exists and agrees with
+the requested encoding is left untouched; one that disagrees raises an error. This
+makes it safe to run on data that already carries FREM dummy columns.
+
+# 2. The parameter function: `createParamFunction`
+
+The parameter function turns a vector of thetas and one row of covariate values
+into the parameters to plot. Writing it by hand duplicates code that already
+exists in the control stream, and it is the easiest place in the whole workflow to
+introduce a silent error.
+
+`createParamFunction()` translates the `$PK` block into R **source text** for you
+to read, check and edit. Nothing is evaluated on your behalf.
+
+```{r}
+gen <- createParamFunction(
+  modFile,
+  parameters = c("CL", "FREL", "V"),
+  covRef     = list(GENO1 = 0, GENO3 = 0),
+  quiet      = TRUE
+)
+cat(head(gen$code, 24), sep = "\n")
+```
+
+Two things to notice.
+
+**Every `ETA(n)` is set to 0**, so the function returns typical values — what a
+Forest plot needs.
+
+**All missing-covariate handling is hoisted into one preamble**, annotated with
+where each reference came from, after which the `$PK` algebra below is a plain
+transliteration you can diff line by line against the control stream. The
+references are read out of the control stream itself, by four rules in decreasing
+order of confidence:
+
+| Rule | Source |
+| --- | --- |
+| 1 | explicit handling, `IF(WT.EQ.-99) WT = 75` |
+| 2a | the branch PsN's scm marks `; Most common` |
+| 2b | the branch assigning the identity value (`1` multiplicative, `0` additive) |
+| 3 | the normalisation constant in `(WT/75)` or `(AGE-50)` |
+
+```{r}
+gen$covRef$WT
+```
+
+A weaker fifth rule proposes the level that no `IF()` tests and **warns**;
+confirm it through `covRef`, as above for `GENO1` and `GENO3`. A covariate
+matching no rule at all is an error, not a guess.
+
+## Secondary parameters are yours
+
+AUC, Cmax and event probabilities are not derivable from `$PK` — the dose used
+for an AUC appears nowhere in the control stream, and anything through `$ERROR`
+or `$DES` needs an ODE solution. The emitted source carries a marked extension
+point for you to add them:
+
+```{r}
+cat(grep("Secondary parameters", gen$code, value = TRUE))
+```
+
+The parser accepts assignments, `IF` statements and closed-form arithmetic, and
+refuses everything else — `$DES`, compartment amounts `A(n)`, verbatim FORTRAN,
+`DO` loops, `CALL` — naming the file and line rather than translating it wrongly.
+
+## Checking the translation: `verifyParamFunction()`
+
+`verifyParamFunction()` evaluates the generated function over a NONMEM `$TABLE`
+file and compares the result with the values NONMEM itself wrote, which turns
+"do I trust this translation?" into a pass or a fail.
+
+```r
+rep <- verifyParamFunction(gen, tabFile = "xptab7", thetas = thetas)
+#>   PARAMETER      TABLECOLUMN   N   MAXABSDIFF   MAXRELDIFF PASS
+#> 1        CL   CL / exp(ETA3) 748 0.0006296369 4.848771e-05 TRUE
+#> 2      FREL FREL / exp(ETA2) 748 0.0001012091 5.217360e-05 TRUE
+```
+
+Put **both the parameters and the covariates** in `$TABLE`. They then come from
+the same row of the same file and cannot be misaligned, and no `$DATA` filtering
+has to be reproduced to compare them. Where `$PK` shows exponential IIV, the
+tabled individual value is divided by `exp(ETA(n))` to recover the typical value;
+a `TVCL`-style column is used directly. Anything missing warns and reports `NA`
+rather than comparing silently.
+
+::: {.callout-note}
+The residual above is not error, it is the table's precision: NONMEM's default
+format carries about five significant digits, so agreement closer than roughly
+`1e-5` relative cannot be observed. `tol` defaults to `1e-4`, just above that
+floor.
+:::
+
+# 3. The reference row: `dfRefRow`
+
+`setupDfRefRow()` builds the reference the other rows are expressed relative to.
+By default it computes the reference state from the data — mode for categorical,
+median or mean for continuous, on one record per subject — and maps it onto the
+geometry of a `setupDfCovs()` result.
+
+`singleRef = TRUE` gives a one-row data frame with every covariate at its
+reference value:
+
+```{r}
+setupDfRefRow(dfCovs, data = dfData, covariates = covariates, idVar = "ID")
+```
+
+`singleRef = FALSE` gives a data frame the same shape as `dfCovs`: active cells
+are replaced with the reference value, inactive cells keep `-99`. Use it when the
+reference should track the covariate that varies on each row.
+
+```{r}
+head(setupDfRefRow(dfCovs, data = dfData, covariates = covariates,
+                   singleRef = FALSE, idVar = "ID"), 4)
+```
+
+## `contRef` and `catRef`
+
+These say how a reference value is chosen. Each takes either a single setting
+applied to every covariate, or a named list with an entry per covariate and an
+optional `default` component:
+
+| | accepted values |
+| --- | --- |
+| `contRef` | a number, `"mean"`, `"median"` (default), `"model"` |
+| `catRef` | a level, `"mode"` (default), `"lowest"`, `"model"` |
+
+```{r}
+setupDfRefRow(dfCovs, dfData, covariates, idVar = "ID",
+              contRef = list(WT = 75, default = "mean"))
+```
+
+`contRef` applies to `setupDfCovs()` too — to `additionalCovs`, and to primary
+covariates when `useMissVal = FALSE`.
+
+::: {.callout-warning}
+`setupDfRefRow()` keys the reference values by the column names `setupDfCovs()`
+produces. Pass it a `dfCovs` built by `setupDfCovs()`, and the **same** `catRef`
+and `sep`, so the columns line up. For a hand-built `createInputForestData()`
+structure, construct `dfRefRow` directly as a one-row data frame.
+:::
+
+# 4. Keeping the reference and the parameter function consistent
+
+This section is the reason the previous two sit in the same vignette.
+
+A parameter function must return something when a covariate is inactive, and it
+falls back to the model's own reference — the `75` in `(WT/75)`, or the level in
+the branch marked `; Most common`. If `setupDfRefRow()` meanwhile takes the median
+weight and the modal formulation from the data, the two disagree. Every row where
+that covariate is inactive is then displaced from 1, by a factor that looks
+entirely plausible on the plot.
+
+For `run7` the two disagree on both counts:
+
+```{r}
+covsMod <- c("WT", "SEX", "FOOD", "FORM")
+dfCovsM <- setupDfCovs(dfData, covariates = covsMod, idVar = "ID")
+
+## From the data
+setupDfRefRow(dfCovsM, dfData, covsMod, idVar = "ID")
+
+## From the control stream
+setupDfRefRow(dfCovsM, dfData, covsMod, idVar = "ID",
+              contRef = "model", catRef = "model", model = modFile)
+```
+
+`WT` is 85.4 in the data and 75 in the model; `FORM` is 0 in the data and 1 in the
+model. With the data-derived reference, every row that does not vary `WT` sits at
+`(75/85.4)^theta` instead of 1 — 0.907 for CL and 0.878 for V — and every row that
+does not vary `FORM` sits at 1.17 for Frel:
+
+```{r}
+ext    <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
+thetas <- as.numeric(ext[ext$ITERATION == -1000000000, 2:15])
+
+c(CL = (75 / 85.4)^thetas[2], V = (75 / 85.4)^thetas[3], Frel = 1 / (1 + thetas[12]))
+```
+
+Setting `contRef = "model"` and `catRef = "model"` removes the mismatch by
+construction. `model` takes either a control stream path or the list returned by
+`createParamFunction()`; passing the latter guarantees the reference row and the
+parameter function come from one derivation.
+
+```{r}
+dfRefRow <- setupDfRefRow(dfCovsM, dfData, covsMod, idVar = "ID",
+                          contRef = "model", catRef = "model", model = gen)
+dfRefRow
+```
+
+::: {.callout-note}
+`inst/validation/compare-paramFunction.R` in the installed package draws the two
+Forest plots side by side — a hand-written parameter function and a generated one
+— and reports the largest difference between them. It is a useful template for
+checking a translation on your own model.
+:::
+
+# 5. Which records to summarise
+
+Everything above summarises whatever data frame you hand it. NONMEM, meanwhile,
+reads only the records its `$DATA` `IGNORE` and `ACCEPT` statements leave, so the
+analysis file and the model's population are not the same thing.
+
+```{r}
+dfUsed <- filterByModel(dfData, modFile, quiet = TRUE)
+
+c(records_file = nrow(dfData),  records_model = nrow(dfUsed),
+  subjects_file = length(unique(dfData$ID)),
+  subjects_model = length(unique(dfUsed$ID)))
+```
+
+Over a fifth of the subjects in the file were never seen by `run7`, and that moves
+the quantiles the plot is built from:
+
+```{r}
+getCovStats(dfData, "CRCL", idVar = "ID")
+getCovStats(dfUsed, "CRCL", idVar = "ID")
+```
+
+So summarise `filterByModel(dfData, modFile)` rather than the raw file — or pass a
+`$TABLE` output, which is already filtered.
+
+::: {.callout-warning}
+`filterByModel()` matches columns **by position, not by name**. NONMEM skips the
+header line and takes its names from `$INPUT`, so the two can disagree — and in
+this very data set they do:
+
+```{r}
+mod <- PMXForest:::nmReadModel(modFile)
+data.frame(position   = 9:10,
+           input      = PMXForest:::nmInputPositions(mod)$names[9:10],
+           csv_header = names(dfData)[9:10])
+```
+
+`$INPUT`'s `DV` is the file's `LNDV`. Filtering by name would read the wrong
+column. `useInputNames = TRUE` returns the data as NONMEM sees it, renamed.
+:::
+
+The single-character form (`IGNORE=C`) is a rule about the first character of each
+raw record rather than a condition on the data, so it cannot be applied to a data
+frame; it is skipped with a warning. The conventional `@` and `#` header markers
+are skipped silently, since `read.csv()` has already dealt with them.
+
+# 6. Parameter uncertainty: `dfParameters`
+
+`getSamples()` builds the sampled parameter vectors, from a `.cov` file (a
+multivariate normal draw around the estimates), a PsN bootstrap, a SIR
+`raw_results` file, or a data frame you supply.
+
+```{r}
+dfSamples <- getSamples(
+  system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
+  system.file("extdata", "SimVal/run7.ext", package = "PMXForest"),
+  n = 25
+)
+dim(dfSamples)
+```
+
+The first row is always the final estimates, so row 1 of the Forest plot data is
+the point estimate and the remaining rows give the interval. `noBaseThetas` says
+how many leading columns to pass to the parameter function; `createParamFunction()`
+reports the right value for the model it read.
+
+```{r}
+gen$noBaseThetas
+```
+
+See the [Walkthrough](Part2-walkthrough.html) for the full treatment, including
+bootstrap and SIR inputs.
+
+# 7. Empirical Forest plots: `covExpressionsList`
+
+`getForestDFemp()` takes a named list of `expression()` objects, one per Forest
+plot row, each selecting the subjects it summarises.
+`setupCovExpressionsList()` builds that list — and the matching `cdfCovsNames`
+labels — from the same deduplicated statistics `setupDfCovs()` uses.
+
+```{r}
+emp <- setupCovExpressionsList(
+  data       = dfUsed,
+  covariates = c("WT", "SEX", "GENO"),
+  idVar      = "ID"
+)
+emp$covExpressionsList
+emp$cdfCovsNames
+```
+
+Continuous covariates become two rows at the `probs` quantile tails
+(`WT < q_05`, `WT >= q_95`); `contSplit = "median"` splits at the median instead
+so every subject falls in one row. Binary and multi-level categorical covariates
+become one `== level` row per level; `includeReference = FALSE` drops the
+reference level, as in the parametric `dfCovs`.
+
+An `additionalCovs` entry gets its own rows *and* contributes a fixed condition
+that is combined with `&` into every other covariate's expression: a level for a
+categorical covariate, or a `prob` / `value` split with a direction for a
+continuous one. Use it to restrict the empirical contrast to a sub-population.
+
+```{r}
+setupCovExpressionsList(
+  data           = dfUsed,
+  covariates     = c("WT", "SEX"),
+  contSplit      = "median",
+  additionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
+  idVar          = "ID"
+)$covExpressionsList
+```
+
+Every generated expression is evaluated against the deduplicated data. If any
+selects fewer than `minSubjects` subjects (default 10) the function stops, so an
+empty or near-empty subset never reaches `getForestDFemp()`.
+
+```{r, error = TRUE}
+setupCovExpressionsList(dfUsed, "WT", probs = c(0.001, 0.999), idVar = "ID")
+```
+
+The reference for an empirical plot stays deterministic: build it with
+`setupDfCovs()` and `setupDfRefRow(singleRef = TRUE)` and pass the one-row data
+frame to `getForestDFemp(dfRefRow = )`, exactly as for a parametric plot.
+
+# 8. Missing covariate values
+
+`getCovStats()` and the setup functions exclude `missVal` before computing
+statistics, so a covariate that is missing for some subjects is summarised from
+the subjects who have it.
+
+```{r}
+dfMiss <- data.frame(
+  ID  = 1:8,
+  WT  = c(60.5, 70.2, 70.5, 80.8, 65.1, 90.0, 77.4, 68.9),
+  SEX = c(0, 1, 1, 0, 1, 0, 1, 0),
+  BMI = c(22.1, 24.4, -99, 27.3, 23.5, 28.9, -99, 25.1)
+)
+
+getCovStats(dfMiss, c("WT", "SEX", "BMI"), idVar = "ID", minLevels = 4)
+```
+
+The `BMI` quantiles are computed from the six non-missing values. The parameter
+function still has to handle `-99` in the `BMI` column of `dfCovs`, because that
+is what marks the rows where `BMI` is inactive — which is exactly what the
+preamble in Section 2 does.
+
+# 9. Feeding the result forward
+
+Putting the four inputs together:
+
+```r
+dfUsed    <- filterByModel(dfData, modFile)
+dfCovs    <- setupDfCovs(dfUsed, covariates = covs, idVar = "ID")
+gen       <- createParamFunction(modFile, parameters = c("CL", "V"))
+paramFunc <- eval(parse(text = gen$code))          # after reading it
+dfRefRow  <- setupDfRefRow(dfCovs, dfUsed, covs, idVar = "ID",
+                           contRef = "model", catRef = "model", model = gen)
+dfSamples <- getSamples(covFile, extFile, n = 1000)
+
+dfres <- getForestDFSCM(
+  dfCovs           = dfCovs,
+  functionList     = list(paramFunc),
+  functionListName = gen$functionListName,
+  noBaseThetas     = gen$noBaseThetas,
+  dfParameters     = dfSamples,
+  dfRefRow         = dfRefRow
+)
+```
+
+See the [Walkthrough](Part2-walkthrough.html) for the full call and the plotting
+step.
+
+For empirical Forest plots, `getForestDFemp()` takes `covExpressionsList` in place
+of `dfCovs`. If the parameter function is written against one-hot dummy columns
+(`GENO_2`, `GENO_3`, ...) rather than the raw `GENO`, give `getForestDFemp()` its
+own `oneHot` argument — the same spec `oneHotEncode()` takes — so those columns
+are added to the analysis data before the parameter function runs. The expressions
+from `setupCovExpressionsList()` always filter on the raw column, so that choice
+is independent of how the expression list is built.
