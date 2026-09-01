@@ -37,6 +37,7 @@
 * Every exported function now has a runnable `@examples` section that works on the bundled `SimVal` model output (`inst/extdata/SimVal`) rather than synthetic data or `\dontrun` snippets. Documented the previously undocumented `forestPlot()` arguments `setSignEff`, `size`, and `xlim`.
 
 ## Internal
+* Declared `rlang` in `Imports`. It was already used through `rlang::sym()` in the deduplication step of `getCovStats()`, `setupDfCovs()`, `setupDfRefRow()` and `setupCovExpressionsList()` but was not listed, which `R CMD check` flagged.
 * Dropped the `table1` dependency. Its only use was `signif_pad()` in the statistics-table formatting, now a small base-R helper (verified to produce identical output).
 * `setupForestPlotData()` is no longer exported (`@keywords internal`). It is an implementation detail of `forestPlot()`, which is unaffected.
 * Test coverage raised from 94.9% to 98.7% (every source file now at or above 98%). Added a `make coverage` target that fails below a 95% floor. The remaining gaps are the parallel (`ncores > 1`) branches and a few unreachable defensive guards.

@@ -18,6 +18,7 @@ Imports:
     foreach,
     ggpubr,
     MASS,
+    rlang,
     utils,
     tools
 Suggests:
