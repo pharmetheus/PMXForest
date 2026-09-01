@@ -104,9 +104,21 @@ generatedFunction <- eval(parse(text = generated$code))
 dfData <- read.csv(dataFile)
 covs   <- c("WT", "SEX", "FOOD", "FORM", "GENO1", "GENO3", "GENO4")
 
-dfCovs   <- setupDfCovs(dfData, covariates = covs, idVar = "ID")
+dfCovs <- setupDfCovs(dfData, covariates = covs, idVar = "ID")
+
+## Take the reference from the control stream rather than from the data.
+##
+## Both parameter functions fall back to the model's own reference when a
+## covariate is inactive - WT at the 75 kg normalisation weight, FORM at the
+## level marked "; Most common". A reference row built from data statistics
+## would instead sit at the median weight (85.4 kg) and the modal formulation,
+## and every row where those covariates are inactive would be displaced from 1:
+## (75/85.4)^theta2 = 0.907 for CL and (75/85.4)^theta3 = 0.878 for V. Passing
+## the generated object as `model` guarantees the reference row and the
+## parameter function come from one derivation.
 dfRefRow <- setupDfRefRow(dfCovs, dfData, covariates = covs, singleRef = TRUE,
-                          idVar = "ID")
+                          idVar = "ID", contRef = "model", catRef = "model",
+                          model = generated)
 
 ## The same samples for both plots, so the comparison isolates the function.
 set.seed(seed)

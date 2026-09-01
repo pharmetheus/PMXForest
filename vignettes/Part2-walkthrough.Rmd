@@ -153,7 +153,7 @@ expanded to one row per level.
 dfCovsAuto <- setupDfCovs(
   data       = dfData,
   covariates = c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO", "RACEL2"),
-  refLevels  = list(GENO = 2),
+  catRef     = list(GENO = 2),
   sep        = "",
   idVar      = "ID"
 )
@@ -162,14 +162,14 @@ dfCovsAuto
 
 By default `setupDfCovs()` drops the lowest level of a categorical covariate as
 the reference and names the one-hot columns `<covariate>_<level>`.
-`refLevels = list(GENO = 2)` makes 2D6 EM the reference, and `sep = ""` names the
+`catRef = list(GENO = 2)` makes 2D6 EM the reference, and `sep = ""` names the
 columns `GENO1`, `GENO3`, `GENO4` — matching the `run7` control stream, the
 analysis data set, and the explicit `dfCovs` from Section 1.1. The same parameter
 function then serves both. `setupDfCovs()` does not produce row labels; supply
 `cdfCovsNames` yourself, or leave it at its default to have each row labelled from
 its covariate values. The `additionalCovs`, `useMissVal`, and `contRef` arguments
 are covered in the
-[covariate data-preparation deep dive](Part3-deep-dive-covariate-data-prep.html).
+[Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html).
 
 The rest of this walkthrough uses the explicit `dfCovs` from Section 1.1.
 
@@ -273,16 +273,28 @@ dfRefRow <- setupDfRefRow(
   dfCovs     = dfCovsAuto,
   data       = dfData,
   covariates = c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO", "RACEL2"),
-  refLevels  = list(GENO = 2),
+  catRef     = list(GENO = 2),
   sep        = "",
   idVar      = "ID"
 )
 dfRefRow
 ```
 
-Pass the same `refLevels` and `sep` here as to `setupDfCovs()` so the reference
-row's one-hot columns line up. For an explicit `dfCovs`, a one-row data frame
-works just as well:
+Pass the same `catRef` and `sep` here as to `setupDfCovs()` so the reference
+row's one-hot columns line up.
+
+::: {.callout-note}
+The reference above is taken from the data - the median for a continuous
+covariate, the most common level for a categorical one. If the parameter
+function instead falls back to the model's own reference when a covariate is
+inactive, as one built by `createParamFunction()` does, the two disagree and
+every row where that covariate is inactive is displaced from 1. Setting
+`contRef = "model"` and `catRef = "model"`, with `model` pointing at the control
+stream, takes both from `$PK` and removes the mismatch. See the
+[Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html).
+:::
+
+For an explicit `dfCovs`, a one-row data frame works just as well:
 
 ```{r}
 dfRefRowManual <- data.frame(
@@ -432,9 +444,10 @@ forestPlot(
 
 # Where to next
 
-* [Covariate data preparation](Part3-deep-dive-covariate-data-prep.html) —
-  `getCovStats()`, `setupDfCovs()`, and `setupDfRefRow()` in full, including
-  additional covariates and missing data.
+* [Preparing Forest plot inputs](Part3-deep-dive-forest-plot-inputs.html) —
+  all four inputs in full: the covariate structure, generating the parameter
+  function from the control stream, the reference row, and keeping the last two
+  consistent with each other.
 * [R-coded models](Part3-deep-dive-r-coded-models.html) — Forest plots for models
   fitted outside NONMEM, with the plot data assembled by hand.
 * [Time-to-event models](Part3-deep-dive-tte-models.html) — hazard ratios, event

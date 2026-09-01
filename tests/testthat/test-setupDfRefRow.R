@@ -55,7 +55,7 @@ test_that("setupDfRefRow honours refLevels so its columns match setupDfCovs", {
   )
 
   df_covs <- setupDfCovs(
-    mock_data, covariates = c("WT", "GENO"), refLevels = list(GENO = 2)
+    mock_data, covariates = c("WT", "GENO"), catRef = list(GENO = 2)
   )
 
   ref <- setupDfRefRow(

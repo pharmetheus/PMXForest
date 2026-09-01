@@ -12,6 +12,8 @@ getCovStats(
   idVar = "ID",
   missVal = -99,
   nsig = 3,
+  catRef = NULL,
+  model = NULL,
   refLevels = NULL,
   sep = "_"
 )
@@ -39,10 +41,18 @@ calculations. Defaults to -99.}
 \item{nsig}{The number of significant digits (passed to the `signif`
 function) for rounding the summary of continuous covariates. Defaults to 3.}
 
-\item{refLevels}{An optional named list (or named vector) giving the reference
-level for individual multi-level categorical covariates, e.g.
-`list(GENO = 2)`. Covariates not named here use their lowest level as the
-reference. Has no effect on continuous or binary covariates.}
+\item{catRef}{The reference level for multi-level categorical covariates -
+the level represented by the all-zero one-hot row. Either a single setting
+applied to every covariate or a named list with an optional `default`
+component; each entry is a level, `"lowest"` (the default), `"mode"` or
+`"model"`. For example `list(GENO = 2)`. Has no effect on continuous or
+binary covariates.}
+
+\item{model}{The NONMEM control stream, required when `catRef` is `"model"`.
+Either a path to the `.mod` file or the list returned by
+[createParamFunction()].}
+
+\item{refLevels}{Deprecated. Use `catRef`.}
 
 \item{sep}{The separator between the covariate name and the level in the
 one-hot column names for multi-level categorical covariates. Defaults to
@@ -57,7 +67,7 @@ A list where each element corresponds to a covariate.
       unique values.
     \item For **multi-level categorical** covariates, the element is a nested
       list of one-hot encoded vectors. The reference level (the lowest level,
-      or the one named in `refLevels`) is represented by all vectors being 0.
+      or the one named in `catRef`) is represented by all vectors being 0.
   }
 }
 \description{
@@ -79,5 +89,5 @@ getCovStats(dfData, covariates = c("WT", "AGE", "SEX", "GENO"), idVar = "ID")
 getCovStats(dfData, "CRCL", idVar = "ID", probs = c(0.1, 0.9), nsig = 4)
 
 # Use genotype level 2 as the reference instead of the lowest level
-getCovStats(dfData, "GENO", idVar = "ID", refLevels = list(GENO = 2))
+getCovStats(dfData, "GENO", idVar = "ID", catRef = list(GENO = 2))
 }

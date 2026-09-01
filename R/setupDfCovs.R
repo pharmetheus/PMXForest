@@ -26,9 +26,11 @@
 #' @param useMissVal Logical. If `TRUE` (default), inactive primary `covariates`
 #'   retain `missVal`. If `FALSE`, inactive primary covariates are replaced with
 #'   their computed baseline references.
-#' @param contRef A character string indicating how to calculate the reference
-#'   value for continuous covariates. Must be either `"median"` or `"mean"`.
-#'   Defaults to `"median"`.
+#' @param contRef Reference setting for continuous covariates: a number,
+#'   `"mean"`, `"median"` (default) or `"model"`, or a named list of those with
+#'   an optional `default` component, e.g.
+#'   `list(WT = 75, AGE = "mean", default = "median")`. Applies to
+#'   `additionalCovs`, and to the primary covariates when `useMissVal = FALSE`.
 #' @param minLevels The maximum number of unique values a covariate can have to be
 #'   treated as categorical. Default is 10.
 #' @param probs A numeric vector of two probabilities used to calculate quantiles
@@ -38,11 +40,16 @@
 #'   states. Defaults to -99.
 #' @param nsig The number of significant digits for rounding continuous covariates.
 #'   Defaults to 3.
-#' @param refLevels An optional named list giving the reference level for
-#'   individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Use
-#'   this to align the one-hot columns with a model whose reference genotype (or
-#'   race, etc.) is not the lowest level. Covariates not named here use their
-#'   lowest level as the reference. Passed through to `getCovStats()`.
+#' @param catRef Reference setting for categorical covariates: a level,
+#'   `"mode"`, `"lowest"` or `"model"`, or a named list of those with an optional
+#'   `default` component, e.g. `list(GENO = 2)`. It selects both the level
+#'   represented by the all-zero one-hot row and, for background cells, the
+#'   reference level. Pass the same `catRef` to [setupDfRefRow()] so the columns
+#'   line up. Replaces `refLevels`.
+#' @param model The NONMEM control stream, required when a reference is set to
+#'   `"model"`. Either a path to the `.mod` file or the list returned by
+#'   [createParamFunction()].
+#' @param refLevels Deprecated. Use `catRef`.
 #' @param sep The separator between the covariate name and the level in the
 #'   one-hot column names. Defaults to `"_"`.
 #'
@@ -70,14 +77,15 @@
 #'             idVar = "ID")
 #'
 #' # Align the GENO one-hot columns with a model whose reference genotype is 2
-#' setupDfCovs(dfData, covariates = c("WT", "GENO"), refLevels = list(GENO = 2),
+#' setupDfCovs(dfData, covariates = c("WT", "GENO"), catRef = list(GENO = 2),
 #'             idVar = "ID")
 setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TRUE,
-                        contRef = c("median", "mean"), minLevels = 10,
+                        contRef = "median", catRef = NULL, model = NULL,
+                        refLevels = NULL, minLevels = 10,
                         probs = c(0.05, 0.95), idVar = "ID",
-                        missVal = -99, nsig = 3, refLevels = NULL, sep = "_") {
+                        missVal = -99, nsig = 3, sep = "_") {
 
-  contRef <- match.arg(contRef)
+  catRef   <- refLevelsToCatRef(refLevels, catRef, "setupDfCovs")
   all_covs <- unique(c(covariates, additionalCovs))
 
   # 1. Calculate statistical summaries
@@ -89,7 +97,8 @@ setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TR
     idVar = idVar,
     missVal = missVal,
     nsig = nsig,
-    refLevels = refLevels,
+    catRef = catRef,
+    model = model,
     sep = sep
   )
 
@@ -111,40 +120,30 @@ setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TR
   # 4. Post-process to replace background missVal with computed references
   if (length(target_covs) > 0) {
 
+    refs <- refResolve(data, target_covs, contRef = contRef, catRef = catRef,
+                       model = model, minLevels = minLevels, idVar = idVar,
+                       missVal = missVal, nsig = nsig, catFallback = "mode")
+
     dedup_data <- data %>% dplyr::distinct(!!rlang::sym(idVar), .keep_all = TRUE)
 
-    get_mode <- function(x) {
-      ux <- unique(x)
-      ux[which.max(tabulate(match(x, ux)))]
-    }
-
     for (acov in target_covs) {
-      v <- dedup_data[[acov]][dedup_data[[acov]] != missVal & !is.na(dedup_data[[acov]])]
+      v     <- refValues(dedup_data, acov, missVal)
+      type  <- refCovType(v, minLevels)
+      value <- refs[[acov]]$value
 
-      if (length(v) == 0) stop(paste("Covariate", acov, "contains only missing values."))
-
-      n_levs <- length(unique(v))
-
-      if (n_levs <= minLevels) {
-        mode_val <- get_mode(v)
-
-        if (n_levs == 2) {
-          df_covs[[acov]][df_covs[[acov]] == missVal] <- mode_val
-        } else {
-          levs   <- sort(unique(v))
-          refLev <- if (!is.null(refLevels[[acov]])) refLevels[[acov]] else levs[1]
-          for (lev in setdiff(levs, refLev)) {
-            col_name <- paste0(acov, sep, lev)
-            ref_val  <- ifelse(mode_val == lev, 1, 0)
-            if (col_name %in% names(df_covs)) {
-              df_covs[[col_name]][df_covs[[col_name]] == missVal] <- ref_val
-            }
+      if (type == "multi") {
+        levs   <- sort(unique(v))
+        encLev <- refEncodingLevel(catRef, acov, levs, model, missVal)
+        if (is.null(encLev)) encLev <- refMode(v)
+        for (lev in setdiff(levs, encLev)) {
+          col_name <- paste0(acov, sep, lev)
+          if (col_name %in% names(df_covs)) {
+            df_covs[[col_name]][df_covs[[col_name]] == missVal] <-
+              as.numeric(value == lev)
           }
         }
       } else {
-        ref_val <- if (contRef == "median") median(v) else mean(v)
-        ref_val <- signif(ref_val, nsig)
-        df_covs[[acov]][df_covs[[acov]] == missVal] <- ref_val
+        df_covs[[acov]][df_covs[[acov]] == missVal] <- value
       }
     }
   }

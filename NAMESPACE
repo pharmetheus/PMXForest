@@ -3,6 +3,7 @@
 S3method(print,pmxParamFunction)
 export(createInputForestData)
 export(createParamFunction)
+export(filterByModel)
 export(forestPlot)
 export(getCovStats)
 export(getExt)

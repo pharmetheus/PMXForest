@@ -27,7 +27,7 @@
 #'   `includeReference = TRUE` (default) every level gets a row, since in an
 #'   empirical plot each level is a real subject subset. With
 #'   `includeReference = FALSE` the reference level is dropped (from
-#'   `refLevels[[cov]]` if named, otherwise the lowest level), mirroring the
+#'   `catRef[[cov]]` if named, otherwise the lowest level), mirroring the
 #'   parametric `dfCovs`.
 #'
 #'   **Additional covariates.** Each entry of `additionalCovs` gets its own rows,
@@ -83,10 +83,15 @@
 #'   covariate before any calculation. Defaults to -99.
 #' @param nsig The number of significant digits for rounding continuous split
 #'   thresholds. Defaults to 3.
-#' @param refLevels An optional named list giving the reference level for
-#'   individual multi-level categorical covariates, e.g. `list(GENO = 2)`. Only
-#'   consulted when `includeReference = FALSE`. Covariates not named here use their
-#'   lowest level as the reference.
+#' @param catRef The reference level for multi-level categorical covariates,
+#'   e.g. `list(GENO = 2)`; also accepts `"lowest"` (the default), `"mode"` or
+#'   `"model"`, either as a single setting or in a named list with a `default`
+#'   component. Only consulted when `includeReference = FALSE`. Replaces
+#'   `refLevels`.
+#' @param model The NONMEM control stream, required when `catRef` is `"model"`.
+#'   Either a path to the `.mod` file or the list returned by
+#'   [createParamFunction()].
+#' @param refLevels Deprecated. Use `catRef`.
 #'
 #' @return A list of two elements, named for the [getForestDFemp()] arguments they
 #'   feed:
@@ -120,7 +125,7 @@
 #'
 #' # Drop the reference genotype (level 2) from the GENO rows
 #' setupCovExpressionsList(dfData, covariates = "GENO", includeReference = FALSE,
-#'                         refLevels = list(GENO = 2),
+#'                         catRef = list(GENO = 2),
 #'                         idVar = "ID")$covExpressionsList
 #'
 #' # FOOD as a categorical additional covariate and CRCL as a continuous one:
@@ -163,7 +168,10 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
                                     includeReference = TRUE, minSubjects = 10,
                                     probs = c(0.05, 0.95), minLevels = 10,
                                     idVar = "ID", missVal = -99, nsig = 3,
+                                    catRef = NULL, model = NULL,
                                     refLevels = NULL) {
+
+  catRef <- refLevelsToCatRef(refLevels, catRef, "setupCovExpressionsList")
 
   contSplit <- match.arg(contSplit)
   data <- as.data.frame(data)
@@ -239,7 +247,8 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
       levs <- sort(unique(v))
       if (is.numeric(levs)) levs <- as.numeric(levs) # drop integer literal suffix
       if (type == "multi" && !includeReference) {
-        refLev <- if (!is.null(refLevels[[cov]])) refLevels[[cov]] else levs[1]
+        refLev <- refEncodingLevel(catRef, cov, levs, model, missVal)
+        if (is.null(refLev)) refLev <- refMode(v)
         if (!refLev %in% levs) {
           stop("Reference level ", refLev, " for covariate '", cov,
                "' is not present in the data.")

@@ -82,6 +82,38 @@ nmInputNames <- function(mod) {
   unique(unlist(strsplit(items, "=", fixed = TRUE)))
 }
 
+#' Column names declared by $INPUT, one per position
+#'
+#' NONMEM reads a data file positionally: the header line is skipped and
+#' `$INPUT` names the columns by position, so the names in the file need not
+#' agree with the names the model uses. This returns one entry per position,
+#' keeping `DROP`/`SKIP` columns because they still occupy one, together with
+#' the alternate names introduced by `SYNONYM=REAL` pairs.
+#'
+#' Returns `list(names = <character, one per position>, aliases = <named
+#' character, alternate name -> primary name>)`.
+#'
+#' @noRd
+nmInputPositions <- function(mod) {
+  rec <- nmRecord(mod, "\\$INP(U(T)?)?\\b")
+  if (nrow(rec) == 0) return(list(names = character(0), aliases = character(0)))
+
+  items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "\\s+"))
+  items <- items[nzchar(items)]
+
+  nms     <- character(length(items))
+  aliases <- character(0)
+  for (i in seq_along(items)) {
+    parts <- strsplit(items[i], "=", fixed = TRUE)[[1]]
+    nms[i] <- parts[1]
+    if (length(parts) > 1 && !grepl("^(DROP|SKIP)$", parts[2], ignore.case = TRUE)) {
+      # SYNONYM=REAL: either name refers to this column.
+      aliases[parts[2]] <- parts[1]
+    }
+  }
+  list(names = nms, aliases = aliases)
+}
+
 #' Number of THETAs declared by the $THETA records
 #'
 #' Counts actual THETAs rather than `$THETA` lines: a `(low,init,up)` triplet is

@@ -48,12 +48,12 @@ test_that("includeReference = FALSE drops the reference level", {
   expect_equal(expr_strings(lowest), c("GENO == 2", "GENO == 3", "GENO == 4"))
 
   named <- setupCovExpressionsList(mock_data, "GENO", includeReference = FALSE,
-                                   refLevels = list(GENO = 2))
+                                   catRef = list(GENO = 2))
   expect_equal(expr_strings(named), c("GENO == 1", "GENO == 3", "GENO == 4"))
 
   expect_error(
     setupCovExpressionsList(mock_data, "GENO", includeReference = FALSE,
-                            refLevels = list(GENO = 9)),
+                            catRef = list(GENO = 9)),
     "not present in the data"
   )
 })

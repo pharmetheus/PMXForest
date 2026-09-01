@@ -180,13 +180,13 @@ test_that("setupDfCovs passes refLevels through to the one-hot column names", {
 
   # refLevels: level 2 is the reference
   df_ref2 <- setupDfCovs(
-    mock_data, covariates = c("WT", "GENO"), refLevels = list(GENO = 2)
+    mock_data, covariates = c("WT", "GENO"), catRef = list(GENO = 2)
   )
   expect_true(all(c("GENO_1", "GENO_3", "GENO_4") %in% names(df_ref2)))
   expect_false("GENO_2" %in% names(df_ref2))
 })
 
-test_that("setupDfCovs sep passthrough and additionalCovs backfill honour refLevels", {
+test_that("setupDfCovs sep passthrough and additionalCovs backfill honour catRef", {
   mock_data <- data.frame(
     ID   = 1:8,
     WT   = c(60, 70, 80, 90, 65, 75, 72, 68),
@@ -197,11 +197,31 @@ test_that("setupDfCovs sep passthrough and additionalCovs backfill honour refLev
     mock_data,
     covariates     = "WT",
     additionalCovs = "RACE",
-    refLevels      = list(RACE = 1),
+    catRef         = list(RACE = 1),
     sep            = "."
   )
 
-  # RACE (ref = 1) -> RACE.2, RACE.3 ; mode is 2 -> background RACE.2 = 1, RACE.3 = 0
+  # catRef says RACE = 1 is the reference, so it is both the level dropped when
+  # encoding (leaving RACE.2 and RACE.3) and the background state, which is
+  # therefore all dummies at 0.
+  expect_true(all(c("RACE.2", "RACE.3") %in% names(df)))
+  wt_rows <- df$COVARIATEGROUPS == "WT"
+  expect_true(all(df$RACE.2[wt_rows] == 0))
+  expect_true(all(df$RACE.3[wt_rows] == 0))
+})
+
+test_that("without catRef the background still comes from the mode", {
+  mock_data <- data.frame(
+    ID   = 1:8,
+    WT   = c(60, 70, 80, 90, 65, 75, 72, 68),
+    RACE = c(1, 2, 2, 3, 2, 2, 1, 2)   # lowest is 1, mode is 2
+  )
+
+  df <- setupDfCovs(mock_data, covariates = "WT", additionalCovs = "RACE",
+                    sep = ".")
+
+  # Unchanged from earlier versions: encoding drops the lowest level, the
+  # background takes the most common one.
   expect_true(all(c("RACE.2", "RACE.3") %in% names(df)))
   wt_rows <- df$COVARIATEGROUPS == "WT"
   expect_true(all(df$RACE.2[wt_rows] == 1))

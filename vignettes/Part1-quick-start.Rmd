@@ -182,7 +182,7 @@ confidence interval. `WT` is fixed in this model, so its interval has zero width
 **Next steps.** The [Walkthrough](Part2-walkthrough.html) adds an explicit
 reference subject, empirical Forest plots, bootstrap and SIR uncertainty, and the
 formatting arguments of `forestPlot()`. The deep-dive vignettes cover
-[covariate data preparation](Part3-deep-dive-covariate-data-prep.html),
+[preparing Forest plot inputs](Part3-deep-dive-forest-plot-inputs.html),
 [R-coded models](Part3-deep-dive-r-coded-models.html), and
 [time-to-event models](Part3-deep-dive-tte-models.html).
 :::
