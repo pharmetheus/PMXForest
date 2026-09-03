@@ -46,9 +46,13 @@
 #'   subjects were covered. Defaults to `"ID"`.
 #' @param quiet Logical. If `FALSE` (default), reports the outcome per parameter.
 #'
-#' @return A data frame with one row per parameter: `PARAMETER`, `TABLECOLUMN`,
-#'   `N`, `MAXABSDIFF`, `MAXRELDIFF` and `PASS`. The per-row values are attached
-#'   as the `"detail"` attribute.
+#' @return A single logical - `TRUE` only if every requested parameter was
+#'   checked and passed within `tol` - so the result can be used directly in an
+#'   `if`. A parameter that could not be reconciled against the table
+#'   (`PASS = NA`) makes the result `FALSE`. The per-parameter table is attached
+#'   as `attr(x, "checks")`: a data frame with `PARAMETER`, `TABLECOLUMN`, `N`,
+#'   `MAXABSDIFF`, `MAXRELDIFF` and `PASS`, itself carrying the per-row values in
+#'   its `"detail"` attribute. Printing shows the table.
 #'
 #' @seealso [createParamFunction()]
 #'
@@ -62,7 +66,11 @@
 #' ## holding CL, V, ETA3, ETA4 and the covariates can be reconciled directly:
 #' out$etaMap
 #'
-#' ## verifyParamFunction(out, tabFile = "xptab7", thetas = thetas)
+#' ## if (verifyParamFunction(out, tabFile = "xptab7", thetas = thetas))
+#' ##   message("generated function reproduces the table")
+#' ##
+#' ## v <- verifyParamFunction(out, tabFile = "xptab7", thetas = thetas)
+#' ## attr(v, "checks")          # per-parameter detail
 verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
                                 parameters = NULL, tol = 1e-4, idVar = "ID",
                                 quiet = FALSE) {
@@ -170,5 +178,28 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
     }
   }
 
-  out
+  ## A single TRUE/FALSE for use in `if`; the per-parameter table rides along.
+  ## An unverifiable parameter (PASS = NA) counts as a failure of the whole.
+  invisible(structure(isTRUE(all(out$PASS)),
+                      class  = "pmxParamVerify",
+                      checks = out))
+}
+
+#' Print a parameter-function verification result
+#'
+#' @param x A `pmxParamVerify` object, as returned by [verifyParamFunction()].
+#' @param ... Ignored.
+#'
+#' @return `x`, invisibly.
+#' @export
+print.pmxParamVerify <- function(x, ...) {
+  d   <- attr(x, "checks")
+  nNA <- sum(is.na(d$PASS))
+  cat(if (isTRUE(unclass(x)[1])) "PASS" else "FAIL",
+      " - verifyParamFunction: ", sum(d$PASS, na.rm = TRUE), "/", nrow(d),
+      " parameter(s)",
+      if (nNA) paste0(" (", nNA, " not verified)") else "",
+      "\n", sep = "")
+  print(d, row.names = FALSE)
+  invisible(x)
 }
