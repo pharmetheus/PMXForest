@@ -215,6 +215,102 @@ nmEqualityTest <- function(cond, cov) {
 }
 
 ## ---------------------------------------------------------------------------
+## Secondary parameters
+## ---------------------------------------------------------------------------
+
+#' Resolve a `secondary` specification for the parameter-function emitters
+#'
+#' @description Turns the `secondary` argument of [createParamFunction()] (and
+#'   `PMXFrem::createFREMParamFunction()`) into a validated list the emitters
+#'   splice into the generated function. Each element of `secondary` is either a
+#'   snippet of R code or the path to a file of R code; the element name is the
+#'   variable the generated function adds to its return list.
+#'
+#' @param secondary A named list, or `NULL`. Each entry is a length-1 character
+#'   string: either R code (an expression, or several statements whose last
+#'   value is the result) or the path to an `.R` file. The names must be valid,
+#'   unique R names and become the extra return-list elements.
+#' @param quiet If `FALSE`, prints one line per entry saying how it was read.
+#'
+#' @return A list with one entry per secondary parameter - each a list of
+#'   `name`, `src` (the file path, or `NA` for a snippet) and `lines` (a
+#'   character vector of R source). An empty list when `secondary` is `NULL`.
+#'
+#' @details A string is treated as a **file** when [file.exists()] is true for
+#'   it. A string that is not an existing file but ends in `.R` / `.r` is an
+#'   error, rather than being taken as a mistyped snippet. Every snippet and
+#'   file is parsed immediately; a syntax error names the offending entry and
+#'   stops.
+#'
+#'   The resolved code is spliced into the body of the generated function and
+#'   wrapped in `local({ ... })`, so it sees `thetas`, `df`, `...` and every
+#'   structural parameter by name, while its own temporaries do not leak into
+#'   the return list. Covariate columns are reached as `df$NAME`. Entries are
+#'   emitted in the order given, so a later one may use an earlier one.
+#'
+#' @seealso [createParamFunction()], [verifyParamFunction()].
+#'
+#' @export
+nmResolveSecondary <- function(secondary, quiet = FALSE) {
+  if (is.null(secondary) || length(secondary) == 0) return(list())
+  if (!is.list(secondary) || is.null(names(secondary)) ||
+      any(!nzchar(names(secondary)))) {
+    stop("`secondary` must be a named list, e.g. ",
+         "secondary = list(AUC = \"df$DOSE / CL\").", call. = FALSE)
+  }
+  nms <- names(secondary)
+  if (anyDuplicated(nms)) {
+    stop("`secondary` has duplicate name(s): ",
+         paste(unique(nms[duplicated(nms)]), collapse = ", "), ".", call. = FALSE)
+  }
+  bad <- nms[make.names(nms) != nms]
+  if (length(bad) > 0) {
+    stop("`secondary` name(s) are not valid R names: ",
+         paste(bad, collapse = ", "), ".", call. = FALSE)
+  }
+
+  out <- vector("list", length(secondary))
+  for (i in seq_along(secondary)) {
+    nm <- nms[i]
+    v  <- secondary[[i]]
+    if (!is.character(v) || length(v) != 1L || is.na(v)) {
+      stop("secondary '", nm, "' must be a single string: R code, or a path ",
+           "to an .R file.", call. = FALSE)
+    }
+    vt     <- trimws(v)
+    isFile <- nzchar(vt) && file.exists(vt) && !dir.exists(vt)
+    if (!isFile && grepl("\\.[Rr]$", vt) && !grepl("[\r\n]", v)) {
+      stop("secondary '", nm, "': '", vt, "' looks like a file path but does ",
+           "not exist.", call. = FALSE)
+    }
+    if (isFile) {
+      lines <- readLines(vt, warn = FALSE)
+      src   <- vt
+    } else {
+      lines <- strsplit(v, "\n", fixed = TRUE)[[1]]
+      src   <- NA_character_
+    }
+    parsed <- tryCatch(parse(text = paste(lines, collapse = "\n")),
+                       error = function(e) e)
+    if (inherits(parsed, "error")) {
+      stop("secondary '", nm, "' does not parse as R code",
+           if (!is.na(src)) paste0(" (", src, ")") else "", ": ",
+           conditionMessage(parsed), call. = FALSE)
+    }
+    if (length(parsed) == 0L) {
+      stop("secondary '", nm, "' is empty.", call. = FALSE)
+    }
+    if (!quiet) {
+      message("  secondary ", nm, ": ",
+              if (is.na(src)) "inline snippet" else paste0("inlined from ", src))
+    }
+    out[[i]] <- list(name = nm, src = src, lines = lines)
+  }
+  names(out) <- nms
+  out
+}
+
+## ---------------------------------------------------------------------------
 ## Emitter
 ## ---------------------------------------------------------------------------
 
@@ -222,7 +318,7 @@ nmEqualityTest <- function(cond, cov) {
 #'
 #' @noRd
 nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
-                   modFile, missVal, noBaseThetas) {
+                   modFile, missVal, noBaseThetas, secondary = list()) {
   base <- basename(modFile)
   ind  <- "  "
   L    <- character(0)
@@ -257,24 +353,44 @@ nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
       paste0(ind, "## ---- $PK, transliterated ", strrep("-", 51)))
   add(nmEmitStmts(stmts, ind, base))
 
-  ## -- extension point -------------------------------------------------------
-  add("",
-      paste0(ind, "## ---- Secondary parameters: add yours below ", strrep("-", 33)),
-      paste0(ind, "## Quantities such as AUC, Cmax or event probabilities are not"),
-      paste0(ind, "## derivable from $PK and are left to you, for example:"),
-      paste0(ind, "##   AUC <- 80 / (CL / FREL)"))
+  ## -- secondary parameters ------------------------------------------------
+  if (length(secondary) > 0) {
+    add("", paste0(ind, "## ---- Secondary parameters ", strrep("-", 49)))
+    for (s in secondary) {
+      loc <- if (is.na(s$src)) "inline snippet"
+             else paste0("inlined from ", basename(s$src))
+      add(paste0(ind, "## ", s$name, "  (", loc, ")"))
+      if (length(s$lines) == 1L && nzchar(trimws(s$lines))) {
+        add(paste0(ind, s$name, " <- local({ ", trimws(s$lines), " })"))
+      } else {
+        # The body is inlined verbatim - re-indenting it would corrupt any
+        # multi-line string literal (e.g. an mrgsolve model block).
+        add(paste0(ind, s$name, " <- local({"))
+        add(s$lines)
+        add(paste0(ind, "})"))
+      }
+    }
+  } else {
+    ## -- extension point ---------------------------------------------------
+    add("",
+        paste0(ind, "## ---- Secondary parameters: add yours below ", strrep("-", 33)),
+        paste0(ind, "## Quantities such as AUC, Cmax or event probabilities are not"),
+        paste0(ind, "## derivable from $PK and are left to you, for example:"),
+        paste0(ind, "##   AUC <- 80 / (CL / FREL)"))
+  }
 
   ## -- return ----------------------------------------------------------------
+  retNames <- c(parameters, unname(vapply(secondary, `[[`, "", "name")))
   add("",
       paste0(ind, "list("),
       paste0(ind, ind,
-             paste(paste0(parameters, " = ", parameters), collapse = ",\n    ")),
+             paste(paste0(retNames, " = ", retNames), collapse = ",\n    ")),
       paste0(ind, ")"),
       "}")
 
   add("",
       paste0("## functionListName <- c(",
-             paste(paste0('"', parameters, '"'), collapse = ", "), ")"),
+             paste(paste0('"', retNames, '"'), collapse = ", "), ")"),
       paste0("## noBaseThetas     <- ", noBaseThetas))
 
   L

@@ -39,8 +39,11 @@
 #'   2:15])`.
 #' @param fun The function to check. Defaults to the one in `x$code`; supply it
 #'   explicitly if you have edited the generated source.
-#' @param parameters A character vector of parameters to check. Defaults to all
-#'   of `x$functionListName`.
+#' @param parameters A character vector of parameters to check. Defaults to the
+#'   `$PK` parameters (`x$primaryNames`, or `x$functionListName` for an older
+#'   object); `secondary` parameters are skipped, since a secondary quantity is
+#'   generally not a table column and not reducible to a typical value. Name one
+#'   explicitly here to check it anyway.
 #' @param tol Relative tolerance for a pass. Defaults to `1e-4`.
 #' @param idVar Column identifying subjects, used only to report how many
 #'   subjects were covered. Defaults to `"ID"`.
@@ -80,8 +83,15 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
   }
   if (!file.exists(tabFile)) stop("Table file not found: ", tabFile, call. = FALSE)
 
-  if (is.null(fun))        fun <- eval(parse(text = x$code))
-  if (is.null(parameters)) parameters <- x$functionListName
+  if (is.null(fun)) fun <- eval(parse(text = x$code))
+  if (is.null(parameters)) {
+    parameters <- if (!is.null(x$primaryNames)) {
+      x$primaryNames
+    } else {
+      setdiff(x$functionListName,
+              if (is.null(x$secondaryNames)) character(0) else x$secondaryNames)
+    }
+  }
 
   tab <- utils::read.table(tabFile, skip = 1, header = TRUE, check.names = TRUE)
 

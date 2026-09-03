@@ -219,6 +219,29 @@ test_that("quiet = FALSE reports each parameter", {
   expect_message(verifyParamFunction(out, f, thetas), "CL: pass")
 })
 
+test_that("secondary parameters are skipped by default", {
+  out <- suppressWarnings(
+    createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE,
+                        secondary = list(AUC = "80 / CL"))
+  )
+  thetas <- run7Thetas()
+  f <- withr::local_tempfile(fileext = ".tab")
+  # table holds only CL / V (+ ETAs); AUC is deliberately absent
+  writeNmTable(makeTable(out, thetas), f)
+
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  d <- attr(v, "checks")
+  expect_setequal(d$PARAMETER, c("CL", "V"))   # AUC not checked
+  expect_true(as.logical(v))
+
+  # ... but naming it explicitly forces the (here failing) check
+  expect_warning(
+    v2 <- verifyParamFunction(out, f, thetas, parameters = "AUC", quiet = TRUE),
+    "not a column of"
+  )
+  expect_false(as.logical(v2))
+})
+
 test_that("bad input is rejected", {
   out <- suppressWarnings(
     createParamFunction(modFile, parameters = "CL", quiet = TRUE)

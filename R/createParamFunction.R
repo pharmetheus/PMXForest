@@ -32,11 +32,21 @@
 #'   covariate that matches no rule is an error - supply its reference through
 #'   `covRef`. The generator never guesses in silence.
 #'
-#'   **Secondary parameters are not generated.** AUC, Cmax, event probabilities
-#'   and anything else reached through `$ERROR` or `$DES` are not derivable from
-#'   `$PK` - the dose used for an AUC, for instance, appears nowhere in the
-#'   control stream. The emitted source carries a marked extension point for
-#'   you to add them.
+#'   **Secondary parameters.** AUC, Cmax, event probabilities and anything else
+#'   reached through `$ERROR` or `$DES` are not derivable from `$PK` - the dose
+#'   used for an AUC, for instance, appears nowhere in the control stream.
+#'   Supply them through `secondary`: a named list where each entry is either a
+#'   line of R code (`secondary = list(AUC = "df$DOSE / CL")`) or the path to an
+#'   `.R` file of arbitrary code, including a `deSolve` or `mrgsolve` simulation
+#'   (`secondary = list(CMAX = "cmax.R")`). Each entry is spliced into the
+#'   generated function inside `local({ ... })` - so it sees `thetas`, `df`,
+#'   `...` and every structural parameter by name, with covariate columns
+#'   reached as `df$NAME` - and its value is added to the return list under the
+#'   entry's name. The names also appear in `functionListName`, so
+#'   `getForestDFSCM()` picks the secondary parameters up automatically.
+#'   Entries are evaluated in order, so a later one may use an earlier one.
+#'   Without `secondary`, the emitted source carries a marked extension point
+#'   for you to add them by hand instead.
 #'
 #'   **Accepted syntax.** Assignments, one-line `IF(...) VAR = ...`,
 #'   `IF/ELSE IF/ELSE/END IF` blocks, arithmetic (`**` becomes `^`), the
@@ -62,13 +72,23 @@
 #'   to -99, matching `getForestDFSCM()`.
 #' @param quiet Logical. If `FALSE` (default), reports the covariates found and
 #'   the reference value chosen for each.
+#' @param secondary An optional named list of secondary parameters to append to
+#'   the generated function's return list. Each entry is a single string: either
+#'   R code whose last value is the result (`list(AUC = "df$DOSE / CL")`) or the
+#'   path to an `.R` file of arbitrary code, e.g. an `mrgsolve` simulation
+#'   (`list(CMAX = "cmax.R")`). The file's text is inlined into the generated
+#'   source, so the result stays self-contained. See Details.
 #'
-#' @return A list of four elements:
+#' @return A list of:
 #'   \itemize{
 #'     \item `code` - the generated R source, a character vector of lines with
 #'       class `"pmxParamFunction"` so that printing it renders the source.
 #'     \item `functionListName` - a character vector matching the order of the
-#'       returned parameters, for `getForestDFSCM()`.
+#'       returned parameters, for `getForestDFSCM()`. Includes the `secondary`
+#'       names, appended after the `$PK` parameters.
+#'     \item `primaryNames` - the `$PK` parameters only.
+#'     \item `secondaryNames` - the `secondary` parameter names (`character(0)`
+#'       when none). [verifyParamFunction()] skips these by default.
 #'     \item `noBaseThetas` - the number of THETAs in the model.
 #'     \item `covRef` - the reference value used for each covariate, with the
 #'       rule and control-stream line it came from.
@@ -98,19 +118,32 @@
 #' paramFunction <- eval(parse(text = out$code))
 #' paramFunction(thetas = rep(1, out$noBaseThetas),
 #'               df     = data.frame(WT = 90, FOOD = 0))
+#'
+#' ## Append secondary parameters - a snippet and (here, also a snippet) a
+#' ## block that could equally be a path to an .R file:
+#' out2 <- createParamFunction(
+#'   modFile, parameters = c("CL", "V"), quiet = TRUE,
+#'   secondary = list(AUC  = "df$DOSE / CL",
+#'                    KEL  = "CL / V"))
+#' out2$functionListName        # c("CL", "V", "AUC", "KEL")
+#' cat(out2$code, sep = "\n")
 createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
                                 functionName = "paramFunction", extFile = NULL,
-                                file = NULL, missVal = -99, quiet = FALSE) {
+                                file = NULL, missVal = -99, quiet = FALSE,
+                                secondary = NULL) {
 
   p <- nmParsePK(modFile, parameters = parameters, covRef = covRef,
                  extFile = extFile, missVal = missVal)
+
+  sec      <- nmResolveSecondary(secondary, quiet = quiet)
+  secNames <- unname(vapply(sec, `[[`, "", "name"))
 
   # Setting ETA() to 0 leaves artefacts such as `TVCL * exp(0)`; fold them away
   # so the emitted source stays diffable against the control stream.
   stmts <- nmSimplifyStmts(p$statements)
 
   code <- nmEmit(stmts, p$covRef, p$covariates, p$parameters, functionName,
-                 modFile, missVal, p$noBaseThetas)
+                 modFile, missVal, p$noBaseThetas, secondary = sec)
   class(code) <- c("pmxParamFunction", "character")
 
   if (!is.null(file)) writeLines(code, file)
@@ -118,7 +151,10 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
   if (!quiet) {
     message("Translated $PK of ", basename(modFile), ": ", length(stmts),
             " statement(s), ", length(p$covariates), " covariate(s), ",
-            p$noBaseThetas, " theta(s).")
+            p$noBaseThetas, " theta(s)",
+            if (length(secNames))
+              paste0(", ", length(secNames), " secondary parameter(s)") else "",
+            ".")
     for (cov in p$covariates) {
       message("  ", cov, " reference ", nmFormatNum(p$covRef[[cov]]$value),
               " - ", p$covRef[[cov]]$source)
@@ -126,7 +162,10 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
     if (!is.null(file)) message("Written to ", file)
   }
 
-  list(code = code, functionListName = p$parameters,
+  list(code = code,
+       functionListName = c(p$parameters, secNames),
+       primaryNames     = p$parameters,
+       secondaryNames   = secNames,
        noBaseThetas = p$noBaseThetas, covRef = p$covRef,
        etaMap = p$etaMap[intersect(names(p$etaMap), p$parameters)],
        modFile = modFile, missVal = missVal)

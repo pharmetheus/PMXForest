@@ -19,11 +19,14 @@ test_that("the return value has the documented shape", {
   out <- suppressWarnings(
     createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE)
   )
-  expect_named(out, c("code", "functionListName", "noBaseThetas", "covRef",
+  expect_named(out, c("code", "functionListName", "primaryNames",
+                      "secondaryNames", "noBaseThetas", "covRef",
                       "etaMap", "modFile", "missVal"))
   expect_s3_class(out$code, "pmxParamFunction")
   expect_type(out$code, "character")
   expect_equal(out$functionListName, c("CL", "V"))
+  expect_equal(out$primaryNames, c("CL", "V"))
+  expect_equal(out$secondaryNames, character(0))
   expect_equal(out$noBaseThetas, 14)
 })
 
@@ -279,4 +282,93 @@ test_that("missVal is honoured throughout", {
   # -999 marks the covariate inactive, so the reference weight is used
   expect_equal(fun(thetas, data.frame(WT = -999, FOOD = -999)),
                fun(thetas, data.frame(WT = 75,   FOOD = 1)))
+})
+
+# ---------------------------------------------------------------------------
+# secondary parameters
+# ---------------------------------------------------------------------------
+
+test_that("a secondary snippet is spliced in and returned", {
+  out <- suppressWarnings(createParamFunction(
+    modFile, parameters = c("CL", "V"), quiet = TRUE,
+    secondary = list(AUC = "df$DOSE / CL", KEL = "CL / V")
+  ))
+  expect_equal(out$functionListName, c("CL", "V", "AUC", "KEL"))
+  expect_equal(out$primaryNames,   c("CL", "V"))
+  expect_equal(out$secondaryNames, c("AUC", "KEL"))
+
+  code <- paste(out$code, collapse = "\n")
+  expect_match(code, "AUC <- local\\(\\{ df\\$DOSE / CL \\}\\)")
+  expect_match(code, "KEL <- local\\(\\{ CL / V \\}\\)")
+  expect_no_match(code, "add yours below")   # extension point replaced
+
+  fun <- eval(parse(text = out$code))
+  expect_equal(names(formals(fun)), c("thetas", "df", "..."))
+  thetas <- run7Thetas()
+  v <- fun(thetas, data.frame(WT = 90, FOOD = 0, DOSE = 160))
+  expect_named(v, c("CL", "V", "AUC", "KEL"))
+  expect_equal(v$AUC, 160 / v$CL)
+  expect_equal(v$KEL, v$CL / v$V)
+})
+
+test_that("secondaries are evaluated in order and can use earlier ones", {
+  out <- suppressWarnings(createParamFunction(
+    modFile, parameters = "CL", quiet = TRUE,
+    secondary = list(KEL = "CL / 100", HALFLIFE = "log(2) / KEL")
+  ))
+  fun <- eval(parse(text = out$code))
+  v <- fun(run7Thetas(), data.frame(WT = 75, FOOD = 1))
+  expect_equal(v$HALFLIFE, log(2) / v$KEL)
+})
+
+test_that("a secondary read from a file is inlined verbatim", {
+  rf <- withr::local_tempfile(fileext = ".R")
+  writeLines(c("# a small derived quantity",
+               "scale <- 1000",
+               "scale * V / CL"), rf)
+  out <- suppressWarnings(createParamFunction(
+    modFile, parameters = c("CL", "V"), quiet = TRUE,
+    secondary = list(MRT = rf)
+  ))
+  code <- paste(out$code, collapse = "\n")
+  expect_match(code, "MRT <- local\\(\\{")
+  expect_match(code, "inlined from ")
+  expect_match(code, "a small derived quantity")   # the file's own comment
+  # the artifact does not depend on the file still being on disk
+  file.remove(rf)
+  fun <- eval(parse(text = out$code))
+  v <- fun(run7Thetas(), data.frame(WT = 75, FOOD = 1))
+  expect_equal(v$MRT, 1000 * v$V / v$CL)
+})
+
+test_that("the generated function with secondaries drives getForestDFSCM()", {
+  out <- suppressWarnings(createParamFunction(
+    modFile, parameters = c("CL", "V"), quiet = TRUE,
+    secondary = list(AUC = "80 / CL")
+  ))
+  fun <- eval(parse(text = out$code))
+  dfData <- read.csv(
+    system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+  )
+  dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "FOOD"), idVar = "ID")
+  dfSamples <- getSamples(
+    system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
+    system.file("extdata", "SimVal/run7.ext", package = "PMXForest"), n = 10
+  )
+  res <- getForestDFSCM(
+    dfCovs, functionList = list(fun), functionListName = out$functionListName,
+    noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
+  )
+  expect_setequal(as.character(unique(res$PARAMETER)), c("CL", "V", "AUC"))
+  expect_true(all(is.finite(res$POINT)))
+})
+
+test_that("quiet = FALSE announces each secondary", {
+  expect_message(
+    suppressWarnings(createParamFunction(
+      modFile, parameters = "CL",
+      secondary = list(AUC = "80 / CL")
+    )),
+    "secondary AUC: inline snippet"
+  )
 })
