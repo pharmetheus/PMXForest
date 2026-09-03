@@ -61,16 +61,22 @@ test_that("a faithful function passes against the table it produced", {
   f   <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(makeTable(out, thetas), f)
 
-  rep <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
 
-  expect_s3_class(rep, "data.frame")
-  expect_named(rep, c("PARAMETER", "TABLECOLUMN", "N", "MAXABSDIFF",
-                      "MAXRELDIFF", "PASS"))
-  expect_equal(rep$PARAMETER, c("CL", "V"))
-  expect_true(all(rep$PASS))
+  # scalar TRUE/FALSE, usable directly in an if
+  expect_length(as.logical(v), 1L)
+  expect_true(as.logical(v))
+  expect_true(if (v) TRUE else FALSE)
+
+  d <- attr(v, "checks")
+  expect_s3_class(d, "data.frame")
+  expect_named(d, c("PARAMETER", "TABLECOLUMN", "N", "MAXABSDIFF",
+                    "MAXRELDIFF", "PASS"))
+  expect_equal(d$PARAMETER, c("CL", "V"))
+  expect_true(all(d$PASS))
   # the individual values were reconciled by dividing out the exponential IIV
-  expect_match(rep$TABLECOLUMN[1], "CL / exp\\(ETA3\\)")
-  expect_true(all(rep$MAXRELDIFF < 1e-4))
+  expect_match(d$TABLECOLUMN[1], "CL / exp\\(ETA3\\)")
+  expect_true(all(d$MAXRELDIFF < 1e-4))
 })
 
 test_that("a wrong function fails", {
@@ -84,9 +90,11 @@ test_that("a wrong function fails", {
   # A deliberately mistranslated function: the WT exponent uses the wrong theta.
   broken <- eval(parse(text = sub("thetas\\[2\\]", "thetas[3]",
                                   paste(out$code, collapse = "\n"))))
-  rep <- verifyParamFunction(out, f, thetas, fun = broken, quiet = TRUE)
-  expect_false(rep$PASS[rep$PARAMETER == "CL"])
-  expect_true(rep$MAXRELDIFF[rep$PARAMETER == "CL"] > 1e-4)
+  v <- verifyParamFunction(out, f, thetas, fun = broken, quiet = TRUE)
+  expect_false(as.logical(v))
+  d <- attr(v, "checks")
+  expect_false(d$PASS[d$PARAMETER == "CL"])
+  expect_true(d$MAXRELDIFF[d$PARAMETER == "CL"] > 1e-4)
 })
 
 test_that("a TV-prefixed column is used directly, without needing an ETA", {
@@ -99,9 +107,11 @@ test_that("a TV-prefixed column is used directly, without needing an ETA", {
 
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(tab, f)
-  rep <- verifyParamFunction(out, f, thetas, quiet = TRUE)
-  expect_equal(rep$TABLECOLUMN, "TVCL")
-  expect_true(rep$PASS)
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  d <- attr(v, "checks")
+  expect_equal(d$TABLECOLUMN, "TVCL")
+  expect_true(as.logical(v))
+  expect_true(d$PASS)
 })
 
 test_that("a missing covariate warns loudly and voids the result", {
@@ -112,10 +122,12 @@ test_that("a missing covariate warns loudly and voids the result", {
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(makeTable(out, thetas, withCovs = FALSE), f)
 
-  expect_warning(rep <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+  expect_warning(v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
                  "not columns of")
-  # PASS is NA rather than TRUE/FALSE: the comparison is not a valid check
-  expect_true(is.na(rep$PASS))
+  # PASS is NA rather than TRUE/FALSE: the comparison is not a valid check,
+  # and an unverifiable parameter makes the scalar FALSE.
+  expect_false(as.logical(v))
+  expect_true(is.na(attr(v, "checks")$PASS))
 })
 
 test_that("a parameter absent from the table warns and is reported unverified", {
@@ -129,11 +141,14 @@ test_that("a parameter absent from the table warns and is reported unverified", 
 
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(tab, f)
-  expect_warning(rep <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+  expect_warning(v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
                  "not a column of")
-  expect_true(rep$PASS[rep$PARAMETER == "CL"])
-  expect_true(is.na(rep$PASS[rep$PARAMETER == "MAT"]))
-  expect_equal(rep$N[rep$PARAMETER == "MAT"], 0L)
+  d <- attr(v, "checks")
+  expect_true(d$PASS[d$PARAMETER == "CL"])
+  expect_true(is.na(d$PASS[d$PARAMETER == "MAT"]))
+  expect_equal(d$N[d$PARAMETER == "MAT"], 0L)
+  # one parameter could not be verified -> overall FALSE
+  expect_false(as.logical(v))
 })
 
 test_that("an individual column with no ETA column warns", {
@@ -146,9 +161,10 @@ test_that("an individual column with no ETA column warns", {
 
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(tab, f)
-  expect_warning(rep <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+  expect_warning(v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
                  "Cannot recover typical values")
-  expect_true(is.na(rep$PASS))
+  expect_true(is.na(attr(v, "checks")$PASS))
+  expect_false(as.logical(v))
 })
 
 test_that("rows are deduplicated on the covariate combination", {
@@ -161,8 +177,8 @@ test_that("rows are deduplicated on the covariate combination", {
 
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(tab, f)
-  rep <- verifyParamFunction(out, f, thetas, quiet = TRUE)
-  expect_equal(rep$N, 5L)
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  expect_equal(attr(v, "checks")$N, 5L)
 })
 
 test_that("the detail attribute carries the per-row comparison", {
@@ -173,11 +189,24 @@ test_that("the detail attribute carries the per-row comparison", {
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(makeTable(out, thetas, n = 8), f)
 
-  rep    <- verifyParamFunction(out, f, thetas, quiet = TRUE)
-  detail <- attr(rep, "detail")
+  v      <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  detail <- attr(attr(v, "checks"), "detail")
   expect_named(detail, "CL")
   expect_named(detail$CL, c("generated", "table", "absdiff", "reldiff"))
   expect_equal(nrow(detail$CL), 8)
+})
+
+test_that("printing shows the per-parameter table", {
+  out <- suppressWarnings(
+    createParamFunction(modFile, parameters = "CL", quiet = TRUE)
+  )
+  thetas <- run7Thetas()
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(makeTable(out, thetas), f)
+
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  expect_output(print(v), "PASS - verifyParamFunction: 1/1")
+  expect_output(print(v), "CL")
 })
 
 test_that("quiet = FALSE reports each parameter", {

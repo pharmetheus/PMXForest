@@ -319,11 +319,18 @@ file and compares the result with the values NONMEM itself wrote, which turns
 "do I trust this translation?" into a pass or a fail.
 
 ```r
-rep <- verifyParamFunction(gen, tabFile = "xptab7", thetas = thetas)
-#>   PARAMETER      TABLECOLUMN   N   MAXABSDIFF   MAXRELDIFF PASS
-#> 1        CL   CL / exp(ETA3) 748 0.0006296369 4.848771e-05 TRUE
-#> 2      FREL FREL / exp(ETA2) 748 0.0001012091 5.217360e-05 TRUE
+v <- verifyParamFunction(gen, tabFile = "xptab7", thetas = thetas)
+v
+#> PASS - verifyParamFunction: 2/2 parameter(s)
+#>  PARAMETER      TABLECOLUMN   N   MAXABSDIFF   MAXRELDIFF PASS
+#>         CL   CL / exp(ETA3) 748 0.0006296369 4.848771e-05 TRUE
+#>       FREL FREL / exp(ETA2) 748 0.0001012091 5.217360e-05 TRUE
 ```
+
+The value is a single `TRUE`/`FALSE` - `TRUE` only if every requested
+parameter was checked and passed - so it drops straight into
+`if (verifyParamFunction(...)) ...`. The per-parameter table shown above is
+attached as `attr(v, "checks")`.
 
 Put **both the parameters and the covariates** in `$TABLE`. They then come from
 the same row of the same file and cannot be misaligned, and no `$DATA` filtering
