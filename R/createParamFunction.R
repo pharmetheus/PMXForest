@@ -102,12 +102,92 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
                                 functionName = "paramFunction", extFile = NULL,
                                 file = NULL, missVal = -99, quiet = FALSE) {
 
+  p <- nmParsePK(modFile, parameters = parameters, covRef = covRef,
+                 extFile = extFile, missVal = missVal)
+
+  # Setting ETA() to 0 leaves artefacts such as `TVCL * exp(0)`; fold them away
+  # so the emitted source stays diffable against the control stream.
+  stmts <- nmSimplifyStmts(p$statements)
+
+  code <- nmEmit(stmts, p$covRef, p$covariates, p$parameters, functionName,
+                 modFile, missVal, p$noBaseThetas)
+  class(code) <- c("pmxParamFunction", "character")
+
+  if (!is.null(file)) writeLines(code, file)
+
+  if (!quiet) {
+    message("Translated $PK of ", basename(modFile), ": ", length(stmts),
+            " statement(s), ", length(p$covariates), " covariate(s), ",
+            p$noBaseThetas, " theta(s).")
+    for (cov in p$covariates) {
+      message("  ", cov, " reference ", nmFormatNum(p$covRef[[cov]]$value),
+              " - ", p$covRef[[cov]]$source)
+    }
+    if (!is.null(file)) message("Written to ", file)
+  }
+
+  list(code = code, functionListName = p$parameters,
+       noBaseThetas = p$noBaseThetas, covRef = p$covRef,
+       etaMap = p$etaMap[intersect(names(p$etaMap), p$parameters)],
+       modFile = modFile, missVal = missVal)
+}
+
+#' Parse a NONMEM `$PK` block into a reusable structure
+#'
+#' @description The shared front end of [createParamFunction()]: it reads the
+#'   control stream, parses `$PK` into a statement tree, and works out the
+#'   covariates, their reference values, the THETA count and the ETA that
+#'   carries each parameter's between-subject variability. [createParamFunction()]
+#'   emits SCM-style parameter-function source from this structure; other
+#'   packages emit their own (PMXFrem's FREM parameter functions wrap each
+#'   covariate parameter as `TV * exp(covthetas + eta)` instead).
+#'
+#'   Nothing is evaluated and no source is generated - this returns the parse
+#'   only. The statement tree keeps `ETA()` references intact, so a downstream
+#'   emitter can decide what to do with them.
+#'
+#' @inheritParams createParamFunction
+#'
+#' @return A list:
+#'   \itemize{
+#'     \item `statements` - the parsed `$PK` statement tree. Each element is an
+#'       `assign` (`lhs`, `rhs`, `lineno`, `comment`) or an `if`
+#'       (`cond`, `then`, `elifs`, `else_`, `lineno`); `rhs`/`cond` are
+#'       expression nodes. Use [nmDeparse()] to render a node as R source.
+#'     \item `covariates` - covariate names: `$INPUT` columns used in `$PK` but
+#'       never assigned there, in first-use order.
+#'     \item `covRef` - a named list, one entry per covariate, each with
+#'       `value`, `line`, `confident` (logical) and `source` (how the reference
+#'       was found). `covRef` overrides and user-supplied entries are merged in.
+#'     \item `parameters` - the `$PK` variables to return: `parameters` as given,
+#'       or every assigned variable when `NULL`.
+#'     \item `noBaseThetas` - the THETA count (from the `.ext` header when
+#'       `extFile` is supplied, otherwise the `$THETA` records).
+#'     \item `etaMap` - a named integer vector: for each parameter written
+#'       `P = <expr> * EXP(ETA(n))`, the ETA index `n`.
+#'     \item `inputNames` - the `$INPUT` column names.
+#'     \item `modFile`, `missVal` - as supplied.
+#'   }
+#'
+#' @seealso [createParamFunction()], [nmDeparse()].
+#'
+#' @export
+#'
+#' @examples
+#' modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
+#' p <- nmParsePK(modFile, parameters = c("CL", "V"))
+#' p$covariates
+#' p$noBaseThetas
+#' p$etaMap
+nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
+                      extFile = NULL, missVal = -99) {
+
   mod <- nmReadModel(modFile)
   pk  <- nmRecord(mod, "\\$PK\\b")
   if (nrow(pk) == 0) {
     stop("No $PK record found in ", basename(modFile),
-         ". createParamFunction() translates $PK blocks; a $PRED model must be ",
-         "written by hand.", call. = FALSE)
+         ". nmParsePK() parses $PK blocks; a $PRED model must be ",
+         "handled by hand.", call. = FALSE)
   }
 
   stmts <- nmParseStatements(pk, modFile)
@@ -115,20 +195,20 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
     stop("The $PK record in ", basename(modFile), " contains no statements.",
          call. = FALSE)
   }
-  # Recorded before folding, while the ETA() references are still in the tree.
+  # Recorded while the ETA() references are still in the tree.
   etaMap <- nmEtaMap(stmts)
-  # Setting ETA() to 0 leaves artefacts such as `TVCL * exp(0)`; fold them away
-  # so the emitted source stays diffable against the control stream.
-  stmts <- nmSimplifyStmts(stmts)
+  # A folded copy (ETA() -> 0, constants collapsed) for the analyses below; the
+  # raw tree is what we return so a downstream emitter keeps the ETA()s.
+  folded <- nmSimplifyStmts(stmts)
 
   ## Covariates: named in $INPUT and never assigned in $PK.
-  syms       <- nmSymbols(stmts)
+  syms       <- nmSymbols(folded)
   inputNames <- nmInputNames(mod)
   covariates <- intersect(syms$used, setdiff(inputNames, syms$assigned))
   covariates <- covariates[order(match(covariates, syms$used))]
 
   ## References, control stream first, then user overrides.
-  derived <- nmCovRef(stmts, covariates, missVal)
+  derived <- nmCovRef(folded, covariates, missVal)
   for (cov in names(covRef)) {
     derived[[cov]] <- list(value = covRef[[cov]], line = NA_integer_,
                            confident = TRUE, source = "supplied through covRef")
@@ -169,7 +249,7 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
   } else {
     nmCountThetas(mod)
   }
-  maxTheta <- nmMaxTheta(stmts)
+  maxTheta <- nmMaxTheta(folded)
   if (noBaseThetas < maxTheta) {
     stop("The model declares ", noBaseThetas, " THETA(s) but $PK references ",
          "THETA(", maxTheta, ") in ", basename(modFile),
@@ -177,27 +257,9 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
          call. = FALSE)
   }
 
-  code <- nmEmit(stmts, derived, covariates, parameters, functionName,
-                 modFile, missVal, noBaseThetas)
-  class(code) <- c("pmxParamFunction", "character")
-
-  if (!is.null(file)) writeLines(code, file)
-
-  if (!quiet) {
-    message("Translated $PK of ", basename(modFile), ": ", length(stmts),
-            " statement(s), ", length(covariates), " covariate(s), ",
-            noBaseThetas, " theta(s).")
-    for (cov in covariates) {
-      message("  ", cov, " reference ", nmFormatNum(derived[[cov]]$value),
-              " - ", derived[[cov]]$source)
-    }
-    if (!is.null(file)) message("Written to ", file)
-  }
-
-  list(code = code, functionListName = parameters,
-       noBaseThetas = noBaseThetas, covRef = derived,
-       etaMap = etaMap[intersect(names(etaMap), parameters)],
-       modFile = modFile, missVal = missVal)
+  list(statements = stmts, covariates = covariates, covRef = derived,
+       parameters = parameters, noBaseThetas = noBaseThetas, etaMap = etaMap,
+       inputNames = inputNames, modFile = modFile, missVal = missVal)
 }
 
 #' Print generated parameter-function source

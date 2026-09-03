@@ -572,13 +572,33 @@ nmPrecOf <- function(node) {
   )
 }
 
-#' Render a parsed expression as R source
+#' Render a parsed `$PK` expression node as R source
 #'
-#' `covMap` maps covariate names onto the local variable used for them (the
-#' preamble hoists each covariate into a local of the same name, so this is
-#' normally the identity); `thetaVar` is the name of the theta vector.
+#' @description Turns one expression node from the `statements` tree of
+#'   [nmParsePK()] into a string of R code. `THETA(n)` becomes `<thetaVar>[n]`
+#'   and every `ETA(n)` becomes the literal text `etaValue` (`"0"` gives typical
+#'   values). Symbols and covariate names are emitted unchanged, `**` becomes
+#'   `^`, and parentheses are added only where operator precedence needs them.
 #'
-#' @noRd
+#' @param node An expression node - a `rhs` or `cond` from an [nmParsePK()]
+#'   statement, or a sub-node of one.
+#' @param thetaVar Name of the vector that `THETA(n)` indexes into. Default
+#'   `"thetas"`.
+#' @param etaValue Text substituted for every `ETA(n)`. Default `"0"`. Pass, for
+#'   example, `"eta[3]"` to keep the random effect.
+#'
+#' @return A length-one character string of R source.
+#'
+#' @seealso [nmParsePK()].
+#'
+#' @export
+#'
+#' @examples
+#' modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
+#' p <- nmParsePK(modFile)
+#' # render the right-hand side of the first assignment
+#' first <- Find(function(s) s$type == "assign", p$statements)
+#' nmDeparse(first$rhs, thetaVar = "thetas")
 nmDeparse <- function(node, thetaVar = "thetas", etaValue = "0") {
   wrap <- function(child, parentPrec, side = c("left", "right")) {
     side <- match.arg(side)
@@ -693,10 +713,22 @@ nmSimplifyStmts <- function(stmts) {
 
 #' Format a numeric literal as the shortest string that reads back exactly
 #'
-#' Keeps ordinary values readable (`75`, `0.75`) while allowing scientific
-#' notation where writing the digits out would be absurd (`1e-12`).
+#' @description Keeps ordinary values readable (`75`, `0.75`) while allowing
+#'   scientific notation where writing the digits out would be absurd
+#'   (`1e-12`). Exported for emitters built on [nmParsePK()] that need to write
+#'   covariate reference values into generated source.
 #'
-#' @noRd
+#' @param x A single numeric value (or `NA`).
+#'
+#' @return A length-one character string that `as.numeric()` maps back to `x`.
+#'
+#' @seealso [nmParsePK()].
+#'
+#' @export
+#'
+#' @examples
+#' nmFormatNum(75)
+#' nmFormatNum(1e-12)
 nmFormatNum <- function(x) {
   if (is.na(x)) return("NA")
   for (d in 1:17) {
