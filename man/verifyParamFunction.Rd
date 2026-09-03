@@ -28,8 +28,11 @@ e.g. `as.numeric(getExt(extFile)[getExt(extFile)$ITERATION == -1000000000,
 \item{fun}{The function to check. Defaults to the one in `x$code`; supply it
 explicitly if you have edited the generated source.}
 
-\item{parameters}{A character vector of parameters to check. Defaults to all
-of `x$functionListName`.}
+\item{parameters}{A character vector of parameters to check. Defaults to the
+`$PK` parameters (`x$primaryNames`, or `x$functionListName` for an older
+object); `secondary` parameters are skipped, since a secondary quantity is
+generally not a table column and not reducible to a typical value. Name one
+explicitly here to check it anyway.}
 
 \item{tol}{Relative tolerance for a pass. Defaults to `1e-4`.}
 
