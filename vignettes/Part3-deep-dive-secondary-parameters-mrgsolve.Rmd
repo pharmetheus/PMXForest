@@ -18,10 +18,11 @@ knitr::opts_chunk$set(
   comment  = "#>",
   warning  = FALSE,
   message  = FALSE,
-  # Simulation and bootstrap chunks are shown but not run when the vignette is
-  # built: mrgsolve needs a C++ toolchain and the Forest data set takes minutes.
-  # Flip this to TRUE (with mrgsolve installed) to execute end to end.
-  eval     = TRUE
+  # Chunks are shown but NOT run when the vignette is built: mrgsolve needs a
+  # C++ toolchain and the Forest data set takes minutes. The outputs below are
+  # illustrative. To execute end to end, set eval = TRUE here (with mrgsolve
+  # installed).
+  eval     = FALSE
 )
 ```
 
