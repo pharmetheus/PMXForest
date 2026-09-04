@@ -321,6 +321,47 @@ test_that("secondaries are evaluated in order and can use earlier ones", {
   expect_equal(v$HALFLIFE, log(2) / v$KEL)
 })
 
+test_that("a config-list secondary binds its constants ahead of the source", {
+  out <- suppressWarnings(createParamFunction(
+    modFile, parameters = "CL", quiet = TRUE,
+    secondary = list(AUC = list(source = "dose / CL", dose = 240))
+  ))
+  code <- paste(out$code, collapse = "\n")
+  expect_match(code, "AUC <- local\\(\\{")
+  expect_match(code, "dose <- 240")
+  expect_equal(out$functionListName, c("CL", "AUC"))
+
+  fun <- eval(parse(text = out$code))
+  v <- fun(run7Thetas(), data.frame(WT = 75, FOOD = 1))
+  expect_equal(v$AUC, 240 / v$CL)
+})
+
+test_that("a config-list constant can be referenced by a file source", {
+  rf <- withr::local_tempfile(fileext = ".R")
+  writeLines(c("# uses the injected `tau`", "auc <- dose / CL", "auc / tau"), rf)
+  out <- suppressWarnings(createParamFunction(
+    modFile, parameters = "CL", quiet = TRUE,
+    secondary = list(CAVG = list(source = rf, dose = 100, tau = 24))
+  ))
+  file.remove(rf)
+  fun <- eval(parse(text = out$code))
+  v <- fun(run7Thetas(), data.frame(WT = 75, FOOD = 1))
+  expect_equal(v$CAVG, (100 / v$CL) / 24)
+})
+
+test_that("a bare-string secondary still works unchanged (back-compat)", {
+  b <- suppressWarnings(createParamFunction(
+    modFile, parameters = "CL", quiet = TRUE,
+    secondary = list(AUC = "80 / CL")))
+  l <- suppressWarnings(createParamFunction(
+    modFile, parameters = "CL", quiet = TRUE,
+    secondary = list(AUC = list(source = "80 / CL"))))   # source only, no consts
+  expect_identical(
+    grep("AUC <- local", b$code, value = TRUE),
+    grep("AUC <- local", l$code, value = TRUE)
+  )
+})
+
 test_that("a secondary read from a file is inlined verbatim", {
   rf <- withr::local_tempfile(fileext = ".R")
   writeLines(c("# a small derived quantity",

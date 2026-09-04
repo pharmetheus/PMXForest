@@ -7,24 +7,35 @@
 nmResolveSecondary(secondary, quiet = FALSE)
 }
 \arguments{
-\item{secondary}{A named list, or `NULL`. Each entry is a length-1 character
-string: either R code (an expression, or several statements whose last
-value is the result) or the path to an `.R` file. The names must be valid,
-unique R names and become the extra return-list elements.}
+\item{secondary}{A named list, or `NULL`. Each entry's value is one of:
+\itemize{
+  \item a length-1 character string - R code (an expression, or several
+    statements whose last value is the result), or the path to an `.R`
+    file; or
+  \item a list with a length-1 character `source` (same meaning) plus any
+    number of extra **named atomic** constants (`dose = 100`, `tau = 12`,
+    ...). Each is emitted as `name <- value` immediately before the
+    `source`, inside the same `local()` block, so the code can refer to it by
+    name.
+}
+The entry names must be valid, unique R names and become the extra
+return-list elements.}
 
 \item{quiet}{If `FALSE`, prints one line per entry saying how it was read.}
 }
 \value{
 A list with one entry per secondary parameter - each a list of
-  `name`, `src` (the file path, or `NA` for a snippet) and `lines` (a
-  character vector of R source). An empty list when `secondary` is `NULL`.
+  `name`, `src` (the file path, or `NA` for a snippet), `lines` (a character
+  vector of R source) and `consts` (a character vector of `name <- value`
+  lines, empty when none). An empty list when `secondary` is `NULL`.
 }
 \description{
 Turns the `secondary` argument of [createParamFunction()] (and
   `PMXFrem::createFREMParamFunction()`) into a validated list the emitters
-  splice into the generated function. Each element of `secondary` is either a
-  snippet of R code or the path to a file of R code; the element name is the
-  variable the generated function adds to its return list.
+  splice into the generated function. Each element of `secondary` names the
+  variable the generated function adds to its return list; its value is
+  either a snippet of R code / the path to an `.R` file, or a list carrying
+  that `source` plus constants to bind ahead of it.
 }
 \details{
 A string is treated as a **file** when [file.exists()] is true for
@@ -34,10 +45,12 @@ A string is treated as a **file** when [file.exists()] is true for
   stops.
 
   The resolved code is spliced into the body of the generated function and
-  wrapped in `local({ ... })`, so it sees `thetas`, `df`, `...` and every
-  structural parameter by name, while its own temporaries do not leak into
-  the return list. Covariate columns are reached as `df$NAME`. Entries are
-  emitted in the order given, so a later one may use an earlier one.
+  wrapped in a `local()` block, so it sees `thetas`, `df`, `...`, any
+  constants passed alongside `source`, and every structural parameter by
+  name, while its own temporaries do not leak into the return list.
+  Covariate columns are reached as `df$NAME`. Entries are emitted in the
+  order given, so a later one may use an earlier one. A constant name that
+  clashes with a `$PK` variable shadows it inside that `local()` block.
 }
 \seealso{
 [createParamFunction()], [verifyParamFunction()].

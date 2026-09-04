@@ -18,10 +18,11 @@ knitr::opts_chunk$set(
   comment  = "#>",
   warning  = FALSE,
   message  = FALSE,
-  # Simulation and bootstrap chunks are shown but not run when the vignette is
-  # built: mrgsolve needs a C++ toolchain and the Forest data set takes minutes.
-  # Flip this to TRUE (with mrgsolve installed) to execute end to end.
-  eval     = eval
+  # Chunks are shown but NOT run when the vignette is built: mrgsolve needs a
+  # C++ toolchain and the Forest data set takes minutes. The outputs below are
+  # illustrative. To execute end to end, set eval = TRUE here (with mrgsolve
+  # installed).
+  eval     = FALSE
 )
 ```
 
@@ -48,17 +49,23 @@ in the same call, so the whole parameter function -- structural part and
 secondary part -- is generated and stays in one object that
 `getForestDFSCM()` can consume directly.
 
-Each `secondary` entry is a named string that is **either**
+Each `secondary` entry's value is **one of**
 
-* a line of R code -- `secondary = list(AUC = "df$DOSE / CL")` -- or
+* a line of R code -- `secondary = list(AUC = "df$DOSE / CL")`;
 * the path to an `.R` file of arbitrary code, including an `mrgsolve` model and
-  simulation -- `secondary = list(CMAX = "cmax.R")`.
+  simulation -- `secondary = list(CMAX = "cmax.R")`; or
+* a **list** with that `source` plus any constants the code needs --
+  `secondary = list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))`.
+  Each constant is bound (`dose <- 100`, `tau <- 12`) immediately before the
+  code, inside the same `local({ })`, so a reusable file can be parametrised at
+  the call site instead of hard-coding the regimen. A bare string is just
+  `source` with no constants.
 
 A file's text is *inlined* into the generated source, so the result stays a
 self-contained artifact: it does not depend on the file still being on disk when
 the parameter function later runs on a compute node.
 
-This vignette builds a Forest plot for **steady-state Cmax after q24h oral
+This vignette builds a Forest plot for **steady-state Cmax after repeated oral
 dosing**, with the Cmax computed by an `mrgsolve` simulation.
 
 # 1. The structural parameter function
@@ -85,9 +92,12 @@ spliced in afterwards can use `FREL` and `KA` by name.
 
 The file below is shipped with the package as
 `system.file("secondary-cmax-mrgsolve.R", ...)` for the vignette. It is ordinary
-R: it compiles a one-compartment oral model with `mrgsolve`, simulates seven
-q24h doses, and returns the maximum concentration in the final interval. The
-**value of its last expression** becomes `CMAX`.
+R: it compiles a one-compartment oral model with `mrgsolve`, simulates a course
+of oral doses, and returns the maximum concentration in the final interval. The
+**value of its last expression** becomes `CMAX`. The regimen constants `dose`,
+`tau` and `n` come from the `secondary` config list (section 3); the
+`exists(name, inherits = FALSE)` guards let the file fall back to defaults when
+a bare-string entry supplies no constants.
 
 ```{r, echo = FALSE, comment = ""}
 cmaxFile <- system.file("secondary-cmax-mrgsolve.R", package = "PMXForest")
@@ -109,14 +119,19 @@ Points worth noting:
 
 # 3. Generate the combined parameter function
 
+The config-list form passes the regimen (80 mg every 24 h, 7 doses to steady
+state) into the shipped file:
+
 ```{r}
 cmaxFile <- system.file("secondary-cmax-mrgsolve.R", package = "PMXForest")
 
 out <- suppressWarnings(createParamFunction(
   modFile,
   parameters = c("CL", "V", "MAT"),
-  secondary  = list(CMAX = cmaxFile),
-  quiet      = TRUE
+  secondary  = list(
+    CMAX = list(source = cmaxFile, dose = 80, tau = 24, n = 7)
+  ),
+  quiet = TRUE
 ))
 
 out$functionListName   # CL, V, MAT, then the secondary
@@ -124,21 +139,29 @@ out$primaryNames
 out$secondaryNames
 ```
 
-The tail of the generated source now carries the inlined simulation and a
-return list extended with `CMAX`. The file's text is spliced in **verbatim**
+The tail of the generated source now carries the constants, then the inlined
+simulation, then a return list extended with `CMAX`. The constants are emitted
+as plain assignments; the file's text is spliced in **verbatim** below them
 (re-indenting it would corrupt the multi-line `mrgsolve` model string):
 
 ```r
   ## ---- Secondary parameters -----------------------------------------------
   ## CMAX  (inlined from secondary-cmax-mrgsolve.R)
   CMAX <- local({
+    dose <- 80
+    tau <- 24
+    n <- 7
+# ... file header ...
+dose <- if (exists("dose", inherits = FALSE)) dose else 80
+tau  <- if (exists("tau",  inherits = FALSE)) tau  else 24
+n    <- if (exists("n",    inherits = FALSE)) n    else 7
 .code <- "
 $PARAM CL = 1, V = 10, KA = 1
 ...
 "
 .mod <- mrgsolve::mcode_cache("pmxforest_secondary_1cmt_oral", .code)
 # ...
-.lastInterval <- subset(.sim, time >= (.ndose - 1) * .tau)
+.lastInterval <- subset(.sim, time >= (n - 1) * tau)
 max(.lastInterval$CP)
   })
 
@@ -149,6 +172,11 @@ max(.lastInterval$CP)
     CMAX = CMAX
   )
 ```
+
+Because the constants are bound *first*, the file's `exists(..., inherits =
+FALSE)` guards keep the passed-in values. A bare `secondary = list(CMAX =
+cmaxFile)` emits no constants and the file's defaults (the same 80 / 24 / 7)
+apply.
 
 ## Sanity-check at the final estimates
 

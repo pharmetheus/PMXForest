@@ -222,19 +222,30 @@ nmEqualityTest <- function(cond, cov) {
 #'
 #' @description Turns the `secondary` argument of [createParamFunction()] (and
 #'   `PMXFrem::createFREMParamFunction()`) into a validated list the emitters
-#'   splice into the generated function. Each element of `secondary` is either a
-#'   snippet of R code or the path to a file of R code; the element name is the
-#'   variable the generated function adds to its return list.
+#'   splice into the generated function. Each element of `secondary` names the
+#'   variable the generated function adds to its return list; its value is
+#'   either a snippet of R code / the path to an `.R` file, or a list carrying
+#'   that `source` plus constants to bind ahead of it.
 #'
-#' @param secondary A named list, or `NULL`. Each entry is a length-1 character
-#'   string: either R code (an expression, or several statements whose last
-#'   value is the result) or the path to an `.R` file. The names must be valid,
-#'   unique R names and become the extra return-list elements.
+#' @param secondary A named list, or `NULL`. Each entry's value is one of:
+#'   \itemize{
+#'     \item a length-1 character string - R code (an expression, or several
+#'       statements whose last value is the result), or the path to an `.R`
+#'       file; or
+#'     \item a list with a length-1 character `source` (same meaning) plus any
+#'       number of extra **named atomic** constants (`dose = 100`, `tau = 12`,
+#'       ...). Each is emitted as `name <- value` immediately before the
+#'       `source`, inside the same `local()` block, so the code can refer to it by
+#'       name.
+#'   }
+#'   The entry names must be valid, unique R names and become the extra
+#'   return-list elements.
 #' @param quiet If `FALSE`, prints one line per entry saying how it was read.
 #'
 #' @return A list with one entry per secondary parameter - each a list of
-#'   `name`, `src` (the file path, or `NA` for a snippet) and `lines` (a
-#'   character vector of R source). An empty list when `secondary` is `NULL`.
+#'   `name`, `src` (the file path, or `NA` for a snippet), `lines` (a character
+#'   vector of R source) and `consts` (a character vector of `name <- value`
+#'   lines, empty when none). An empty list when `secondary` is `NULL`.
 #'
 #' @details A string is treated as a **file** when [file.exists()] is true for
 #'   it. A string that is not an existing file but ends in `.R` / `.r` is an
@@ -243,10 +254,12 @@ nmEqualityTest <- function(cond, cov) {
 #'   stops.
 #'
 #'   The resolved code is spliced into the body of the generated function and
-#'   wrapped in `local({ ... })`, so it sees `thetas`, `df`, `...` and every
-#'   structural parameter by name, while its own temporaries do not leak into
-#'   the return list. Covariate columns are reached as `df$NAME`. Entries are
-#'   emitted in the order given, so a later one may use an earlier one.
+#'   wrapped in a `local()` block, so it sees `thetas`, `df`, `...`, any
+#'   constants passed alongside `source`, and every structural parameter by
+#'   name, while its own temporaries do not leak into the return list.
+#'   Covariate columns are reached as `df$NAME`. Entries are emitted in the
+#'   order given, so a later one may use an earlier one. A constant name that
+#'   clashes with a `$PK` variable shadows it inside that `local()` block.
 #'
 #' @seealso [createParamFunction()], [verifyParamFunction()].
 #'
@@ -273,9 +286,42 @@ nmResolveSecondary <- function(secondary, quiet = FALSE) {
   for (i in seq_along(secondary)) {
     nm <- nms[i]
     v  <- secondary[[i]]
-    if (!is.character(v) || length(v) != 1L || is.na(v)) {
-      stop("secondary '", nm, "' must be a single string: R code, or a path ",
-           "to an .R file.", call. = FALSE)
+
+    ## A list entry: `source` is the code/file, everything else is a constant
+    ## to bind ahead of the body. A bare string is `source` with no constants.
+    consts <- character(0)
+    if (is.list(v)) {
+      if (is.null(v$source) || !is.character(v$source) ||
+          length(v$source) != 1L || is.na(v$source)) {
+        stop("secondary '", nm, "': a list entry needs a single-string ",
+             "`source` (R code, or a path to an .R file).", call. = FALSE)
+      }
+      extra <- v[setdiff(names(v), "source")]
+      if (length(extra) > 0L &&
+          (is.null(names(extra)) || any(!nzchar(names(extra))))) {
+        stop("secondary '", nm, "': every constant beside `source` must be ",
+             "named, e.g. list(source = \"cmax.R\", dose = 100, tau = 12).",
+             call. = FALSE)
+      }
+      badc <- names(extra)[make.names(names(extra)) != names(extra)]
+      if (length(badc) > 0L) {
+        stop("secondary '", nm, "': constant name(s) are not valid R names: ",
+             paste(badc, collapse = ", "), ".", call. = FALSE)
+      }
+      for (cn in names(extra)) {
+        cv <- extra[[cn]]
+        if (!is.null(cv) && !is.atomic(cv)) {
+          stop("secondary '", nm, "': constant `", cn, "` must be an atomic ",
+               "value (number, string, logical, or a simple vector of those).",
+               call. = FALSE)
+        }
+        consts <- c(consts,
+                    paste0(cn, " <- ", paste(deparse(cv), collapse = " ")))
+      }
+      v <- v$source
+    } else if (!is.character(v) || length(v) != 1L || is.na(v)) {
+      stop("secondary '", nm, "' must be a single string (R code or a path to ",
+           "an .R file), or a list with a `source` string.", call. = FALSE)
     }
     vt     <- trimws(v)
     isFile <- nzchar(vt) && file.exists(vt) && !dir.exists(vt)
@@ -302,9 +348,11 @@ nmResolveSecondary <- function(secondary, quiet = FALSE) {
     }
     if (!quiet) {
       message("  secondary ", nm, ": ",
-              if (is.na(src)) "inline snippet" else paste0("inlined from ", src))
+              if (is.na(src)) "inline snippet" else paste0("inlined from ", src),
+              if (length(consts) > 0L)
+                paste0(" (+", length(consts), " constant(s))") else "")
     }
-    out[[i]] <- list(name = nm, src = src, lines = lines)
+    out[[i]] <- list(name = nm, src = src, lines = lines, consts = consts)
   }
   names(out) <- nms
   out
@@ -360,12 +408,14 @@ nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
       loc <- if (is.na(s$src)) "inline snippet"
              else paste0("inlined from ", basename(s$src))
       add(paste0(ind, "## ", s$name, "  (", loc, ")"))
-      if (length(s$lines) == 1L && nzchar(trimws(s$lines))) {
+      if (length(s$lines) == 1L && nzchar(trimws(s$lines)) &&
+          length(s$consts) == 0L) {
         add(paste0(ind, s$name, " <- local({ ", trimws(s$lines), " })"))
       } else {
-        # The body is inlined verbatim - re-indenting it would corrupt any
-        # multi-line string literal (e.g. an mrgsolve model block).
+        # Constants first, then the body inlined verbatim - re-indenting it
+        # would corrupt any multi-line string literal (e.g. an mrgsolve block).
         add(paste0(ind, s$name, " <- local({"))
+        if (length(s$consts) > 0L) add(paste0(ind, ind, s$consts))
         add(s$lines)
         add(paste0(ind, "})"))
       }
