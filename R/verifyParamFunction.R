@@ -130,7 +130,7 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
       ref    <- rows[[tvCol]]
       colUse <- tvCol
     } else if (p %in% names(rows)) {
-      etaIdx <- x$etaMap[[p]]
+      etaIdx <- if (p %in% names(x$etaMap)) x$etaMap[[p]] else NULL
       etaCol <- if (!is.null(etaIdx)) paste0("ETA", etaIdx) else NULL
       if (!is.null(etaCol) && etaCol %in% names(rows)) {
         # Tabled value is individual; divide out the exponential IIV.

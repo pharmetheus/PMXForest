@@ -35,7 +35,7 @@ makeTable <- function(out, thetas, n = 20, withEta = TRUE, withCovs = TRUE) {
   tab <- covs
   etas <- stats::rnorm(n, sd = 0.2)
   for (p in out$functionListName) {
-    idx <- out$etaMap[[p]]
+    idx <- if (p %in% names(out$etaMap)) out$etaMap[[p]] else NULL  # secondaries have none
     if (withEta && !is.null(idx)) {
       # NONMEM tables individual values: TV * exp(eta)
       tab[[p]] <- tv[, p] * exp(etas)
@@ -234,11 +234,13 @@ test_that("secondary parameters are skipped by default", {
   expect_setequal(d$PARAMETER, c("CL", "V"))   # AUC not checked
   expect_true(as.logical(v))
 
-  # ... but naming it explicitly forces the (here failing) check
+  # ... but naming it explicitly forces the check. AUC has no TVAUC column and
+  # no exponential-IIV pattern, so it cannot be reconciled -> warn, PASS = NA.
   expect_warning(
     v2 <- verifyParamFunction(out, f, thetas, parameters = "AUC", quiet = TRUE),
-    "not a column of"
+    "Cannot recover typical values"
   )
+  expect_true(is.na(attr(v2, "checks")$PASS))
   expect_false(as.logical(v2))
 })
 

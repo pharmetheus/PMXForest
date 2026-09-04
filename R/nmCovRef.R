@@ -296,7 +296,10 @@ nmResolveSecondary <- function(secondary, quiet = FALSE) {
         stop("secondary '", nm, "': a list entry needs a single-string ",
              "`source` (R code, or a path to an .R file).", call. = FALSE)
       }
-      extra <- v[setdiff(names(v), "source")]
+      ## Boolean indexing, not v[setdiff(names(v), "source")]: indexing a list
+      ## by "" never matches in R (always yields NA), so that form silently
+      ## dropped an unnamed constant instead of catching it below.
+      extra <- v[names(v) != "source"]
       if (length(extra) > 0L &&
           (is.null(names(extra)) || any(!nzchar(names(extra))))) {
         stop("secondary '", nm, "': every constant beside `source` must be ",
