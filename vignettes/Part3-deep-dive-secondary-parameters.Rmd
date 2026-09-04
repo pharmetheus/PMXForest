@@ -1,0 +1,390 @@
+---
+title: "3. Deep Dive: Secondary Parameters"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
+vignette: >
+  %\VignetteIndexEntry{3. Deep Dive: Secondary Parameters}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{css, echo=FALSE}
+.callout-note {
+  background-color: #e7f1ff;
+  border-left: 4px solid #0dcaf0;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+.callout-warning {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  warning  = FALSE,
+  message  = FALSE
+)
+```
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(PMXForest)
+  library(ggplot2)
+})
+theme_set(theme_bw(base_size = 14))
+set.seed(865765)
+```
+
+# Introduction
+
+A Forest plot usually shows model parameters -- `CL`, `V`, a bioavailability
+term. Often the quantity of clinical interest is a **secondary** parameter
+derived from those: an exposure `AUC` over a dosing interval, a terminal
+half-life, a steady-state `Cmax`. These are not in `$PK`; they are computed from
+the structural parameters, sometimes in closed form, sometimes by solving the
+model for a particular dosing design.
+
+`createParamFunction()` translates `$PK` into an R parameter function
+automatically. Its `secondary` argument attaches the derived quantities in the
+same call, so the whole parameter function -- structural part and secondary
+part -- is generated as one object that `getForestDFSCM()` can consume directly.
+
+Each `secondary` entry names a variable to add to the return list; its value is
+**one of**
+
+* a line of R code -- `secondary = list(AUC = "df$DOSE / CL")`;
+* the path to an `.R` file of arbitrary code, including a `deSolve` or
+  `mrgsolve` simulation -- `secondary = list(CMAX = "cmax.R")`; or
+* a **list** with that `source` plus any constants the code needs --
+  `secondary = list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))`.
+  Each constant is bound (`dose <- 100`, `tau <- 12`) immediately before the
+  code, inside the same `local()` block, so a reusable file is parametrised at
+  the call site instead of hard-coding the regimen. A bare string is just
+  `source` with no constants.
+
+A file's text is *inlined* into the generated source, so the result stays a
+self-contained artifact: it does not depend on the file still being on disk when
+the parameter function later runs on a worker process.
+
+The two parts below are independent:
+
+* **Part 1** derives `AUC`, an elimination rate and a half-life in closed form.
+  It has no compiled dependencies and runs anywhere -- the code and output on
+  this page are from a live run.
+* **Part 2** computes a steady-state `Cmax` with an `mrgsolve` simulation. Its
+  chunks are **not executed** when this vignette is built; the outputs shown
+  there are illustrative. The code is runnable if you have a working `mrgsolve`.
+
+---
+
+# Part 1 -- closed-form secondary parameters
+
+## 1.1 The structural parameter function
+
+Start from the bundled `run7` control stream and ask for the structural
+parameters.
+
+```{r}
+modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
+extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+
+base <- suppressWarnings(
+  createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE)
+)
+base$functionListName
+```
+
+`run7`'s `$PK` also computes `FREL` (relative bioavailability); the generator
+keeps that intermediate assignment, so a secondary block spliced in afterwards
+can use `FREL` by name.
+
+## 1.2 Attach the secondary parameters
+
+Three entries, showing each form:
+
+* **`AUC`** -- a config list: `source` is a one-liner, and `dose` is a constant
+  supplied at the call site (100 mg here). Steady-state `AUC` over a dosing
+  interval for a linear model is `F * dose / CL`.
+* **`KEL`** -- a bare snippet, `CL / V`.
+* **`THALF`** -- another snippet that **uses `KEL`**: entries are emitted in
+  order, so a later one may refer to an earlier one.
+
+```{r}
+out <- suppressWarnings(createParamFunction(
+  modFile,
+  parameters = c("CL", "V"),
+  secondary  = list(
+    AUC   = list(source = "dose * FREL / CL", dose = 100),
+    KEL   = "CL / V",
+    THALF = "log(2) / KEL"
+  ),
+  quiet = TRUE
+))
+
+out$functionListName   # CL, V, then the three secondaries
+out$primaryNames
+out$secondaryNames
+```
+
+The tail of the generated source -- the constant binding, then each entry
+inside its own `local()` block, then the extended return list:
+
+```{r, echo = FALSE, comment = ""}
+tail(out$code, 22)
+```
+
+## 1.3 Evaluate at the final estimates
+
+Read the function in and call it for a reference subject.
+
+```{r}
+paramFunction <- eval(parse(text = out$code))
+
+thetas <- as.numeric(
+  getExt(extFile)[getExt(extFile)$ITERATION == -1000000000, 2:15]
+)
+
+paramFunction(thetas = thetas, df = data.frame(WT = 75, FOOD = 1))
+```
+
+## 1.4 The Forest plot
+
+`functionListName` already carries the secondary names, so `getForestDFSCM()`
+returns rows for `AUC`, `KEL` and `THALF` with no extra work.
+
+```{r}
+dfData <- read.csv(
+  system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+)
+dfCovs <- setupDfCovs(dfData, covariates = c("WT", "FOOD"), idVar = "ID")
+
+dfSamples <- getSamples(
+  system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
+  extFile, n = 50
+)
+
+dfres <- getForestDFSCM(
+  dfCovs           = dfCovs,
+  functionList     = list(paramFunction),
+  functionListName = out$functionListName,
+  noBaseThetas     = out$noBaseThetas,
+  dfParameters     = dfSamples
+)
+
+unique(dfres$PARAMETER)
+```
+
+```{r, fig.width = 9, fig.asp = 0.5, out.width = "100%"}
+forestPlot(
+  dfres[dfres$PARAMETER == "AUC", ],
+  plotRelative = TRUE,
+  keepYlabs    = TRUE,
+  rightStrip   = FALSE
+) +
+  ggtitle("Steady-state AUC vs. reference")
+```
+
+---
+
+# Part 2 -- a simulation-based secondary with mrgsolve
+
+::: {.callout-warning}
+**The chunks in this part are not executed when the vignette is built.** The
+outputs shown are illustrative, not the result of a live run. The code itself
+*is* runnable, but you must have a working `mrgsolve` installation first -- which
+means a C++ toolchain (Rtools on Windows, the Xcode command-line tools on macOS,
+`r-base-dev` / `build-essential` on Linux), because `mrgsolve` compiles each
+model on first use. To run this part yourself, copy the chunks into a script and
+execute them, or set `eval = TRUE` per chunk.
+:::
+
+::: {.callout-note}
+**mrgsolve version.** The shipped file below uses only long-stable core API --
+`mcode_cache()`, `param()`, `ev()`, `mrgsim_df()` -- and the basic
+`$PARAM` / `$CMT` / `$ODE` / `$TABLE` / `$CAPTURE` blocks. It needs **no
+version-specific features**. It has been checked on **mrgsolve 1.0.9**; any
+**mrgsolve >= 1.0.0** should be enough. The current CRAN release is **2.0.1**
+and these calls are unchanged across the 1.x -> 2.x boundary, so the latest
+version is *not* required.
+:::
+
+## 2.1 The shipped secondary file
+
+`PMXForest` ships an example at
+`system.file("secondary-cmax-mrgsolve.R", package = "PMXForest")`. It compiles a
+one-compartment oral model, simulates a course of oral doses, and returns the
+maximum concentration in the final (steady-state) dosing interval -- the value
+of its last expression becomes `CMAX`. The regimen constants `dose`, `tau` and
+`n` come from the `secondary` config list (2.2); the
+`exists(name, inherits = FALSE)` guards let the file fall back to defaults when a
+bare-string entry supplies no constants.
+
+```{r, echo = FALSE, comment = ""}
+cmaxFile <- system.file("secondary-cmax-mrgsolve.R", package = "PMXForest")
+cat(readLines(cmaxFile), sep = "\n")
+```
+
+Points worth noting:
+
+* **Scope.** Inside the generated function the block sees `thetas`, `df`, `...`,
+  the call-site constants, and every structural parameter (`CL`, `V`, `FREL`,
+  `KA`, ...) by name. Covariate columns are reached as `df$NAME` -- there is no
+  bare `WT`.
+* **Compilation cost.** `mrgsolve::mcode_cache()` keeps the compiled model on
+  disk between calls. The parameter function is evaluated once per covariate row
+  per bootstrap sample -- hundreds to thousands of times -- so recompiling on
+  every call would dominate the run. Cache the model, or build it once outside
+  and pass it in through `...`.
+* **Return a scalar.** `getForestDFSCM()` expects each returned element to be a
+  single number; the last line reduces the simulation with `max(...)`.
+
+## 2.2 Generate the combined parameter function
+
+The config-list form passes the regimen (80 mg every 24 h, 7 doses to steady
+state) into the shipped file:
+
+```{r, eval = FALSE}
+cmaxFile <- system.file("secondary-cmax-mrgsolve.R", package = "PMXForest")
+
+out <- suppressWarnings(createParamFunction(
+  modFile,
+  parameters = c("CL", "V", "MAT"),
+  secondary  = list(
+    CMAX = list(source = cmaxFile, dose = 80, tau = 24, n = 7)
+  ),
+  quiet = TRUE
+))
+
+out$functionListName
+#> [1] "CL"   "V"    "MAT"  "CMAX"
+```
+
+The tail of the generated source carries the constants, then the file's text
+spliced in **verbatim** below them (re-indenting it would corrupt the multi-line
+`mrgsolve` model string):
+
+```r
+  ## ---- Secondary parameters -----------------------------------------------
+  ## CMAX  (inlined from secondary-cmax-mrgsolve.R)
+  CMAX <- local({
+    dose <- 80
+    tau <- 24
+    n <- 7
+# ... file header ...
+dose <- if (exists("dose", inherits = FALSE)) dose else 80
+tau  <- if (exists("tau",  inherits = FALSE)) tau  else 24
+n    <- if (exists("n",    inherits = FALSE)) n    else 7
+.code <- "
+$PARAM CL = 1, V = 10, KA = 1
+...
+"
+.mod <- mrgsolve::mcode_cache("pmxforest_secondary_1cmt_oral", .code)
+# ...
+.lastInterval <- subset(.sim, time >= (n - 1) * tau)
+max(.lastInterval$CP)
+  })
+
+  list(CL = CL, V = V, MAT = MAT, CMAX = CMAX)
+```
+
+Because the constants are bound *first*, the file's `exists(..., inherits =
+FALSE)` guards keep the passed-in values. A bare
+`secondary = list(CMAX = cmaxFile)` emits no constants and the file's defaults
+(the same 80 / 24 / 7) apply.
+
+## 2.3 Sanity-check at the final estimates
+
+```{r, eval = FALSE}
+paramFunction <- eval(parse(text = out$code))
+
+thetas <- as.numeric(
+  getExt(extFile)[getExt(extFile)$ITERATION == -1000000000, 2:15]
+)
+
+paramFunction(thetas = thetas, df = data.frame(WT = 75, FOOD = 1))
+#> $CL
+#> [1] 11.9074
+#>
+#> $V
+#> [1] 191.231
+#>
+#> $MAT
+#> [1] 6.46559
+#>
+#> $CMAX
+#> [1] 0.3699538          # ng/mL, steady-state peak for the reference subject
+```
+
+## 2.4 Feed it to `getForestDFSCM()`
+
+Nothing special is needed beyond loading `mrgsolve` on the worker processes,
+hence `cstrPackages`.
+
+```{r, eval = FALSE}
+dfData <- read.csv(
+  system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+)
+dfCovs <- setupDfCovs(
+  dfData, covariates = c("WT", "FOOD", "FORM"), idVar = "ID"
+)
+dfSamples <- getSamples(
+  system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
+  extFile, n = 200
+)
+
+dfres <- getForestDFSCM(
+  dfCovs           = dfCovs,
+  functionList     = list(paramFunction),
+  functionListName = out$functionListName,   # CL, V, MAT, CMAX
+  noBaseThetas     = out$noBaseThetas,
+  dfParameters     = dfSamples,
+  cstrPackages     = "mrgsolve",
+  ncores           = 1
+)
+
+unique(dfres$PARAMETER)
+#> [1] CL   V    MAT  CMAX
+#> Levels: CL V MAT CMAX
+```
+
+## 2.5 The Forest plot
+
+```{r, eval = FALSE}
+forestPlot(
+  dfres[dfres$PARAMETER == "CMAX", ],
+  plotRelative = TRUE,
+  keepYlabs    = TRUE,
+  rightStrip   = FALSE
+) +
+  ggtitle("Steady-state Cmax vs. reference")
+```
+
+---
+
+# Notes
+
+* **Verification.** `verifyParamFunction()` checks a generated function against a
+  NONMEM `$TABLE`. It checks only the `$PK` parameters by default -- a secondary
+  such as `AUC` or `CMAX` is generally not a table column and not reducible to a
+  typical value -- so a function with secondaries still verifies cleanly. Pass
+  `parameters = "AUC"` to force a check if you do have it tabled.
+* **Snippet vs. file vs. config list.** A string is treated as a file when it
+  exists on disk; a string that looks like a path (`.R` / `.r`) but does not
+  exist is an error, not a silently mistyped snippet. A list entry needs a
+  single-string `source`; every other element must be a named, atomic constant.
+* **Constant names.** A call-site constant shadows a `$PK` variable of the same
+  name inside that entry's `local()` block. Reusable files use dotted names
+  (`.dose`) or the `exists(..., inherits = FALSE)` guard shown above to stay
+  clear of the structural namespace.

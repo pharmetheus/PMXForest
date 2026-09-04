@@ -35,7 +35,8 @@
 * **Unexported helpers:** `setupDfCovs()` and `setupDfRefRow()` were added without a `NAMESPACE` entry or help page and were therefore not reachable as `PMXForest::setupDfCovs()` / `setupDfRefRow()`. Documentation has been regenerated so both functions are exported and documented.
 
 ## Documentation
-* Restructured the vignettes into a three-tier set: a Quick-Start, an end-to-end Walkthrough, and three deep dives (forest-plot inputs, R-coded models, time-to-event models). The vignettes now build with `rmarkdown::html_document` instead of `bookdown`.
+* Restructured the vignettes into a three-tier set: a Quick-Start, an end-to-end Walkthrough, and four deep dives (forest-plot inputs, R-coded models, secondary parameters, time-to-event models). The vignettes now build with `rmarkdown::html_document` instead of `bookdown`.
+* New **"Secondary Parameters"** deep dive: a two-part walkthrough of the `secondary` argument. Part 1 derives `AUC` / an elimination rate / a half-life in closed form and runs at build time; Part 2 computes a steady-state `Cmax` with an `mrgsolve` simulation and is shown but not executed (its output is illustrative), with the mrgsolve version requirements spelled out.
 * The "forest-plot inputs" deep dive replaces the earlier "covariate data preparation" vignette. It follows the three inputs `getForestDFSCM()` needs - `dfCovs`, the parameter function, and `dfRefRow` - end to end, and shows `createParamFunction()` and the `contRef`/`catRef` `"model"` option keeping the reference row and the parameter function in agreement.
 * Every exported function now has a runnable `@examples` section that works on the bundled `SimVal` model output (`inst/extdata/SimVal`) rather than synthetic data or `\dontrun` snippets. Documented the previously undocumented `forestPlot()` arguments `setSignEff`, `size`, and `xlim`.
 
