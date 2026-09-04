@@ -162,8 +162,12 @@ getForestDFSCM <- function(dfCovs,
   if (is.null(cGrouping)) cGrouping <- getGroups(dfCovs)
 
 
-  ## Register to allow for paralell computing
-  if (ncores>1) registerDoParallel(cores = ncores)
+  ## Register to allow for paralell computing. Tear the cluster down on exit
+  ## (including on error) rather than only at the end of a successful run.
+  if (ncores>1) {
+    registerDoParallel(cores = ncores)
+    on.exit(stopImplicitCluster(), add = TRUE)
+  }
 
   ## Calculate the parameters
   internalCalc<-function(k) {
@@ -201,7 +205,11 @@ getForestDFSCM <- function(dfCovs,
   if (ncores>1) {
   dfres <- foreach(
     k = 1:nrow(dfParameters), .packages = cstrPackages,
-    .export = cstrExports, .verbose = !quiet, .combine = bind_rows
+    ## Bundle the whole local environment for PSOCK workers (Windows). foreach's
+    ## static global detection does not reliably follow `internalCalc`'s free
+    ## variables; `cstrExports` remains available for anything outside this frame.
+    .export = c(ls(environment()), cstrExports),
+    .verbose = !quiet, .combine = bind_rows
   ) %dopar% {
     internalCalc(k)
     }
@@ -288,7 +296,7 @@ getForestDFSCM <- function(dfCovs,
     }
   }
 
-  if (ncores>1) stopImplicitCluster()
+  ## (cluster teardown is handled by on.exit() registered above)
 
   ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
   dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
