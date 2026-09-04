@@ -32,9 +32,14 @@ $CAPTURE CP
 .mod <- mrgsolve::param(.mod, CL = CL, V = V, KA = KA)
 .ev  <- mrgsolve::ev(amt = .amt, ii = .tau, addl = .ndose - 1, cmt = "ABS")
 
-.sim <- as.data.frame(mrgsolve::mrgsim(
+## mrgsim_df() returns a plain data.frame. Do NOT use as.data.frame() on a
+## mrgsim() result here: `mrgsims` is an S4 class and its as.data.frame method
+## only dispatches when mrgsolve is *attached* (library(mrgsolve)); this file
+## runs with mrgsolve merely loaded via ::, so as.data.frame() would fall
+## through to the default method and error.
+.sim <- mrgsolve::mrgsim_df(
   .mod, events = .ev, end = .ndose * .tau, delta = 0.1
-))
+)
 
 ## ---- Cmax within the final (steady-state) dosing interval ---------------
 .lastInterval <- subset(.sim, time >= (.ndose - 1) * .tau)
