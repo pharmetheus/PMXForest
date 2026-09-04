@@ -37,9 +37,53 @@ test_that("names must be present, unique and valid", {
   expect_error(nmResolveSecondary(list(`a b` = "1")), "not valid R names")
 })
 
-test_that("a non-string entry is rejected", {
+test_that("a non-string, non-list entry is rejected", {
   expect_error(nmResolveSecondary(list(A = 1)), "single string")
   expect_error(nmResolveSecondary(list(A = c("a", "b"))), "single string")
+})
+
+test_that("a list entry: `source` plus constants become `name <- value` lines", {
+  r <- nmResolveSecondary(
+    list(CMAX = list(source = "cmax(dose, tau)", dose = 100, tau = 12,
+                     label = "qd", flag = TRUE, times = c(0, 24, 48))),
+    quiet = TRUE)
+  expect_equal(r$CMAX$name, "CMAX")
+  expect_true(is.na(r$CMAX$src))            # source is a snippet here
+  expect_equal(r$CMAX$lines, "cmax(dose, tau)")
+  expect_equal(r$CMAX$consts,
+               c("dose <- 100", "tau <- 12", "label <- \"qd\"",
+                 "flag <- TRUE", "times <- c(0, 24, 48)"))
+})
+
+test_that("a list entry with a file `source` is read, constants kept", {
+  f <- withr::local_tempfile(fileext = ".R")
+  writeLines(c("dose / CL"), f)
+  r <- nmResolveSecondary(list(AUC = list(source = f, dose = 50)), quiet = TRUE)
+  expect_equal(r$AUC$src, f)
+  expect_equal(r$AUC$lines, "dose / CL")
+  expect_equal(r$AUC$consts, "dose <- 50")
+})
+
+test_that("a bare string entry has empty consts", {
+  r <- nmResolveSecondary(list(AUC = "df$DOSE / CL"), quiet = TRUE)
+  expect_identical(r$AUC$consts, character(0))
+})
+
+test_that("a list entry is validated", {
+  expect_error(nmResolveSecondary(list(A = list(dose = 100))),
+               "needs a single-string `source`")
+  expect_error(nmResolveSecondary(list(A = list(source = "x", 100))),
+               "must be .*named")
+  expect_error(nmResolveSecondary(list(A = list(source = "x", `a b` = 1))),
+               "not valid R names")
+  expect_error(nmResolveSecondary(list(A = list(source = "x", d = list(1)))),
+               "must be an atomic value")
+})
+
+test_that("quiet = FALSE notes how many constants an entry carries", {
+  expect_message(
+    nmResolveSecondary(list(A = list(source = "dose / CL", dose = 100))),
+    "\\(\\+1 constant")
 })
 
 test_that("a syntax error names the offending entry", {
