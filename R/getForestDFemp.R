@@ -128,28 +128,34 @@ getForestDFemp <- function(dfData,
   }
 
   ## Calculate the parameters
+  nOut <- length(functionListName)
   internalCalc<-function(k) {
     thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
-    dftmp <- data.frame()
 
-    ## Calculate TVpars
-    # For all subjects, calculate the functionList plot
+    ## Per-subject typical values. Fill typed vectors and build the data.frame
+    ## once (a per-cell data.frame() + bind_rows() loop over nrow(dfData) x
+    ## nOut rows is the dominant cost for large data sets).
+    nRow <- nrow(dfData) * nOut
+    v_ITER <- integer(nRow); v_SUBJ <- integer(nRow)
+    v_NAME <- character(nRow); v_VALUE <- numeric(nRow)
+    p <- 0L
     for (m in 1:nrow(dfData)) {
-      n <- 1
+      n <- 1L
       for (j in 1:length(functionList)) {
         val <- functionList[[j]](thetas = thetas, df = dfData[m, ], ...)
-        listcount <- length(val)
-
-        for (l in 1:listcount) {
-          dftmp <- bind_rows(dftmp, data.frame(
-            ITER = k,
-            SUBJ = m, NAME = functionListName[n], VALUE = val[[l]],
-            stringsAsFactors = FALSE
-          ))
-          n <- n + 1
+        for (l in seq_along(val)) {
+          p <- p + 1L
+          v_ITER[p] <- k; v_SUBJ[p] <- m
+          v_NAME[p] <- functionListName[n]; v_VALUE[p] <- val[[l]]
+          n <- n + 1L
         }
       }
     }
+    if (p != nRow) { idx <- seq_len(p)
+      v_ITER <- v_ITER[idx]; v_SUBJ <- v_SUBJ[idx]
+      v_NAME <- v_NAME[idx]; v_VALUE <- v_VALUE[idx] }
+    dftmp <- data.frame(ITER = v_ITER, SUBJ = v_SUBJ, NAME = v_NAME,
+                        VALUE = v_VALUE, stringsAsFactors = FALSE)
 
     dfvalbase<-data.frame() #Prepare for a different reference per expressionList index
     # The default ref=1
@@ -182,7 +188,8 @@ getForestDFemp <- function(dfData,
     }
 
     ## Compute statistic for each "cov value"
-    dfrest <- data.frame()
+    rest <- vector("list", length(covExpressionsList) * nOut)
+    q <- 0L
     for (i in 1:length(covExpressionsList)) { # For all rows in the forestPlot
       # Get the subjects included in this Expression
       subjs <- subset(dfData, eval(covExpressionsList[[i]]))$TMPINDEX1
@@ -216,32 +223,32 @@ getForestDFemp <- function(dfData,
         }
 
         # Store the val
-        dfrest <- bind_rows(dfrest, data.frame(
-          ITER = k,
-          SUBJ = -1, NAME = functionListName[m], VALUE = val,
-          COVS = i, NSUBJSCOVGROUP = NSubjs,
-          VALUEBASE = VB, stringsAsFactors = FALSE
-        ))
+        q <- q + 1L
+        rest[[q]] <- data.frame(ITER = k, SUBJ = -1L, NAME = functionListName[m],
+                                VALUE = val, COVS = i, NSUBJSCOVGROUP = NSubjs,
+                                VALUEBASE = VB, stringsAsFactors = FALSE)
       }
     }
+    dfrest <- bind_rows(rest[seq_len(q)])   # one combine, not a growing loop
     return(dfrest)
   }
 
   if (ncores>1) {
-    dfres <- foreach(
+    parts <- foreach(
     k = 1:nrow(dfParameters), .packages = cstrPackages,
     ## Bundle the whole local environment for PSOCK workers (Windows); foreach's
     ## static global detection does not reliably follow `internalCalc`'s free
     ## variables. `cstrExports` covers anything outside this frame.
     .export = c(ls(environment()), cstrExports),
-    .verbose = !quiet, .combine = bind_rows
+    .verbose = !quiet
   ) %dopar% {
       internalCalc(k)
     }
   } else {
-    dfres<-data.frame()
-    for (k in 1:nrow(dfParameters)) dfres<-bind_rows(dfres,internalCalc(k))
+    parts <- vector("list", nrow(dfParameters))
+    for (k in 1:nrow(dfParameters)) parts[[k]] <- internalCalc(k)
   }
+  dfres <- bind_rows(parts)
 
   dfret <- data.frame()
   for (i in 1:length(covExpressionsList)) {

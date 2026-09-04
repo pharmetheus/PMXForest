@@ -169,54 +169,63 @@ getForestDFSCM <- function(dfCovs,
     on.exit(stopImplicitCluster(), add = TRUE)
   }
 
-  ## Calculate the parameters
-  internalCalc<-function(k) {
+  ## Calculate the parameters. Result rows per parameter vector k: one per
+  ## (dfCovs row) x (element returned by the functionList). Fill typed column
+  ## vectors and build the data.frame once - a per-cell data.frame() +
+  ## bind_rows() loop is ~50-80x slower for closed-form parameter functions.
+  nOut <- length(functionListName)
+  internalCalc <- function(k) {
     thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
-    dfrest <- data.frame()
+    nRow   <- nrow(dfCovs) * nOut
+    ITER <- integer(nRow); COVS <- integer(nRow); NAME <- character(nRow)
+    VALUE <- numeric(nRow); VALUEBASE <- numeric(nRow)
+    p <- 0L
 
     for (i in 1:nrow(dfCovs)) {
-      n <- 1
+      n <- 1L
       for (j in 1:length(functionList)) {
-        val <- functionList[[j]](thetas = thetas, df = dfCovs[i, ,drop=FALSE], ...)
+        val <- functionList[[j]](thetas = thetas, df = dfCovs[i, , drop = FALSE], ...)
         if (!is.null(dfRefRow)) {
-          indi<-min(i,nrow(dfRefRow))
-          valbase <- functionList[[j]](thetas = thetas, df = dfRefRow[indi,,drop=FALSE], ...)
-        }
-        else {
-          dfMissing <- as.data.frame(dfCovs[1,,drop=FALSE])
-          dfMissing[,] <- iMiss
+          indi <- min(i, nrow(dfRefRow))
+          valbase <- functionList[[j]](thetas = thetas, df = dfRefRow[indi, , drop = FALSE], ...)
+        } else {
+          dfMissing <- as.data.frame(dfCovs[1, , drop = FALSE])
+          dfMissing[, ] <- iMiss
           valbase <- functionList[[j]](thetas = thetas, df = dfMissing, ...)
         }
-        listcount <- length(val)
-        for (l in 1:listcount) {
-          dfrest <- bind_rows(dfrest, data.frame(
-            ITER = k,
-            COVS = i, NAME = functionListName[n], VALUE = val[[l]],
-            VALUEBASE = valbase[[l]],
-            stringsAsFactors = FALSE
-          ))
-          n <- n + 1
+        for (l in seq_along(val)) {
+          p <- p + 1L
+          ITER[p] <- k; COVS[p] <- i; NAME[p] <- functionListName[n]
+          VALUE[p] <- val[[l]]; VALUEBASE[p] <- valbase[[l]]
+          n <- n + 1L
         }
       }
     }
-    return(dfrest)
+    if (p != nRow) {           # a functionList element returned length != 1 somewhere
+      idx <- seq_len(p)
+      ITER <- ITER[idx]; COVS <- COVS[idx]; NAME <- NAME[idx]
+      VALUE <- VALUE[idx]; VALUEBASE <- VALUEBASE[idx]
+    }
+    data.frame(ITER = ITER, COVS = COVS, NAME = NAME, VALUE = VALUE,
+               VALUEBASE = VALUEBASE, stringsAsFactors = FALSE)
   }
 
   if (ncores>1) {
-  dfres <- foreach(
-    k = 1:nrow(dfParameters), .packages = cstrPackages,
-    ## Bundle the whole local environment for PSOCK workers (Windows). foreach's
-    ## static global detection does not reliably follow `internalCalc`'s free
-    ## variables; `cstrExports` remains available for anything outside this frame.
-    .export = c(ls(environment()), cstrExports),
-    .verbose = !quiet, .combine = bind_rows
-  ) %dopar% {
-    internalCalc(k)
+    parts <- foreach(
+      k = 1:nrow(dfParameters), .packages = cstrPackages,
+      ## Bundle the whole local environment for PSOCK workers (Windows). foreach's
+      ## static global detection does not reliably follow `internalCalc`'s free
+      ## variables; `cstrExports` remains available for anything outside this frame.
+      .export = c(ls(environment()), cstrExports),
+      .verbose = !quiet
+    ) %dopar% {
+      internalCalc(k)
     }
   } else {
-    dfres<-data.frame()
-    for (k in 1:nrow(dfParameters)) dfres<-bind_rows(dfres,internalCalc(k))
+    parts <- vector("list", nrow(dfParameters))
+    for (k in 1:nrow(dfParameters)) parts[[k]] <- internalCalc(k)
   }
+  dfres <- bind_rows(parts)
 
   getCovNameString <- function(dfrow) {
     strName <- ""
