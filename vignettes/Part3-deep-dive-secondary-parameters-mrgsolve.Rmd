@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
   # Simulation and bootstrap chunks are shown but not run when the vignette is
   # built: mrgsolve needs a C++ toolchain and the Forest data set takes minutes.
   # Flip this to TRUE (with mrgsolve installed) to execute end to end.
-  eval     = FALSE
+  eval     = eval
 )
 ```
 
@@ -164,16 +164,16 @@ thetas <- as.numeric(
 
 paramFunction(thetas = thetas, df = data.frame(WT = 75, FOOD = 1))
 #> $CL
-#> [1] 17.1
+#> [1] 11.9074
 #>
 #> $V
-#> [1] 229
+#> [1] 191.231
 #>
 #> $MAT
-#> [1] 1.05
+#> [1] 6.46559
 #>
 #> $CMAX
-#> [1] 6.63
+#> [1] 0.3699538
 ```
 
 # 4. Feed it to `getForestDFSCM()`
