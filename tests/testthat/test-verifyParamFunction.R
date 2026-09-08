@@ -35,7 +35,7 @@ makeTable <- function(out, thetas, n = 20, withEta = TRUE, withCovs = TRUE) {
   tab <- covs
   etas <- stats::rnorm(n, sd = 0.2)
   for (p in out$functionListName) {
-    idx <- out$etaMap[[p]]
+    idx <- if (p %in% names(out$etaMap)) out$etaMap[[p]] else NULL  # secondaries have none
     if (withEta && !is.null(idx)) {
       # NONMEM tables individual values: TV * exp(eta)
       tab[[p]] <- tv[, p] * exp(etas)
@@ -226,7 +226,9 @@ test_that("secondary parameters are skipped by default", {
   )
   thetas <- run7Thetas()
   f <- withr::local_tempfile(fileext = ".tab")
-  # table holds only CL / V (+ ETAs); AUC is deliberately absent
+  # makeTable() tables every functionListName entry, so the file gets an AUC
+  # column too - but the default check still skips it (secondaries are excluded
+  # from `parameters` unless named).
   writeNmTable(makeTable(out, thetas), f)
 
   v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
@@ -234,12 +236,35 @@ test_that("secondary parameters are skipped by default", {
   expect_setequal(d$PARAMETER, c("CL", "V"))   # AUC not checked
   expect_true(as.logical(v))
 
-  # ... but naming it explicitly forces the (here failing) check
+  # ... but naming it explicitly forces the check. AUC is in the table (a raw
+  # column) yet has no TVAUC column and no exponential-IIV pattern, so it
+  # cannot be reduced to a typical value -> warn, PASS = NA.
   expect_warning(
     v2 <- verifyParamFunction(out, f, thetas, parameters = "AUC", quiet = TRUE),
-    "not a column of"
+    "Cannot recover typical values"
   )
+  expect_true(is.na(attr(v2, "checks")$PASS))
   expect_false(as.logical(v2))
+})
+
+test_that("naming a parameter the function does not return warns rather than crashing", {
+  out <- suppressWarnings(
+    createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE)
+  )
+  thetas <- run7Thetas()
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(makeTable(out, thetas), f)
+
+  # "Cmax" is neither a $PK parameter nor a defined secondary.
+  expect_warning(
+    v <- verifyParamFunction(out, f, thetas, parameters = "Cmax", quiet = TRUE),
+    "not returned by the generated function"
+  )
+  d <- attr(v, "checks")
+  expect_equal(d$PARAMETER, "Cmax")
+  expect_true(is.na(d$PASS))
+  expect_equal(d$N, 0L)
+  expect_false(as.logical(v))
 })
 
 test_that("bad input is rejected", {
