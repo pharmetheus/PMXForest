@@ -273,7 +273,10 @@ test_that("getForestDFemp oneHot also encodes a data.frame dfRefRow", {
   df_data   <- data.frame(ID = 1:8, WT = c(60, 70, 80, 90, 65, 75, 72, 68),
                           GENO = c(1, 2, 3, 4, 2, 3, 1, 4))
   ls_expr   <- list("GENO" = expression(GENO == 1), "GENO" = expression(GENO == 3))
-  df_ref    <- data.frame(GENO = 2, WT = 70)   # >1 column so row-subsetting stays a data.frame
+  # A single-row reference carries one level, so its dummy columns can only come
+  # from the encoding derived for dfData. GENO 1 is a level the parameter
+  # function reacts to, so an unencoded reference row would be visibly wrong.
+  df_ref    <- data.frame(GENO = 1, WT = 70)   # >1 column so row-subsetting stays a data.frame
 
   p_func <- function(thetas, df, ...) {
     x <- thetas[1]
@@ -291,11 +294,16 @@ test_that("getForestDFemp oneHot also encodes a data.frame dfRefRow", {
   res_manual <- getForestDFemp(
     dfData   = oneHotEncode(df_data, spec = spec),
     covExpressionsList = ls_expr,
-    dfRefRow = oneHotEncode(df_ref, spec = spec),
+    # The dummy columns dfData gets, stated outright.
+    dfRefRow = data.frame(GENO_1 = 1, GENO_3 = 0, GENO_4 = 0, WT = 70),
     functionList = list(p_func), functionListName = "CL",
     noBaseThetas = 2, dfParameters = df_params
   )
   expect_equal(res_onehot, res_manual)
+  # The reference row really was encoded: GENO 1 carries the THETA2 effect, so
+  # the reference is not the bare thetas[1] an unencoded row would give.
+  expect_equal(unique(res_onehot$REFFUNC),
+               median(df_params$THETA1 * (1 + df_params$THETA2)))
 })
 
 test_that("getForestDFemp uses supplied cdfCovsNames for the row labels", {

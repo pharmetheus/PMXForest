@@ -203,7 +203,10 @@ test_that("getForestDFSCM oneHot also encodes a data.frame dfRefRow", {
   df_params <- data.frame(THETA1 = c(10, 11, 9, 12), THETA2 = c(0.3, 0.35, 0.28, 0.31))
   df_covs   <- data.frame(GENO = c(1, 3, 4), COVARIATEGROUPS = "GENO",
                           stringsAsFactors = FALSE)
-  df_ref    <- data.frame(GENO = 2)             # raw column, needs encoding too
+  # A single-row reference carries one level, so its dummy columns can only come
+  # from the encoding derived for dfCovs. GENO 1 is a level the parameter
+  # function reacts to, so an unencoded reference row would be visibly wrong.
+  df_ref    <- data.frame(GENO = 1)             # raw column, needs encoding too
 
   p_func <- function(thetas, df, ...) {
     x <- thetas[1]
@@ -219,12 +222,16 @@ test_that("getForestDFSCM oneHot also encodes a data.frame dfRefRow", {
   )
   res_manual <- getForestDFSCM(
     dfCovs   = oneHotEncode(df_covs, spec = spec, dropOriginal = TRUE),
-    dfRefRow = oneHotEncode(df_ref, spec = spec, dropOriginal = TRUE),
+    # The dummy columns dfCovs gets, stated outright.
+    dfRefRow = data.frame(GENO_1 = 1, GENO_3 = 0, GENO_4 = 0),
     functionList = list(p_func), functionListName = "CL",
     noBaseThetas = 2, dfParameters = df_params
   )
+  # The reference row really was encoded: GENO 1 carries the THETA2 effect, so
+  # the reference is not the bare thetas[1] an unencoded row would give.
+  expect_equal(unique(res_onehot$REFFUNC),
+               median(df_params$THETA1 * (1 + df_params$THETA2)))
   expect_equal(res_onehot, res_manual)
-  # The reference row was encoded: reference genotype 2 -> all GENO_* dummies 0
   expect_equal(unique(res_onehot$REFROW), "YES")
 })
 

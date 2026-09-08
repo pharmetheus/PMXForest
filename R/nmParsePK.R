@@ -72,7 +72,7 @@ nmInputNames <- function(mod) {
   rec <- nmRecord(mod, "\\$INP(U(T)?)?\\b")
   if (nrow(rec) == 0) return(character(0))
 
-  items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "\\s+"))
+  items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "[[:space:],]+"))
   items <- items[nzchar(items)]
   if (length(items) == 0) return(character(0))
 
@@ -98,7 +98,7 @@ nmInputPositions <- function(mod) {
   rec <- nmRecord(mod, "\\$INP(U(T)?)?\\b")
   if (nrow(rec) == 0) return(list(names = character(0), aliases = character(0)))
 
-  items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "\\s+"))
+  items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "[[:space:],]+"))
   items <- items[nzchar(items)]
 
   nms     <- character(length(items))
@@ -182,7 +182,7 @@ nmDotOps <- c(
 
 nmFunctions <- c(
   EXP = "exp", LOG = "log", LOG10 = "log10", SQRT = "sqrt", ABS = "abs",
-  MIN = "min", MAX = "max", INT = "trunc", MOD = "%%",
+  MIN = "min", MAX = "max", INT = "trunc",
   SIN = "sin", COS = "cos", TAN = "tan", ATAN = "atan", ASIN = "asin",
   ACOS = "acos", GAMLN = "lgamma"
 )
@@ -378,6 +378,12 @@ nmParseAtom <- function(p) {
       }
       if (nm == "A") {
         nmFail(p, "A() refers to a compartment amount and needs an ODE solution")
+      }
+      if (nm == "MOD") {
+        # R spells the remainder as an infix operator; emitting it as a call
+        # ("%%(a, b)") would produce source that does not parse.
+        if (length(args) != 2) nmFail(p, "MOD() takes exactly two arguments")
+        return(list(type = "binop", op = "%%", lhs = args[[1]], rhs = args[[2]]))
       }
       if (nm %in% names(nmFunctions)) {
         return(list(type = "call", fn = nmFunctions[[nm]], args = args))
