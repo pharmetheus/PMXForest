@@ -139,6 +139,21 @@ setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
   # 3. Construct the output geometry.
   if (singleRef) {
     df_out <- dfCovs[1, , drop = FALSE]
+
+    ## A covariate column of dfCovs that no reference was resolved for would be
+    ## filled with NA below, and every parameter computed on this row would then
+    ## be NA - silently, since the parameter function is handed a valid row.
+    ## Usually this means a covariate was passed to setupDfCovs() but not here.
+    unmapped <- setdiff(names(df_out),
+                        c(names(ref_map), "COVARIATEGROUPS", "COVNAME"))
+    if (length(unmapped) > 0) {
+      warning("No reference value was resolved for the dfCovs column(s) ",
+              paste(unmapped, collapse = ", "),
+              "; they are set to NA in the reference row, which makes every ",
+              "parameter computed on it NA. Add them to `covariates` / ",
+              "`additionalCovs`.", call. = FALSE)
+    }
+
     for (col in names(df_out)) {
       if (col %in% names(ref_map)) {
         df_out[[col]] <- ref_map[[col]]

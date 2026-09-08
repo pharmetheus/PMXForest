@@ -411,8 +411,10 @@ nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
       loc <- if (is.na(s$src)) "inline snippet"
              else paste0("inlined from ", basename(s$src))
       add(paste0(ind, "## ", s$name, "  (", loc, ")"))
+      # A "#" would comment out the closing "})" of the one-line form, so a
+      # snippet carrying one takes the block form instead.
       if (length(s$lines) == 1L && nzchar(trimws(s$lines)) &&
-          length(s$consts) == 0L) {
+          length(s$consts) == 0L && !grepl("#", s$lines, fixed = TRUE)) {
         add(paste0(ind, s$name, " <- local({ ", trimws(s$lines), " })"))
       } else {
         # Constants first, then the body inlined verbatim - re-indenting it

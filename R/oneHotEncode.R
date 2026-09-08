@@ -148,20 +148,23 @@ normalizeOneHotSpec <- function(spec, data, missVal, includeReference) {
     obs  <- obs[!is.na(obs) & obs != missVal]
     levs <- sort(unique(obs))
 
-    if (length(levs) < 2) {
+    el <- spec[[cov]]
+    wantLevels <- if (is.list(el)) el$levels else NULL
+
+    ## A covariate with fewer than two observed levels carries no contrast of
+    ## its own, so there is nothing to derive - unless the spec states the dummy
+    ## columns outright. That is how a one-row reference row is encoded to match
+    ## a dfCovs/dfData encoding derived elsewhere.
+    if (length(levs) < 2 && is.null(wantLevels)) {
       warning("One-hot encoding: covariate '", cov,
               "' has fewer than two non-missing levels; skipped.")
       next
     }
 
-    el <- spec[[cov]]
-    wantLevels <- NULL
-
     if (is.null(el)) {
       ref <- levs[1]
     } else if (is.list(el)) {
       ref <- if (!is.null(el$ref)) el$ref else levs[1]
-      wantLevels <- el$levels
     } else if (length(el) == 1) {
       ref <- el
     } else {
@@ -169,7 +172,9 @@ normalizeOneHotSpec <- function(spec, data, missVal, includeReference) {
            "' must be NULL, a single reference value, or a list with `ref`/`levels`.")
     }
 
-    if (!ref %in% levs) {
+    ## Only meaningful when the levels are derived from `data`; with explicit
+    ## levels the reference deliberately need not appear in this data frame.
+    if (is.null(wantLevels) && !ref %in% levs) {
       warning("One-hot encoding: reference level ", ref, " for covariate '", cov,
               "' is not present in the data.")
     }

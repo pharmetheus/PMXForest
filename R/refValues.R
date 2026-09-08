@@ -11,6 +11,9 @@
 ## derivation as `createParamFunction()`, so a reference row built this way
 ## cannot disagree with the parameter function generated from the same model.
 
+## The reserved words a reference setting can take; anything else is a level.
+refKeywords <- c("mean", "median", "mode", "lowest", "model")
+
 #' Most frequent value
 #' @noRd
 refMode <- function(x) {
@@ -141,6 +144,15 @@ refResolve <- function(data, covariates, contRef = "median", catRef = NULL,
            "\"lowest\" or \"model\".", call. = FALSE)
     }
 
+    ## A character-coded covariate takes its level as a string, e.g.
+    ## catRef = list(RACE = "White"). Only a level that is actually observed is
+    ## accepted here, so a mistyped keyword still reaches the stop() below.
+    if (is.character(v) && !spec %in% refKeywords && spec %in% v) {
+      out[[cov]] <- list(value = spec, source = "supplied directly",
+                         confident = TRUE)
+      next
+    }
+
     out[[cov]] <- switch(spec,
       "model" = {
         r <- modelRefs[[cov]]
@@ -222,6 +234,11 @@ refEncodingLevel <- function(catRef, cov, levs, model, missVal) {
            "catRef = list(", cov, " = <level>).", call. = FALSE)
     }
     r$value
+  } else if (is.character(levs) && length(spec) == 1 &&
+             !spec %in% refKeywords && spec %in% levs) {
+    ## A character-coded level, e.g. catRef = list(RACE = "White"). Requiring it
+    ## to be an observed level keeps a mistyped keyword reaching the stop below.
+    spec
   } else {
     stop("Unknown reference setting \"", spec, "\" for covariate ", cov, ".",
          call. = FALSE)

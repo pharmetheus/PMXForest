@@ -123,13 +123,20 @@ getForestDFSCM <- function(dfCovs,
   ## Optionally one-hot encode raw multi-level categorical columns so a single
   ## parameter function can be written against the dummy columns.
   if (!is.null(oneHot)) {
-    dfCovs <- oneHotEncode(dfCovs, spec = oneHot, sep = oneHotSep,
+    ## Resolve the encoding (reference level and dummy columns) once, against
+    ## dfCovs, and reuse it for dfRefRow. Re-deriving it from dfRefRow would use
+    ## only the levels that row happens to carry - a single-row reference has
+    ## one, so it would get no dummy columns at all while keeping the raw column
+    ## dfCovs has just dropped, and the parameter function would silently
+    ## compute the baseline as if every dummy were absent.
+    oneHotSpec <- normalizeOneHotSpec(oneHot, dfCovs, iMiss, FALSE)
+    dfCovs <- oneHotEncode(dfCovs, spec = oneHotSpec, sep = oneHotSep,
                            missVal = iMiss, dropOriginal = TRUE)
     if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
       ## A reference row built by setupDfRefRow() may already carry the dummy
       ## columns and not the raw one; encoding is then a no-op bar the warning.
       dfRefRow <- suppressWarnings(
-        oneHotEncode(dfRefRow, spec = oneHot, sep = oneHotSep,
+        oneHotEncode(dfRefRow, spec = oneHotSpec, sep = oneHotSep,
                      missVal = iMiss, dropOriginal = TRUE)
       )
     }

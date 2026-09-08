@@ -106,11 +106,16 @@ getForestDFemp <- function(dfData,
   ## the same parameter function used for the parametric workflow also works here.
   ## The raw columns are kept because covExpressionsList filters on them.
   if (!is.null(oneHot)) {
-    dfData <- oneHotEncode(dfData, spec = oneHot, sep = oneHotSep,
+    ## Resolve the encoding once, against dfData, and reuse it for dfRefRow: a
+    ## one-row reference carries a single level, so re-deriving the spec from it
+    ## would produce no dummy columns at all and the parameter function would
+    ## silently compute the baseline as if every dummy were absent.
+    oneHotSpec <- normalizeOneHotSpec(oneHot, dfData, iMiss, FALSE)
+    dfData <- oneHotEncode(dfData, spec = oneHotSpec, sep = oneHotSep,
                            missVal = iMiss, dropOriginal = FALSE)
     if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
       dfRefRow <- suppressWarnings(
-        oneHotEncode(dfRefRow, spec = oneHot, sep = oneHotSep,
+        oneHotEncode(dfRefRow, spec = oneHotSpec, sep = oneHotSep,
                      missVal = iMiss, dropOriginal = FALSE)
       )
     }
