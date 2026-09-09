@@ -80,6 +80,35 @@ test_that("covRef overrides a derived reference and is recorded as supplied", {
   expect_true(any(grepl("else 70", out$code)))
 })
 
+test_that("the covariate preamble reads df[[cov]], so it cannot partial-match", {
+  # `$` partial-matches on a data frame: data.frame(WTKG = 90)$WT is 90. A
+  # data set carrying a longer name from the same family but not the covariate
+  # itself must fall back to the reference, not silently use the other column.
+  f <- tempMod(c(
+    "$PROBLEM partial matching",
+    "$INPUT ID TIME DV AMT WT WTKG",
+    "$DATA data.csv IGNORE=@",
+    "$PK",
+    "TVCL = THETA(1)",
+    "CL = TVCL*(WT/75)**0.75",
+    "V = THETA(2)",
+    "$THETA (0,7) (0,3)"
+  ))
+  out <- createParamFunction(f, parameters = c("CL", "V"), quiet = TRUE)
+
+  expect_true(any(grepl('df[["WT"]]', out$code, fixed = TRUE)))
+  expect_false(any(grepl("df$WT", out$code, fixed = TRUE)))
+
+  fun <- eval(parse(text = paste(out$code, collapse = "\n")))
+  atRef <- fun(thetas = c(7, 3), df = data.frame(FOO = 1))$CL
+  expect_equal(fun(thetas = c(7, 3), df = data.frame(WTKG = 90))$CL, atRef)
+  expect_equal(fun(thetas = c(7, 3), df = data.frame(WT = 75))$CL, atRef)
+  # a real WT is still read
+  expect_false(isTRUE(all.equal(
+    fun(thetas = c(7, 3), df = data.frame(WT = 90))$CL, atRef
+  )))
+})
+
 test_that("a covariate with no derivable reference is refused, not guessed", {
   # EXPO enters tte_weibull.mod as THETA(4)*EXPO: no branch, no normalisation.
   expect_error(createParamFunction(tteFile, quiet = TRUE),

@@ -393,8 +393,13 @@ nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
       add(paste0(ind, "## ", formatC(cov, width = width, flag = "-"), "  ",
                  r$source, loc))
       pad <- formatC(cov, width = width, flag = "-")
-      add(paste0(ind, pad, " <- if (!is.null(df$", cov, ") && df$", cov,
-                 " != ", nmFormatNum(missVal), ") df$", cov, " else ",
+      ## df[["WT"]], never df$WT: `$` partial-matches on a data frame, so a
+      ## data set carrying WTKG but no WT would silently use WTKG as the
+      ## covariate instead of falling back to the reference value. Name
+      ## families like that are common - run7's own $INPUT has NCI/NCIL.
+      acc <- paste0("df[[\"", cov, "\"]]")
+      add(paste0(ind, pad, " <- if (!is.null(", acc, ") && ", acc,
+                 " != ", nmFormatNum(missVal), ") ", acc, " else ",
                  nmFormatNum(r$value)))
     }
   }

@@ -272,7 +272,7 @@ nmLex <- function(text, lineno, modFile) {
 ## both Fortran's `**` and R's `^`.
 nmBinPrec <- c("|" = 1, "&" = 2,
                "==" = 4, "!=" = 4, "<" = 4, ">" = 4, "<=" = 4, ">=" = 4,
-               "+" = 5, "-" = 5, "*" = 6, "/" = 6, "%%" = 6, "^" = 8)
+               "+" = 5, "-" = 5, "*" = 6, "/" = 6, "^" = 8)
 
 #' Parser state: a token list plus a cursor
 #' @noRd
@@ -380,10 +380,24 @@ nmParseAtom <- function(p) {
         nmFail(p, "A() refers to a compartment amount and needs an ODE solution")
       }
       if (nm == "MOD") {
-        # R spells the remainder as an infix operator; emitting it as a call
-        # ("%%(a, b)") would produce source that does not parse.
         if (length(args) != 2) nmFail(p, "MOD() takes exactly two arguments")
-        return(list(type = "binop", op = "%%", lhs = args[[1]], rhs = args[[2]]))
+        # Not `%%`. Two reasons, either of which alone is a wrong answer:
+        #   * Fortran MOD() truncates towards zero, R's `%%` floors, so they
+        #     disagree whenever the first argument is negative -
+        #     MOD(-7, 3) is -1 but -7 %% 3 is 2.
+        #   * `%any%` binds tighter than `*` and `/` in R but MOD() is a call,
+        #     so `MOD(A*B, C)` would have emitted `A * B %% C` = A * (B %% C).
+        # Desugaring to `a - b * trunc(a / b)` is the faithful translation and,
+        # being built from nodes the deparser already knows, it gets its
+        # parentheses from the ordinary precedence rules. $PK expressions are
+        # pure, so evaluating `a` and `b` twice is safe.
+        return(list(type = "binop", op = "-", lhs = args[[1]],
+                    rhs = list(type = "binop", op = "*", lhs = args[[2]],
+                               rhs = list(type = "call", fn = "trunc",
+                                          args = list(list(type = "binop",
+                                                           op   = "/",
+                                                           lhs  = args[[1]],
+                                                           rhs  = args[[2]]))))))
       }
       if (nm %in% names(nmFunctions)) {
         return(list(type = "call", fn = nmFunctions[[nm]], args = args))
@@ -567,7 +581,7 @@ nmParseAssign <- function(line, lineno, comment, modFile) {
 ## needed. Matches R's own table.
 nmRPrec <- c("|" = 1, "&" = 2, "!" = 3,
              "==" = 4, "!=" = 4, "<" = 4, ">" = 4, "<=" = 4, ">=" = 4,
-             "+" = 5, "-" = 5, "*" = 6, "/" = 6, "%%" = 6, "u-" = 7, "^" = 8)
+             "+" = 5, "-" = 5, "*" = 6, "/" = 6, "u-" = 7, "^" = 8)
 
 #' @noRd
 nmPrecOf <- function(node) {
