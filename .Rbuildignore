@@ -5,10 +5,6 @@
 RawExampleFiles
 ^README\.Rmd$
 ^LICENSE\.md$
-^BuildVignettesHere/.*\.R$
-^BuildVignettesHere/.*cache$
-^BuildVignettesHere/.*files$
-^BuildVignettesHere/.*figures$
 ^\.github$
 ^Makefile$
 ^\.covrignore$

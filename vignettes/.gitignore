@@ -9,7 +9,3 @@
 # quarto
 /.quarto/
 **/*.quarto_ipynb
-
-# Hand-written helper scripts sourced by the vignettes (keep tracked)
-!paramFunctionDeSolve.R
-!paramFunctionmrgsolve.R

@@ -26,7 +26,7 @@ You can install the development version of PMXForest from [GitHub](https://githu
 devtools::install_github("pharmetheus/PMXForest")
 ```
 
-The latest versions of the vignettes are available in the `BuildVignettesHereDirectory`. Open the Rmd-files in RStudio and click the Knit button to compile. Note that some of the vignettes will take a fair bit of time to compile. 
+The vignette sources are in `vignettes/`. Open the `.Rmd` files in RStudio and click Knit to compile, or run `browseVignettes("PMXForest")` to read the versions built at install time. Note that some of the vignettes take a fair bit of time to compile.
 
 To get the latest stable release (including vignettes), please click the appropriate link on the right side of the page. Download the file with a name that starts with PMXForest. Install `PMXForest` with the `install.packages` command, e.g.:
 
