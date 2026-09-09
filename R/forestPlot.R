@@ -305,7 +305,7 @@ forestPlot <- function(dfres,
   tabList <- list()
 
   ## The errorbar plots
-  for (i in 1:length(parameters)) {
+  for (i in seq_along(parameters)) {
     plotList[[i]] <- parPlot(subset(plotData, PARAMETER == as.character(parameters[i])), parameters, parameterLabels,
       label_fun = labelfun,
       group_name_label_fun = groupname_labelfun
@@ -354,7 +354,7 @@ forestPlot <- function(dfres,
   }
 
   ## The table plots
-  for (i in 1:length(parameters)) {
+  for (i in seq_along(parameters)) {
     tabList[[i]] <- tablePlot(subset(plotData, PARAMETER == as.character(parameters[i])), parameters,
       label_fun = labelfun,
       group_name_label_fun = groupname_labelfun,
@@ -403,7 +403,7 @@ forestPlot <- function(dfres,
 
   ## Remove all xlabs. Will add a common one later
   if (commonXlab) {
-    for (i in 1:length(totList)) {
+    for (i in seq_along(totList)) {
       totList[[i]] <- totList[[i]] + rremove("xlab")
     }
   }
@@ -417,17 +417,17 @@ forestPlot <- function(dfres,
     errbartabwidth[length(errbartabwidth)] <- errbartabwidth[length(errbartabwidth)] * tabplotscale
 
     if (!stackedPlots) {
-      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = 1, widths = errbartabwidth, align = "h", common.legend = T)
+      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = 1, widths = errbartabwidth, align = "h", common.legend = TRUE)
     } else {
-      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = length(totList) / 2, ncol = 2, widths = errbartabwidth, align = "h", common.legend = T)
+      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = length(totList) / 2, ncol = 2, widths = errbartabwidth, align = "h", common.legend = TRUE)
     }
   } else {
     errbartabwidth[1] <- errbartabwidth[1] * errbarplotscale
 
     if (!stackedPlots) {
-      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = 1, widths = errbartabwidth, align = "h", common.legend = T)
+      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = 1, widths = errbartabwidth, align = "h", common.legend = TRUE)
     } else {
-      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = length(totList), ncol = 1, widths = errbartabwidth, align = "h", common.legend = T)
+      myPlot <- ggpubr::ggarrange(plotlist = totList, nrow = length(totList), ncol = 1, widths = errbartabwidth, align = "h", common.legend = TRUE)
     }
   }
 

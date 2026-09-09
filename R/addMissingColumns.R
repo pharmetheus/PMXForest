@@ -25,7 +25,7 @@ addMissingColumns <- function(dfParams, dfExt, zerosindex) {
     zerosindex <- NULL
     tmpz <- (dfExt[1, ] == 0)
     namesdf <- names(dfExt)
-    for (i in 1:length(dfExt)) {
+    for (i in seq_along(dfExt)) {
       for (j in 1:i) {
         if (i != j) zerosindex <- c(zerosindex, which(tmpz & grepl(paste0("^(OMEGA|SIGMA)\\.", i, "\\.", j, "\\."), namesdf)))
       }

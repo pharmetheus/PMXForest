@@ -171,7 +171,7 @@ getSamples <- function(input,
 
     # Get the parameters which are fixed based on the covariance
     fixedmu <- rep(FALSE, 1, ncol(sigma))
-    for (j in 1:ncol(sigma)) {
+    for (j in seq_len(ncol(sigma))) {
       fixedmu[j] <- all(sigma[, j] == 0)
     }
     # Draw n samples from cov matrix
@@ -253,7 +253,7 @@ getSamples <- function(input,
 
       # Get the parameters which are fixed based on the covariance
       fixedmu <- rep(FALSE, 1, ncol(sigma))
-      for (j in 1:ncol(sigma)) {
+      for (j in seq_len(ncol(sigma))) {
         fixedmu[j] <- all(sigma[, j] == 0)
       }
 

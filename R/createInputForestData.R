@@ -73,7 +73,7 @@ createInputForestData <- function(listCovs, iMiss = -99) {
       strNameBig <- names(listCovs[i])
       strVal1 <- listCovs[[i]][[1]]
       if (length(strVal1) > 0) {
-        for (k in 1:length(strVal1)) {
+        for (k in seq_along(strVal1)) {
           dfr <- df[1, ]
           dfr[, ] <- iMiss
           for (j in seq_along(listCovs[[i]])) {

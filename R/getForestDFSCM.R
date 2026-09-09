@@ -158,7 +158,7 @@ getForestDFSCM <- function(dfCovs,
     cGroups <- c()
     cUnique <- c()
     iGroup <- 0
-    for (i in 1:nrow(df)) {
+    for (i in seq_len(nrow(df))) {
       tmp <- paste0(names(dfCovs[i, , drop = FALSE])[as.numeric(dfCovs[i, , drop = FALSE]) != iMiss], collapse = ",")
       if (tmp %in% cUnique) {
         tmpl <- which(tmp == cUnique)
@@ -196,9 +196,9 @@ getForestDFSCM <- function(dfCovs,
     VALUEBASE <- numeric(nRow)
     p <- 0L
 
-    for (i in 1:nrow(dfCovs)) {
+    for (i in seq_len(nrow(dfCovs))) {
       n <- 1L
-      for (j in 1:length(functionList)) {
+      for (j in seq_along(functionList)) {
         val <- functionList[[j]](thetas = thetas, df = dfCovs[i, , drop = FALSE], ...)
         if (!is.null(dfRefRow)) {
           indi <- min(i, nrow(dfRefRow))
@@ -235,7 +235,7 @@ getForestDFSCM <- function(dfCovs,
 
   if (ncores > 1) {
     parts <- foreach(
-      k = 1:nrow(dfParameters), .packages = cstrPackages,
+      k = seq_len(nrow(dfParameters)), .packages = cstrPackages,
       ## Bundle the whole local environment for PSOCK workers (Windows). foreach's
       ## static global detection does not reliably follow `internalCalc`'s free
       ## variables; `cstrExports` remains available for anything outside this frame.
@@ -246,14 +246,14 @@ getForestDFSCM <- function(dfCovs,
     }
   } else {
     parts <- vector("list", nrow(dfParameters))
-    for (k in 1:nrow(dfParameters)) parts[[k]] <- internalCalc(k)
+    for (k in seq_len(nrow(dfParameters))) parts[[k]] <- internalCalc(k)
   }
   dfres <- bind_rows(parts)
 
   getCovNameString <- function(dfrow) {
     strName <- ""
     colnames <- names(dfrow)
-    for (i in 1:ncol(dfrow)) {
+    for (i in seq_len(ncol(dfrow))) {
       if (dfrow[1, i] != iMiss) {
         if (strName == "") {
           strName <- paste0(colnames[i], "=", dfrow[1, i])
@@ -270,24 +270,24 @@ getForestDFSCM <- function(dfCovs,
 
 
   dfret <- data.frame()
-  for (i in 1:nrow(dfCovs)) {
+  for (i in seq_len(nrow(dfCovs))) {
     if (is.null(cdfCovsNames)) {
       covname <- getCovNameString(dfCovs[i, , drop = FALSE])
     } else {
       covname <- cdfCovsNames[i]
     }
     group <- cGrouping[i]
-    for (j in 1:length(functionListName)) {
+    for (j in seq_along(functionListName)) {
       dft <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j], ]
 
-      quant <- quantile(dft$VALUE, probs = probs, names = FALSE, na.rm = T)
+      quant <- quantile(dft$VALUE, probs = probs, names = FALSE, na.rm = TRUE)
       # Calculate the point value of the forest plot
       FUNCVAL <- pointFunction(dft$VALUE)
 
       # Define the relative without parameter uncertainty
       dft$RELINTERNAL <- dft$VALUE / dft$VALUEBASE
       # Get quantile and pointvalue when uncertainty is not taken into account
-      quantrel <- quantile(dft$RELINTERNAL, probs = probs, names = FALSE, na.rm = T)
+      quantrel <- quantile(dft$RELINTERNAL, probs = probs, names = FALSE, na.rm = TRUE)
       FUNCNOVAR <- pointFunction(dft$RELINTERNAL)
 
       # Calculate reference value based one the pointFunction
@@ -299,8 +299,8 @@ getForestDFSCM <- function(dfCovs,
       # stay ordered as lower/upper even when the reference value is negative.
       # Fall back to quant/base when the base is NA so an all-NA reference yields
       # NA columns rather than erroring in quantile().
-      quant_reffunc <- if (is.na(func_base)) quant / func_base else quantile(dft$VALUE / func_base, probs = probs, names = FALSE, na.rm = T)
-      quant_reffinal <- if (is.na(true_base)) quant / true_base else quantile(dft$VALUE / true_base, probs = probs, names = FALSE, na.rm = T)
+      quant_reffunc <- if (is.na(func_base)) quant / func_base else quantile(dft$VALUE / func_base, probs = probs, names = FALSE, na.rm = TRUE)
+      quant_reffinal <- if (is.na(true_base)) quant / true_base else quantile(dft$VALUE / true_base, probs = probs, names = FALSE, na.rm = TRUE)
       groupname <- group
       if (!is.null(groupnames)) groupname <- groupnames[i]
       dfrow <- cbind(dfCovs[i, , drop = FALSE], data.frame(
@@ -311,14 +311,14 @@ getForestDFSCM <- function(dfCovs,
         POINT_REL_REFFUNC = FUNCVAL / func_base, POINT_REL_REFFINAL = FUNCVAL / true_base,
         COVEFF = !all(dft$RELINTERNAL == 1)
       ))
-      for (k in 1:length(probs)) {
+      for (k in seq_along(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k)]] <- quant[k]
         dfp[[paste0("Q", k, "_REL_REFFUNC")]] <- quant_reffunc[k]
         dfp[[paste0("Q", k, "_REL_REFFINAL")]] <- quant_reffinal[k]
         dfrow <- cbind(dfrow, dfp[, 2:4])
       }
-      for (k in 1:length(probs)) {
+      for (k in seq_along(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k, "_NOVAR_REL_REFFUNC")]] <- quantrel[k]
         dfrow <- cbind(dfrow, dfp[, 2])
