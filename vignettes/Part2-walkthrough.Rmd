@@ -84,6 +84,24 @@ sirFile <- system.file("extdata", paste0(modDir, "/sir7.dir/raw_results_run7.csv
 dfData <- read.csv(dataFile)
 ```
 
+# 0. Use the data the model actually saw
+
+The analysis data file is not the data the model was fitted to. `run7`'s `$DATA`
+record carries `IGNORE` statements, so NONMEM dropped rows before estimating —
+and a Forest plot built from the full file describes a population the model never
+saw.
+
+`filterByModel()` applies the model's own `IGNORE` and `ACCEPT` statements:
+
+```{r, message = TRUE}
+dfData <- filterByModel(dfData, modFile)
+```
+
+The difference is not cosmetic. Here it removes 210 of 964 subjects, and the 5th
+percentile of creatinine clearance — one of the values that becomes a Forest plot
+row in the next section — moves from 74.9 to 77.7 mL/min. Every covariate
+summary below is computed on the filtered data for that reason.
+
 # 1. Build the covariate structure
 
 Each row of `dfCovs` becomes one row of the Forest plot. The covariate effect on
@@ -389,42 +407,58 @@ data set already contains them, but passing `oneHot = list(GENO = list(ref = 2))
 with `oneHotSep = ""` builds them from the raw `GENO` column when they are not
 present, and is a harmless no-op when they are.
 
-```{r}
-lsExpr <- list(
-  "NCI"  = expression(NCIL == 0),
-  "NCI"  = expression(NCIL == 1),
-  "FORM" = expression(FORM == 0),
-  "FORM" = expression(FORM == 1),
-  "FOOD" = expression(FOOD == 0),
-  "FOOD" = expression(FOOD == 1),
-  "GENO" = expression(GENO == 1),
-  "GENO" = expression(GENO == 2),
-  "GENO" = expression(GENO == 3),
-  "GENO" = expression(GENO == 4),
-  "WT"   = expression(WT < 70),
-  "WT"   = expression(WT > 104),
-  "SEX"  = expression(SEX == 1),
-  "SEX"  = expression(SEX == 2)
-)
+Empirical plots are more expensive to compute than parametric ones, so a subset
+of subjects keeps the example quick.
 
-covnamesEmp <- c(
-  "NCI = 0", "NCI > 0", "Oral tablet", "FDC", "Fasted", "Fed",
-  "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
-  "WT < 70 kg", "WT > 104 kg", "Male", "Female"
-)
-stopifnot(length(covnamesEmp) == length(lsExpr))
+```{r}
+dfDataEmp <- dfData %>%
+  distinct(ID, .keep_all = TRUE) %>%
+  slice(1:500)
 ```
 
-`getForestDFemp()` needs the analysis data. Empirical plots are more expensive to
-compute than parametric ones, so a subset keeps the example quick; `ncores > 1`
-parallelises the calculation and `cstrPackages` names the packages the workers
-need.
+`setupCovExpressionsList()` writes the expressions and the row labels from the
+data, the way `setupDfCovs()` writes `dfCovs` for the parametric plot. Continuous
+covariates become a low and a high tail; categorical ones become one row per
+level.
 
 ```{r}
-dfDataEmp <- read.csv(dataFile) %>%
-  distinct(ID, .keep_all = TRUE) %>%
-  slice(1:300)
+emp <- setupCovExpressionsList(
+  data       = dfDataEmp,
+  covariates = c("NCIL", "FORM", "FOOD", "GENO", "WT", "SEX"),
+  idVar      = "ID"
+)
+lsExpr <- emp$covExpressionsList
+covnamesEmp <- emp$cdfCovsNames
+lsExpr
+```
 
+Note what it refuses to do. Each row has to be backed by at least `minSubjects`
+subjects (10 by default), because a covariate effect estimated from a handful of
+people is not worth plotting. On the first 300 subjects rather than 500, this
+call stops with
+
+```
+Expression `GENO == 1` selects 7 subject(s) in `data`, fewer than
+`minSubjects` (10).
+```
+
+which is the guard working, not a problem to route around. Widen the data, widen
+`probs`, or lower `minSubjects` deliberately.
+
+::: {.callout-note}
+The two continuous cut points come from the same 5th and 95th percentiles
+`getCovStats()` uses — but `setupCovExpressionsList()` implements that rule
+separately rather than calling it, so the two are kept in step by hand. The
+[deep dive](Part3-deep-dive-forest-plot-inputs.html) says where that matters.
+:::
+
+`getForestDFemp()` then needs the analysis data itself; `ncores > 1` parallelises
+the calculation and `cstrPackages` names the packages the workers need. Half the
+uncertainty samples are used here purely to keep the vignette quick — an
+empirical plot evaluates the parameter function once per subject per sample, so
+its cost is the product of the two.
+
+```{r}
 dfresEmp <- getForestDFemp(
   dfData             = dfDataEmp,
   covExpressionsList = lsExpr,
@@ -432,7 +466,7 @@ dfresEmp <- getForestDFemp(
   functionList       = list(paramFunction),
   functionListName   = functionListName,
   noBaseThetas       = gen$noBaseThetas,
-  dfParameters       = dfSamplesCOV,
+  dfParameters       = dfSamplesCOV[1:100, ],
   oneHot             = list(GENO = list(ref = 2)),
   oneHotSep          = "",
   ncores             = 1,
@@ -458,7 +492,7 @@ default for empirical data) drops it and shows only the covariate effect.
 | `plotRelative` | `TRUE` (default) plots relative to the reference; `FALSE` plots the absolute value |
 | `noVar` | drop the parameter-uncertainty interval |
 | `xlim` | x-axis limits |
-| `statisticsLabel` | prefix for the statistics-panel strip labels |
+| `statisticsLabel` | prefix for the statistics-panel strip labels, prepended verbatim — include the space |
 | `return` | `"plot"` (default) or `"plotList"` for the panel list |
 
 ```{r}
@@ -466,10 +500,24 @@ forestPlot(
   dfresBS,
   parameters      = c("CL", "FREL"),
   groupNameLabels = covariateGroupNames,
-  statisticsLabel = "Estimate:",
+  statisticsLabel = "Estimate: ",
   xlim            = c(0.5, 1.6)
 )
 ```
+
+## Recording where a figure came from
+
+A Forest plot that leaves the session — pasted into a report, attached to an
+email — is easier to trust when it says where it was made. `addStamp()` appends a
+caption naming the working directory and the time, and inside a `knitr` chunk the
+source file and chunk label as well.
+
+```{r}
+addStamp(forestPlot(dfresBS, parameters = "CL", groupNameLabels = covariateGroupNames))
+```
+
+It takes and returns a `ggplot`, so it composes with anything else you do to the
+plot. Pass `source` to say something more specific than the directory name.
 
 # Where to next
 
@@ -481,3 +529,6 @@ forestPlot(
   fitted outside NONMEM, with the plot data assembled by hand.
 * [Time-to-event models](Part3-deep-dive-tte-models.html) — hazard ratios, event
   probabilities, and distribution reparameterisation.
+* [Secondary parameters](Part3-deep-dive-secondary-parameters.html) — attaching
+  AUC, `Cmax` or a whole `mrgsolve` simulation to the generated parameter
+  function.
