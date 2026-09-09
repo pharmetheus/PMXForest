@@ -45,13 +45,13 @@ the reference value chosen for each.}
 
 \item{secondary}{An optional named list of secondary parameters to append to
 the generated function's return list. Each entry's value is a single string
-(R code whose last value is the result, `list(AUC = "df$DOSE / CL")`, or the
-path to an `.R` file of arbitrary code such as an `mrgsolve` simulation,
-`list(CMAX = "cmax.R")`), or a list `list(source = <string>, ...)` carrying
-that `source` plus named atomic constants the code needs
-(`list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))`). A file's text
-is inlined into the generated source, so the result stays self-contained.
-See Details.}
+(R code whose last value is the result, `list(AUC = "df$DOSE / CL")`, or
+the path to an `.R` file of arbitrary code such as an `mrgsolve`
+simulation, `list(CMAX = "cmax.R")`), or a list `list(source = <string>,
+...)` carrying that `source` plus named atomic constants the code needs
+(`list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))`). A file's
+text is inlined into the generated source, so the result stays
+self-contained. See Details.}
 }
 \value{
 A list of:
