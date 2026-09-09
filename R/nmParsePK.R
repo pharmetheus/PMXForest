@@ -799,6 +799,90 @@ nmSymbols <- function(stmts) {
   list(assigned = unique(assigned), used = unique(used))
 }
 
+#' Symbols read by one `$PK` expression
+#' @noRd
+nmExprSyms <- function(node) {
+  out  <- character(0)
+  walk <- function(n) {
+    switch(n$type,
+      sym   = out <<- c(out, n$name),
+      call  = lapply(n$args, walk),
+      unop  = walk(n$arg),
+      binop = { walk(n$lhs); walk(n$rhs) },
+      NULL
+    )
+    invisible(NULL)
+  }
+  walk(node)
+  unique(out)
+}
+
+#' The first symbol read before any path has bound it
+#'
+#' A reaching-assignment walk. `bound` is what holds a value on entry; after an
+#' `IF` construct a name counts as bound if *any* branch assigns it.
+#'
+#' The weaker "any" rather than "every" is deliberate. PsN's scm writes
+#' exhaustive one-line branches with no `ELSE` -
+#' `IF(FORM.EQ.1) FRELFORM = 1` / `IF(FORM.EQ.0) FRELFORM = (1 + THETA(12))`,
+#' as run7.mod itself does - which no static analysis can tell apart from a
+#' genuinely non-exhaustive branch. Requiring every path to assign would reject
+#' the package's own reference model, so a name assigned only under a condition
+#' is accepted here; if no branch fires at run time the generated function
+#' fails loudly with "object not found", which is the right outcome anyway.
+#'
+#' This is what tells a covariate apart from a local. NONMEM populates the
+#' `$INPUT` data items before `$PK` runs, so a name read before `$PK` assigns
+#' it is being read from the data record - whether or not `$PK` later
+#' reassigns it. `IF(WT.EQ.-99) WT = 75` reads WT in the condition, so WT is
+#' correctly found this way; classifying on "is it assigned anywhere" instead
+#' made that idiom - rule 1 of [nmCovRef()] - unreachable.
+#'
+#' Returns `list(name, lineno, everAssigned)` for the first offending read, or
+#' `NULL` when every read is safe.
+#'
+#' @noRd
+nmFirstUnboundUse <- function(stmts, bound, everAssigned) {
+  hit <- NULL
+
+  checkExpr <- function(node, lineno, bnd) {
+    if (!is.null(hit) || is.null(node)) return(invisible(NULL))
+    for (nm in nmExprSyms(node)) {
+      if (!nm %in% bnd) {
+        hit <<- list(name = nm, lineno = lineno,
+                     everAssigned = nm %in% everAssigned)
+        return(invisible(NULL))
+      }
+    }
+    invisible(NULL)
+  }
+
+  ## Returns the set of names bound after running `ss`.
+  run <- function(ss, bnd) {
+    for (s in ss) {
+      if (!is.null(hit)) return(bnd)
+      if (s$type == "assign") {
+        checkExpr(s$rhs, s$lineno, bnd)
+        bnd <- union(bnd, s$lhs)
+      } else {
+        lineno <- if (is.null(s$lineno)) NA_integer_ else s$lineno
+        checkExpr(s$cond, lineno, bnd)
+        outs <- list(run(s$then, bnd))
+        for (e in s$elifs) {
+          checkExpr(e$cond, lineno, bnd)
+          outs[[length(outs) + 1L]] <- run(e$stmts, bnd)
+        }
+        if (!is.null(s$else_)) outs[[length(outs) + 1L]] <- run(s$else_, bnd)
+        bnd <- Reduce(union, outs)
+      }
+    }
+    bnd
+  }
+
+  run(stmts, bound)
+  hit
+}
+
 #' Map parameters onto the ETA that carries their between-subject variability
 #'
 #' Detects the exponential-IIV idiom `P = <expr> * EXP(ETA(n))` at the top level

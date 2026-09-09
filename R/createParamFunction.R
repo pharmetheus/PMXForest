@@ -200,8 +200,11 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
 #'       `assign` (`lhs`, `rhs`, `lineno`, `comment`) or an `if`
 #'       (`cond`, `then`, `elifs`, `else_`, `lineno`); `rhs`/`cond` are
 #'       expression nodes. Use [nmDeparse()] to render a node as R source.
-#'     \item `covariates` - covariate names: `$INPUT` columns used in `$PK` but
-#'       never assigned there, in first-use order.
+#'     \item `covariates` - covariate names: `$INPUT` columns that `$PK` reads
+#'       before assigning them, in first-use order. Being assigned later does
+#'       not disqualify a column, since NONMEM populates the data items before
+#'       `$PK` runs - that is what makes `IF(WT.EQ.-99) WT = 75` a covariate
+#'       rather than a local.
 #'     \item `covRef` - a named list, one entry per covariate, each with
 #'       `value`, `line`, `confident` (logical) and `source` (how the reference
 #'       was found). `covRef` overrides and user-supplied entries are merged in.
@@ -247,14 +250,70 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   # raw tree is what we return so a downstream emitter keeps the ETA()s.
   folded <- nmSimplifyStmts(stmts)
 
-  ## Covariates: named in $INPUT and never assigned in $PK.
+  ## Covariates are discovered, not filtered: a $PK that reads a name before
+  ## binding it is reading a data item, which is exactly what NONMEM does. Each
+  ## such $INPUT name gets a preamble binding and the walk is repeated, so the
+  ## covariates come out in first-use order. Anything read before it is bound
+  ## that is *not* in $INPUT cannot be supplied, and is an error here rather
+  ## than an "object not found" from inside getForestDFSCM() later.
   syms       <- nmSymbols(folded)
   inputNames <- nmInputNames(mod)
-  covariates <- intersect(syms$used, setdiff(inputNames, syms$assigned))
-  covariates <- covariates[order(match(covariates, syms$used))]
+  covariates <- character(0)
+  repeat {
+    unbound <- nmFirstUnboundUse(folded, covariates, syms$assigned)
+    if (is.null(unbound)) break
+    if (unbound$name %in% inputNames) {
+      covariates <- c(covariates, unbound$name)
+      next
+    }
+    at <- if (is.na(unbound$lineno)) "" else paste0(" on line ", unbound$lineno)
+    stop(
+      "The $PK block of ", basename(modFile), " reads ", unbound$name, at,
+      if (unbound$everAssigned) {
+        paste0(
+          " before assigning it.\nNONMEM does not initialise $PK variables and",
+          " does not clear them between data records, so the model reads",
+          " whatever the previous record left there. A parameter function is",
+          " evaluated one row at a time and cannot reproduce that.",
+          "\nMove the assignment of ", unbound$name, " above the line that",
+          " reads it."
+        )
+      } else {
+        paste0(
+          ", but never assigns it and it is not in $INPUT.\nIf it is a NONMEM",
+          " reserved variable such as NEWIND, it has no value a parameter",
+          " function could supply."
+        )
+      },
+      call. = FALSE
+    )
+  }
 
   ## References, control stream first, then user overrides.
   derived <- nmCovRef(folded, covariates, missVal)
+  if (length(covRef) > 0) {
+    if (is.null(names(covRef)) || any(!nzchar(names(covRef)))) {
+      stop("Every element of covRef must be named.", call. = FALSE)
+    }
+    ## A typo here used to be silently ignored, leaving the derived reference
+    ## in place, and a non-numeric value emitted source that parsed but failed
+    ## when called.
+    stray <- setdiff(names(covRef), covariates)
+    if (length(stray) > 0) {
+      stop("covRef names a covariate that ", basename(modFile),
+           " does not use: ", paste(stray, collapse = ", "),
+           ".\nCovariates in this $PK: ",
+           if (length(covariates) == 0) "none" else paste(covariates, collapse = ", "),
+           ".", call. = FALSE)
+    }
+    bad <- names(covRef)[!vapply(covRef, function(v) {
+      is.numeric(v) && length(v) == 1L && !is.na(v) && is.finite(v)
+    }, logical(1))]
+    if (length(bad) > 0) {
+      stop("Each covRef value must be a single finite number; check: ",
+           paste(bad, collapse = ", "), ".", call. = FALSE)
+    }
+  }
   for (cov in names(covRef)) {
     derived[[cov]] <- list(value = covRef[[cov]], line = NA_integer_,
                            confident = TRUE, source = "supplied through covRef")
