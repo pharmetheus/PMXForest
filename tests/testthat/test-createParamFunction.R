@@ -37,14 +37,102 @@ test_that("the generated source parses and is a conforming parameter function", 
   expect_equal(names(formals(fun)), c("thetas", "df", "..."))
 })
 
-test_that("covariates are those in $INPUT that $PK never assigns", {
+test_that("covariates are those in $INPUT that $PK reads before assigning", {
   out <- suppressWarnings(createParamFunction(modFile, quiet = TRUE))
   expect_setequal(names(out$covRef),
                   c("SEX", "GENO4", "FORM", "FOOD", "WT", "GENO1", "GENO3"))
-  # GENO2 is assigned a constant in $PK, so it is a local, not a covariate
+  # GENO2 is assigned a constant before it is read, so it is a local
   expect_false("GENO2" %in% names(out$covRef))
-  # TVCL is assigned in $PK and is never a covariate
+  # TVCL is assigned before it is read and is never a covariate
   expect_false("TVCL" %in% names(out$covRef))
+})
+
+test_that("a covariate re-imputed by IF(X.EQ.missVal) is still a covariate", {
+  # Rule 1 of nmCovRef() reads exactly this idiom, but the old classification
+  # excluded any $INPUT name $PK assigned - so the documented rule could never
+  # fire, and the generated function referred to an unbound WT.
+  f <- tempMod(c(
+    "$PROBLEM rule 1",
+    "$INPUT ID TIME DV AMT WT",
+    "$DATA data.csv IGNORE=@",
+    "$PK",
+    "IF(WT.EQ.-99) WT = 75",
+    "TVCL = THETA(1)",
+    "CL = TVCL*(WT/75)**0.75",
+    "V = THETA(2)",
+    "$THETA (0,5) (0,50)"
+  ))
+  out <- createParamFunction(f, parameters = c("CL", "V"), quiet = TRUE)
+
+  expect_equal(names(out$covRef), "WT")
+  expect_equal(out$covRef$WT$value, 75)
+  expect_true(any(grepl('df[["WT"]]', out$code, fixed = TRUE)))
+
+  fun <- eval(parse(text = paste(out$code, collapse = "\n")))
+  expect_equal(fun(thetas = c(5, 50), df = data.frame(WT = -99))$CL,
+               fun(thetas = c(5, 50), df = data.frame(WT = 75))$CL)
+  expect_gt(fun(thetas = c(5, 50), df = data.frame(WT = 90))$CL,
+            fun(thetas = c(5, 50), df = data.frame(WT = 75))$CL)
+})
+
+test_that("a symbol read before it is bound is refused at generation time", {
+  base <- c("$PROBLEM unbound", "$INPUT ID TIME DV AMT WT",
+            "$DATA data.csv IGNORE=@", "$PK")
+  tail <- c("V = THETA(2)", "$THETA (0,7) (0,3)")
+
+  # not in $INPUT and never assigned: a NONMEM reserved variable
+  expect_error(
+    createParamFunction(tempMod(c(base,
+      "IF(NEWIND.NE.2) CNT = 0", "TVCL = THETA(1)",
+      "CL = TVCL*(WT/75)*CNT", tail)),
+      parameters = c("CL", "V"), quiet = TRUE),
+    "reads NEWIND.*never assigns it"
+  )
+  # read above its own assignment: NONMEM would carry a value over from the
+  # previous data record, which a one-row parameter function cannot do
+  expect_error(
+    createParamFunction(tempMod(c(base,
+      "CL = TVCL*(WT/75)", "TVCL = THETA(1)", tail)),
+      parameters = c("CL", "V"), quiet = TRUE),
+    "reads TVCL.*before assigning it"
+  )
+  # but an exhaustive scm-style branch chain, as run7.mod writes, is accepted:
+  # FRELWT is assigned only inside IFs with no ELSE, which no static analysis
+  # can tell apart from a genuinely non-exhaustive branch
+  scm <- createParamFunction(tempMod(c(base,
+    "TVCL = THETA(1)",
+    "IF(WT.GT.100) FRELWT = 1",
+    "IF(WT.LE.100) FRELWT = 2",
+    "CL = TVCL*FRELWT*(WT/75)", tail)),
+    parameters = c("CL", "V"), quiet = TRUE)
+  expect_equal(names(scm$covRef), "WT")
+  expect_false("FRELWT" %in% names(scm$covRef))
+})
+
+test_that("covRef is validated rather than spliced in unchecked", {
+  expect_error(
+    suppressWarnings(createParamFunction(modFile, parameters = "CL",
+                                         covRef = list(WGT = 70), quiet = TRUE)),
+    "does not use: WGT"
+  )
+  for (bad in list(list(WT = "seventy"), list(WT = c(70, 80)),
+                   list(WT = NA), list(WT = Inf))) {
+    expect_error(
+      suppressWarnings(createParamFunction(modFile, parameters = "CL",
+                                           covRef = bad, quiet = TRUE)),
+      "single finite number"
+    )
+  }
+  expect_error(
+    suppressWarnings(createParamFunction(modFile, parameters = "CL",
+                                         covRef = list(70), quiet = TRUE)),
+    "must be named"
+  )
+  # a valid override still works and is recorded as supplied
+  ok <- suppressWarnings(createParamFunction(modFile, parameters = "CL",
+                                             covRef = list(WT = 70), quiet = TRUE))
+  expect_equal(ok$covRef$WT$value, 70)
+  expect_match(ok$covRef$WT$source, "supplied through covRef")
 })
 
 test_that("covariate references are taken from the control stream", {

@@ -37,8 +37,11 @@ A list:
       `assign` (`lhs`, `rhs`, `lineno`, `comment`) or an `if`
       (`cond`, `then`, `elifs`, `else_`, `lineno`); `rhs`/`cond` are
       expression nodes. Use [nmDeparse()] to render a node as R source.
-    \item `covariates` - covariate names: `$INPUT` columns used in `$PK` but
-      never assigned there, in first-use order.
+    \item `covariates` - covariate names: `$INPUT` columns that `$PK` reads
+      before assigning them, in first-use order. Being assigned later does
+      not disqualify a column, since NONMEM populates the data items before
+      `$PK` runs - that is what makes `IF(WT.EQ.-99) WT = 75` a covariate
+      rather than a local.
     \item `covRef` - a named list, one entry per covariate, each with
       `value`, `line`, `confident` (logical) and `source` (how the reference
       was found). `covRef` overrides and user-supplied entries are merged in.
