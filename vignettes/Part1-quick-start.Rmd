@@ -66,6 +66,17 @@ The [Walkthrough](Part2-walkthrough.html) covers the same steps in full, includi
 empirical Forest plots, alternative uncertainty sources, an explicit reference
 subject, and the formatting arguments of `forestPlot()`.
 
+## Which vignette do I want?
+
+| If you want to… | Read |
+| --- | --- |
+| get a plot out of a NONMEM model quickly | this vignette |
+| build a publication Forest plot end to end | [2. Walkthrough](Part2-walkthrough.html) |
+| control how covariate values, references or rows are chosen | [3. Preparing Forest plot inputs](Part3-deep-dive-forest-plot-inputs.html) |
+| plot AUC, half-life or another derived quantity | [3. Secondary parameters](Part3-deep-dive-secondary-parameters.html) |
+| plot a model that is not a NONMEM `$PK` block | [3. R-coded models](Part3-deep-dive-r-coded-models.html) |
+| plot hazard ratios or event probabilities | [3. Time-to-event models](Part3-deep-dive-tte-models.html) |
+
 # 1. Describe the covariates
 
 `setupDfCovs()` reads an analysis data set, summarises each covariate, and returns
@@ -75,6 +86,7 @@ are expanded to one row per level.
 
 ```{r}
 dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
 dfData <- read.csv(dataFile)
 
 covariates <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "RACEL2")
@@ -88,49 +100,50 @@ parameter function in the next step treats that as "no effect". Multi-level
 categorical covariates (one-hot encoding, reference level) are covered in the
 [Walkthrough](Part2-walkthrough.html).
 
-# 2. Write the parameter function
+# 2. Generate the parameter function
 
-The function takes a vector of `thetas` (in the order the THETAs appear in the
-NONMEM model) and a one-row data frame `df` of covariate values. It rebuilds the
-relevant part of the model and returns the quantities to plot.
-
-Every covariate test guards for the missing-value indicator (`-99`), which
-`setupDfCovs()` places in the cells that are inactive on a given row, and for the
-covariate column being absent entirely.
+The parameter function turns the estimates and one row of covariate values into
+the quantities to plot. Rather than retyping the model's algebra in R,
+`createParamFunction()` translates the `$PK` block of the control stream.
 
 ```{r}
-paramFunction <- function(thetas, df, ...) {
-  CLFOOD <- 1
-  if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) CLFOOD <- 1 + thetas[11]
-
-  FRELFORM <- 1
-  if (any(names(df) == "FORM") && df$FORM != -99 && df$FORM == 0) FRELFORM <- 1 + thetas[12]
-
-  FRELSEX <- 1
-  if (any(names(df) == "SEX") && df$SEX != -99 && df$SEX == 2) FRELSEX <- 1 + thetas[14]
-
-  FREL <- thetas[1] * FRELSEX * FRELFORM
-
-  if (any(names(df) == "WT") && df$WT != -99) {
-    TVCL <- thetas[4] * (df$WT / 75)^thetas[2]
-  } else {
-    TVCL <- thetas[4]
-  }
-  CL <- CLFOOD * TVCL
-
-  if (any(names(df) == "WT") && df$WT != -99) {
-    V <- thetas[5] * (df$WT / 75)^thetas[3]
-  } else {
-    V <- thetas[5]
-  }
-
-  AUC <- 80 / (CL / FREL)
-
-  list(CL, FREL, AUC, V)
-}
-
-functionListName <- c("CL", "Frel", "AUC", "V")
+gen <- createParamFunction(
+  modFile,
+  parameters = c("CL", "FREL", "V"),
+  covRef     = list(GENO1 = 0, GENO3 = 0),
+  secondary  = list(AUC = "80 / (CL / FREL)"),
+  quiet      = TRUE
+)
 ```
+
+`covRef` pins down two genotype dummies the control stream does not settle on its
+own -- without it the generator proposes a value and warns. `secondary` adds
+`AUC` after an 80 mg dose, which is not in `$PK` because the dose is not.
+
+The result is **source text, not a function**. Read it against your control
+stream before you run it: the missing-value handling is hoisted into an
+annotated preamble, and everything below is a plain transliteration of `$PK`.
+
+```{r}
+cat(gen$code, sep = "\n")
+```
+
+Once it matches the model, evaluate it:
+
+```{r}
+paramFunction <- eval(parse(text = paste(gen$code, collapse = "\n")))
+```
+
+`gen` also carries the parameter names and the THETA count, so neither has to be
+typed in and kept up to date by hand.
+
+::: {.callout-note}
+If the model was run with a `$TABLE` holding the parameters and the covariates,
+`verifyParamFunction()` checks the translation against the values NONMEM itself
+wrote. No `$TABLE` is bundled here, so it is not shown; see the
+[Walkthrough](Part2-walkthrough.html) and
+[Preparing Forest plot inputs](Part3-deep-dive-forest-plot-inputs.html).
+:::
 
 # 3. Sample the parameter uncertainty
 
@@ -160,8 +173,8 @@ labels and covariate group names.
 dfres <- getForestDFSCM(
   dfCovs           = dfCovs,
   functionList     = list(paramFunction),
-  functionListName = functionListName,
-  noBaseThetas     = 14,
+  functionListName = gen$functionListName,
+  noBaseThetas     = gen$noBaseThetas,
   dfParameters     = dfSamples
 )
 ```
@@ -172,10 +185,18 @@ dfres <- getForestDFSCM(
 forestPlot(dfres, parameters = "CL")
 ```
 
-The dotted line marks the reference: here no `dfRefRow` was supplied, so the
-reference is the model with every covariate effect switched off. The points show
-the covariate effect on `CL` relative to that reference, and the bars its 90%
-confidence interval. `WT` is fixed in this model, so its interval has zero width.
+The dotted line marks the reference. No `dfRefRow` was supplied, so the reference
+is the row with every covariate set to `-99`. With a generated parameter
+function that is the right reference by construction: `-99` sends each covariate
+to the value the preamble read out of `$PK`, so the reference *is* the model's
+own reference subject rather than something computed separately that might
+disagree with it. Supplying a reference taken from the data instead — a median
+weight, the most common formulation — is a deliberate choice, and one the
+[Walkthrough](Part2-walkthrough.html) makes explicitly.
+
+The points show the covariate effect on `CL` relative to that reference, and the
+bars its 90% confidence interval. `WT` is fixed in this model, so its interval
+has zero width.
 
 ::: {.callout-note}
 **Next steps.** The [Walkthrough](Part2-walkthrough.html) adds an explicit
