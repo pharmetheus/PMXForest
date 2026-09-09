@@ -65,7 +65,7 @@ Reads the `IGNORE` and `ACCEPT` statements from a NONMEM control
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
-dfData  <- read.csv(
+dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
 

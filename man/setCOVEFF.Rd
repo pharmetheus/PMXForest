@@ -15,25 +15,26 @@ setCOVEFF(dfres, lsTrue)
 A data frame similar to \code{dfres} except that the COVEFF column has been modified.
 }
 \description{
-Set the COEFF column in dfes to TRUE based on user input. Used to specify which covariates that are significant in an SCM.
+Set the COEFF column in dfes to TRUE based on user input. Used to specify which
+  covariates that are significant in an SCM.
 }
 \examples{
 \dontrun{
 lsTrue <- list(
-  c("CL","FOOD"),
-  c("CL","GENO"),
-  c("CL","WT"),
-  c("Frel","FORM"),
-  c("Frel","GENO"),
-  c("Frel","SEX"),
-  c("AUC","FORM"),
-  c("AUC","FOOD"),
-  c("AUC","GENO"),
-  c("AUC","WT"),
-  c("AUC","SEX"),
-  c("V","WT")
+  c("CL", "FOOD"),
+  c("CL", "GENO"),
+  c("CL", "WT"),
+  c("Frel", "FORM"),
+  c("Frel", "GENO"),
+  c("Frel", "SEX"),
+  c("AUC", "FORM"),
+  c("AUC", "FOOD"),
+  c("AUC", "GENO"),
+  c("AUC", "WT"),
+  c("AUC", "SEX"),
+  c("V", "WT")
 )
-newDfres <- setCOVEFF(dfresCOVscm,lsTrue)
+newDfres <- setCOVEFF(dfresCOVscm, lsTrue)
 }
 }
 \keyword{internal}

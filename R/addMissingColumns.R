@@ -1,7 +1,7 @@
 #' addMissingColumns
 #'
-#' @description Transforms a PsN raw reasults file to a format that is the same as a NONMEM ext file. This involves adding
-#' columns for fixed parameters, rearranging and renaming columns.
+#' @description Transforms a PsN raw reasults file to a format that is the same as a NONMEM ext
+#'   file. This involves adding columns for fixed parameters, rearranging and renaming columns.
 #'
 #' @param dfParams The file with a PsN raw results structure.
 #' @param dfExt The NONMEM ext file that is used as a temlate for the rearranging
@@ -27,7 +27,12 @@ addMissingColumns <- function(dfParams, dfExt, zerosindex) {
     namesdf <- names(dfExt)
     for (i in seq_along(dfExt)) {
       for (j in 1:i) {
-        if (i != j) zerosindex <- c(zerosindex, which(tmpz & grepl(paste0("^(OMEGA|SIGMA)\\.", i, "\\.", j, "\\."), namesdf)))
+        if (i != j) {
+          zerosindex <- c(
+            zerosindex,
+            which(tmpz & grepl(paste0("^(OMEGA|SIGMA)\\.", i, "\\.", j, "\\."), namesdf))
+          )
+        }
       }
     }
   }

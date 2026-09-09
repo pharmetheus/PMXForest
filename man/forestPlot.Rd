@@ -63,41 +63,61 @@ forestPlot(
 \arguments{
 \item{dfres}{A data.frame as output from getForestDFSCM, getForestDFFREM or getForestDFemp.}
 
-\item{plotData}{A \code{data.frame} to be used for creating the Forest plot. If \code{plotData} is provided \code{dfres} is ignored. See Details.}
+\item{plotData}{A \code{data.frame} to be used for creating the Forest plot. If
+\code{plotData} is provided \code{dfres} is ignored. See Details.}
 
 \item{plotRelative}{Should the plot be made on the relative scale (TRUE or FALSE)}
 
 \item{noVar}{Should the uncertainty in the reference be included (FALSE) or not (TRUE)}
 
 \item{referenceParameters}{Character string indicating how the reference parameter estimates were obtained.
-"final" means the final parameter estimates from the model. "func" means the mean parameter estimates across the posterior distribution.}
+"final" means the final parameter estimates from the model. "func" means the mean parameter
+estimates across the posterior distribution.}
 
-\item{sigdigits}{Number of significant digits for the numbers in the statistics table. Mutually exclusive with \code{decimals}. If both are \code{NULL} (the default), the number of decimals (2) is used when \code{plotRelative = TRUE} and \code{sigdigits = 2} when \code{plotRelative = FALSE}.}
+\item{sigdigits}{Number of significant digits for the numbers in the statistics table.
+Mutually exclusive with \code{decimals}. If both are \code{NULL} (the default), the number
+of decimals (2) is used when \code{plotRelative = TRUE} and \code{sigdigits = 2} when
+\code{plotRelative = FALSE}.}
 
-\item{decimals}{Number of decimal places for the numbers in the statistics table. Mutually exclusive with \code{sigdigits}. See \code{sigdigits} for the default behaviour.}
+\item{decimals}{Number of decimal places for the numbers in the statistics table. Mutually
+exclusive with \code{sigdigits}. See \code{sigdigits} for the default behaviour.}
 
-\item{parameters}{A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.}
+\item{parameters}{A character vector with the parameters present in the dfres$PARAMETER
+column to be included in the output.}
 
-\item{parameterLabels}{A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
-If a vector of the same length as \code{parameters} should also be ordered to match \code{parameters}. If \code{parameters} is not specified, then is should match the order in \code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
+\item{parameterLabels}{A vector of labels for the parameters. Should either have the same
+  length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+If a vector of the same length as \code{parameters} should also be ordered to match
+\code{parameters}. If \code{parameters} is not specified, then is should match the order in
+\code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar
+panels in the Forest plot in the x-direction (columns).}
 
-\item{parameterLabelsPrefix}{A string to be added before the \code{parameterLabels} in the facet strip for the parameter panels.}
+\item{parameterLabelsPrefix}{A string to be added before the \code{parameterLabels} in the
+facet strip for the parameter panels.}
 
-\item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
+\item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the
+ same length as the number unique values in \code{dfres$GROUPNAME} or the same length as
+ the number of rows in \code{dfres}.
 Is by default the same as \code{dfres$GROUPNAME}.}
 
-\item{referenceInfo}{A character string or NULL. If set to NULL, no information about how the reference line was derived will be displayed. If set to "auto",
-generic information based on \code{referenceParameters} and the \code{REFROW} column in \code{dfres} will be included at the bottom of the plot. If not NULL or "auto",
-then the character string will be displayed below the plot. Uses \code{ggpubr::annotate_figure} and \code{ggpubr::text_grob} to place and format the text.
+\item{referenceInfo}{A character string or NULL. If set to NULL, no information about how
+  the reference line was derived will be displayed. If set to "auto",
+generic information based on \code{referenceParameters} and the \code{REFROW} column in
+\code{dfres} will be included at the bottom of the plot. If not NULL or "auto",
+then the character string will be displayed below the plot. Uses
+\code{ggpubr::annotate_figure} and \code{ggpubr::text_grob} to place and format the text.
 Formatting instructions to \code{ggpubr::text_grob} are passed on through \code{...}. Default is "auto".}
 
-\item{labelfun}{A label function compatible with \code{labeller}. Used to format \code{parameterLabels} used as column facet labels for the errorbar and table plots.
+\item{labelfun}{A label function compatible with \code{labeller}. Used to format
+  \code{parameterLabels} used as column facet labels for the errorbar and table plots.
 Default is \code{label_value}.}
 
-\item{groupname_labelfun}{A label function compatible with \code{labeller}. Used to format \code{groupNameLabels} used as row facet labels for the errorbar and table plots.
+\item{groupname_labelfun}{A label function compatible with \code{labeller}. Used to format
+  \code{groupNameLabels} used as row facet labels for the errorbar and table plots.
 Default is \code{label_value}.}
 
-\item{ref_area}{Numerical vector indicating the horizontal size of the reference area. The default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
+\item{ref_area}{Numerical vector indicating the horizontal size of the reference area. The
+  default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
 xmin and xmax values for the reference area.}
 
 \item{ref_fill_col}{Reference area color.}
@@ -126,54 +146,78 @@ xmin and xmax values for the reference area.}
 
 \item{keepYlabs}{Logical. Should the labels on the y-axis be kept for all errorbar panels.}
 
-\item{keepRightStrip}{Logical. Should the right facet titles be kept for all table plots. Only when \code{rightStrip} is \code{TRUE}.}
+\item{keepRightStrip}{Logical. Should the right facet titles be kept for all table plots.
+Only when \code{rightStrip} is \code{TRUE}.}
 
-\item{stackedPlots}{Should the plots for the parameters be stacked instead of being vertical. Useful if there are many parameters to visualize. Works best with \code{keepYlab} and \code{keepRightStrip} set to \code{TRUE}.}
+\item{stackedPlots}{Should the plots for the parameters be stacked instead of being
+vertical. Useful if there are many parameters to visualize. Works best with
+\code{keepYlab} and \code{keepRightStrip} set to \code{TRUE}.}
 
-\item{strip_right_size}{Size of the facet text on the right (in pt). Default is NULL, which will fall back on the theme default.}
+\item{strip_right_size}{Size of the facet text on the right (in pt). Default is NULL, which
+will fall back on the theme default.}
 
-\item{strip_top_size}{Size of the facet text on the top (in pt). Default is NULL, which will fall back on the theme default.}
+\item{strip_top_size}{Size of the facet text on the top (in pt). Default is NULL, which will
+fall back on the theme default.}
 
-\item{ref_subj_label}{A character string indicating the label to be used for the reference subject in the figure legend. Default is "Reference subject".}
+\item{ref_subj_label}{A character string indicating the label to be used for the reference
+subject in the figure legend. Default is "Reference subject".}
 
-\item{ref_area_label}{A character string indicating the label to be used for the reference area in the figure legend. Default is "Reference area".}
+\item{ref_area_label}{A character string indicating the label to be used for the reference
+area in the figure legend. Default is "Reference area".}
 
-\item{point_label}{A character string indicating the label to be used for the point estimates in the figure legend. Default is "Point estimate".}
+\item{point_label}{A character string indicating the label to be used for the point
+estimates in the figure legend. Default is "Point estimate".}
 
-\item{ci_label}{A character string indicating the label to be used for the confidence interval in the figure legend. Default is "Confidence interval".}
+\item{ci_label}{A character string indicating the label to be used for the confidence
+interval in the figure legend. Default is "Confidence interval".}
 
-\item{statisticsLabel}{A vector of character string of the same length as \code{parameters} to be used as facet labels for the table plots.}
+\item{statisticsLabel}{A vector of character string of the same length as \code{parameters}
+to be used as facet labels for the table plots.}
 
 \item{xlb}{x-axis label for the errorbar plots}
 
-\item{commonXlab}{Logical. Should a common x-axis title be used or should each panel have its own. Default is FALSE.}
+\item{commonXlab}{Logical. Should a common x-axis title be used or should each panel have
+its own. Default is FALSE.}
 
-\item{size.legend.text}{The font size used in the legend in points or relative size to the theme base font. Default is rel(0.8).}
+\item{size.legend.text}{The font size used in the legend in points or relative size to the
+theme base font. Default is rel(0.8).}
 
-\item{return}{Either "plot" (default), "plotList" or "data". "plot" returns the \code{ggpubr::ggarrange} object. "plotList" returns a list of the different plots that make up
-the Forest plot (see Details). "data" returns a \code{data.frame} with the actual data used to create the Forest plot.}
+\item{return}{Either "plot" (default), "plotList" or "data". "plot" returns the
+\code{ggpubr::ggarrange} object. "plotList" returns a list of the different plots that
+make up the Forest plot (see Details). "data" returns a \code{data.frame} with the actual
+data used to create the Forest plot.}
 
 \item{table}{Logical. Should the table plots be included in the Forest plot or not.}
 
-\item{rightStrip}{Should the facet title in the rightmost panel in the Forest plot be displayed? If TRUE (the default) \code{groupNameLabels} will be used as the facets labels.}
+\item{rightStrip}{Should the facet title in the rightmost panel in the Forest plot be
+displayed? If TRUE (the default) \code{groupNameLabels} will be used as the facets labels.}
 
-\item{errbartabwidth}{A numerical vector of the same length as the number of panels in the plot (eror bar panels + table panels). Specifies the relative width of the panels.}
+\item{errbartabwidth}{A numerical vector of the same length as the number of panels in the
+plot (eror bar panels + table panels). Specifies the relative width of the panels.}
 
 \item{errbarplotscale}{Scaling factor for the width of the leftmost errorbar plot to compensate for y-axis labels.}
 
-\item{tabplotscale}{Scaling factor for the width of the rightmost column (usually a table plot) to adjust for the size of the right strip.}
+\item{tabplotscale}{Scaling factor for the width of the rightmost column (usually a table
+plot) to adjust for the size of the right strip.}
 
-\item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).}
+\item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or
+all covariates regardless of significance (FALSE).}
 
-\item{onlySignificantErrorBars}{Logical. Should error bars be hidden for non-significant covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).}
+\item{onlySignificantErrorBars}{Logical. Should error bars be hidden for non-significant
+covariates (TRUE) or be shown for all covariates regardless of significance (FALSE).}
 
-\item{setSignEff}{Passed to \code{setupForestPlotData()}. \code{NULL} (default) or a list of two-element character vectors \code{c(PARAMETER, GROUPNAME)}. When supplied, the \code{COVEFF} column is set \code{TRUE} for the matching parameter/covariate-group combinations and \code{FALSE} otherwise, overriding any existing \code{COVEFF} values.}
+\item{setSignEff}{Passed to \code{setupForestPlotData()}. \code{NULL} (default) or a list of
+two-element character vectors \code{c(PARAMETER, GROUPNAME)}. When supplied, the
+\code{COVEFF} column is set \code{TRUE} for the matching parameter/covariate-group
+combinations and \code{FALSE} otherwise, overriding any existing \code{COVEFF} values.}
 
-\item{size}{Base font size (points) for the plot text. Defaults to 80\% of the current \code{ggplot2} theme font size.}
+\item{size}{Base font size (points) for the plot text. Defaults to 80\% of the current
+\code{ggplot2} theme font size.}
 
 \item{addcodeErr}{A string of code to be applied to each of the panels with error bars.}
 
-\item{xlim}{Numeric length-2 vector giving the x-axis limits for the error-bar panels. Default \code{c(NA, NA)} lets the data set the range.}
+\item{xlim}{Numeric length-2 vector giving the x-axis limits for the error-bar panels.
+Default \code{c(NA, NA)} lets the data set the range.}
 
 \item{...}{Arguments passed on to \code{ggpubr::text_grob}.}
 }
@@ -181,48 +225,79 @@ the Forest plot (see Details). "data" returns a \code{data.frame} with the actua
 A \code{ggpubr::ggarrange} object, a list of plots or a \code{data.frame}.
 }
 \description{
-Create Forest plots consisting of alternating columns of errorbar plots and tabulated numerical statistics.
+Create Forest plots consisting of alternating columns of errorbar plots and
+  tabulated numerical statistics.
 }
 \details{
-If \code{plotData} is NULL, \code{dfres} is passed to \code{setupForestPlotData} to create a \code{data.frame} that contains the exact data to be plotted, including the numerical statistics.
-If \code{return} is set to "data" then the \code{data.frame} is returned. This makes it possible to to review the data and/or do modifications if necessary. \code{forestPlot} can
-be called with \code{plotData} set to the name of the \code{data.frame}, in which case \code{dfres} is not required and the \code{plotData} \code{data.frame} will be used for
+If \code{plotData} is NULL, \code{dfres} is passed to \code{setupForestPlotData} to create a
+\code{data.frame} that contains the exact data to be plotted, including the numerical
+statistics.
+If \code{return} is set to "data" then the \code{data.frame} is returned. This makes it
+possible to to review the data and/or do modifications if necessary. \code{forestPlot} can
+be called with \code{plotData} set to the name of the \code{data.frame}, in which case
+\code{dfres} is not required and the \code{plotData} \code{data.frame} will be used for
 creating the Forest plot.
 
-If \code{referenceInfo} is set to \code{auto} (the default) then generic information based on \code{referenceParameters} and the \code{REFROW} column in \code{dfres} will be included at the bottom of the plot.
-The \code{REFROW} column in \code{dfres} will be \code{NO} if \code{dfRefRow} is \code{NULL} in the call to \code{getForestDFSCM}, \code{getForestDFemp} and \code{getForestDFFREM} and \code{YES} if it is not.
+If \code{referenceInfo} is set to \code{auto} (the default) then generic information based
+on \code{referenceParameters} and the \code{REFROW} column in \code{dfres} will be included
+at the bottom of the plot.
+The \code{REFROW} column in \code{dfres} will be \code{NO} if \code{dfRefRow} is
+\code{NULL} in the call to \code{getForestDFSCM}, \code{getForestDFemp} and
+\code{getForestDFFREM} and \code{YES} if it is not.
 
-If \code{REFROW} is \code{NO}   and \code{referenceParameters} is \code{final} then the reference information text will be: "The reference line is based on the final parameter estimates and the reference covariate values in the model.".
+If \code{REFROW} is \code{NO}   and \code{referenceParameters} is \code{final} then the
+reference information text will be: "The reference line is based on the final parameter
+estimates and the reference covariate values in the model.".
 
-If \code{REFROW} is \code{NO}   and \code{referenceParameters} is \code{func} then the reference information text will be: "The reference line is based on the average parameter estimates over the posterior parameter distribution and the reference covariate values in the model.".
+If \code{REFROW} is \code{NO}   and \code{referenceParameters} is \code{func} then the
+reference information text will be: "The reference line is based on the average parameter
+estimates over the posterior parameter distribution and the reference covariate values in
+the model.".
 
-If \code{REFROW} is \code{YES}  and \code{referenceParameters} is \code{final} then the reference information text will be: "The reference line is based on the final parameter estimates and selected covariate values.".
+If \code{REFROW} is \code{YES}  and \code{referenceParameters} is \code{final} then the
+reference information text will be: "The reference line is based on the final parameter
+estimates and selected covariate values.".
 
-If \code{REFROW} is \code{YES}  and \code{referenceParameters} is \code{func}  then the reference information text will be: "The reference line is based on the average parameter estimates over the posterior parameter distribution and selected covariate values.".
+If \code{REFROW} is \code{YES}  and \code{referenceParameters} is \code{func}  then the
+reference information text will be: "The reference line is based on the average parameter
+estimates over the posterior parameter distribution and selected covariate values.".
 
-If \code{referenceInfo} is not \code{NULL} and not \code{auto} then the reference information text will be \code{referenceInfo}.
+If \code{referenceInfo} is not \code{NULL} and not \code{auto} then the reference
+information text will be \code{referenceInfo}.
 
-The Forest plots are created as a combination of separate errorbar plots and plots with the table information. Each panel is a separate plot, which are combined using \code{ggpubr::ggarrange}.
-In other words, even if the plot looks like a regular faceted plot it is not. For example, in a one parameter Forest plot with \code{table=TRUE}, the left panel is an errorbar plot with the right
-facet labels suppressed and the right plot is a plot with text, and which have the y-axis labels suppressed. In a plot with three parameters the errobar plot for the middle parameter will have both the y-axis labels and
-facet labels suppressed. the same is true for that parameter's table plot. The arguments \code{keepYlabs} and \code{keepRightStrip} controls if the y-axis labels and right facet labels for panels "in the middle" should
+The Forest plots are created as a combination of separate errorbar plots and plots with the
+table information. Each panel is a separate plot, which are combined using
+\code{ggpubr::ggarrange}.
+In other words, even if the plot looks like a regular faceted plot it is not. For example,
+in a one parameter Forest plot with \code{table=TRUE}, the left panel is an errorbar plot
+with the right
+facet labels suppressed and the right plot is a plot with text, and which have the y-axis
+labels suppressed. In a plot with three parameters the errobar plot for the middle parameter
+will have both the y-axis labels and
+facet labels suppressed. the same is true for that parameter's table plot. The arguments
+\code{keepYlabs} and \code{keepRightStrip} controls if the y-axis labels and right facet
+labels for panels "in the middle" should
 keep the axis and facet labels or not.
 
-\code{stackedPlots} switch from the default stacked horizontal orientation used if multiple parameters are included to vertical stacking. For this to provide a nice display it
-is necessary to have \code{keepYlabs} set to \code{TRUE} and \code{keepRightStrip=TRUE}. \code{stackedPlots} can be combind with \code{table=FALSE} and  \code{rightStrip=FALSE}.
+\code{stackedPlots} switch from the default stacked horizontal orientation used if multiple
+parameters are included to vertical stacking. For this to provide a nice display it
+is necessary to have \code{keepYlabs} set to \code{TRUE} and \code{keepRightStrip=TRUE}.
+\code{stackedPlots} can be combind with \code{table=FALSE} and  \code{rightStrip=FALSE}.
 
 The graphical settings use standard \code{ggplot} syntax.
 }
 \examples{
 # Build a small dfres from the SimVal PK model (run7, 14 THETAs)
-dfData  <- read.csv(
+dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
 extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
 
-dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "AGE", "CRCL"),
-                         idVar = "ID")
+dfCovs <- setupDfCovs(dfData,
+  covariates = c("WT", "AGE", "CRCL"),
+  idVar = "ID"
+)
 dfSamples <- getSamples(covFile, extFile, n = 50)
 
 paramFunction <- function(thetas, df, ...) {
@@ -233,15 +308,19 @@ paramFunction <- function(thetas, df, ...) {
   list(CL = TVCL)
 }
 
-dfres <- getForestDFSCM(dfCovs, functionList = list(paramFunction),
-                        functionListName = "CL", noBaseThetas = 14,
-                        dfParameters = dfSamples)
+dfres <- getForestDFSCM(dfCovs,
+  functionList = list(paramFunction),
+  functionListName = "CL", noBaseThetas = 14,
+  dfParameters = dfSamples
+)
 
 # Default Forest plot (error bars + statistics table)
 forestPlot(dfres, parameters = "CL")
 
 # Without the table, and with custom covariate-group labels and x-axis label
-forestPlot(dfres, parameters = "CL", table = FALSE,
-           groupNameLabels = c("Weight (kg)", "Age (y)", "Creatinine clearance"),
-           xlb = "Relative CL")
+forestPlot(dfres,
+  parameters = "CL", table = FALSE,
+  groupNameLabels = c("Weight (kg)", "Age (y)", "Creatinine clearance"),
+  xlb = "Relative CL"
+)
 }

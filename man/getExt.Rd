@@ -9,7 +9,8 @@ getExt(extFile, set = NULL)
 \arguments{
 \item{extFile}{The name of the .ext file.}
 
-\item{set}{The $ESTIMATION the iteration information should be extracted from. Will use the last $ESTIMATION if set to \code{NULL}.}
+\item{set}{The $ESTIMATION the iteration information should be extracted from. Will use the
+last $ESTIMATION if set to \code{NULL}.}
 }
 \value{
 A data.frame.

@@ -23,23 +23,33 @@ setupForestPlotData(
 \arguments{
 \item{dfres}{A data.frame as output from getForestDFSCM, getForestDFFREM or getForestDFemp.}
 
-\item{parameters}{A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.}
+\item{parameters}{A character vector with the parameters present in the dfres$PARAMETER
+column to be included in the output.}
 
-\item{parameterLabels}{A vector of labels for the parameters. Should either have the same length as \code{parameters} or the same length as the number of rows in \code{dfres}.
-If a vector of the same length as \code{parameters} should also be ordered to match \code{parameters}. If \code{parameters} is not specified, then is should match the order in \code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
+\item{parameterLabels}{A vector of labels for the parameters. Should either have the same
+  length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+If a vector of the same length as \code{parameters} should also be ordered to match
+\code{parameters}. If \code{parameters} is not specified, then is should match the order in
+\code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar
+panels in the Forest plot in the x-direction (columns).}
 
-\item{parameterLabelsPrefix}{A string to be added before the \code{parameterLabels} in the facet strip for the parameter panels.}
+\item{parameterLabelsPrefix}{A string to be added before the \code{parameterLabels} in the
+facet strip for the parameter panels.}
 
-\item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the same length as the number unique values in \code{dfres$GROUPNAME} or the same length as the number of rows in \code{dfres}.
+\item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the
+ same length as the number unique values in \code{dfres$GROUPNAME} or the same length as
+ the number of rows in \code{dfres}.
 Is by default the same as \code{dfres$GROUPNAME}.}
 
-\item{statisticsLabels}{A character string that will precede the \code{parameterLabels} in the facet labels for the statistics panels. Default is `Statistics:`.}
+\item{statisticsLabels}{A character string that will precede the \code{parameterLabels} in
+the facet labels for the statistics panels. Default is `Statistics:`.}
 
 \item{plotRelative}{Should the plot be made on the relative scale (TRUE or FALSE)}
 
 \item{noVar}{Should the uncertainty in the reference be included (FALSE) or not (TRUE)}
 
-\item{reference}{Which reference should be used, the final parameter estimates (final) or the parameter function (func)}
+\item{reference}{Which reference should be used, the final parameter estimates (final) or the
+parameter function (func)}
 
 \item{sigdigits}{Number of significant digits for the numbers in the statistics
 table. Mutually exclusive with \code{decimals}. If both \code{sigdigits} and
@@ -50,24 +60,40 @@ used on the relative scale and \code{sigdigits = 2} on the absolute scale.}
 table. Mutually exclusive with \code{sigdigits}. See \code{sigdigits} for the
 default behaviour.}
 
-\item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).}
+\item{onlySignificant}{Logical. Should only the significant covariates be included (TRUE) or
+all covariates regardless of significance (FALSE).}
 }
 \value{
-A processed data.frame to the used for creating the Forest plot. Only the columns used in the actual Forest plot is included:
+A processed data.frame to the used for creating the Forest plot. Only the columns
+  used in the actual Forest plot is included:
 \describe{
-\item{GROUPNAME}{The names of the covariate group, as specified in the call to \code{\link{createInputForestData}}.}
-\item{GROUPNAMELABEL}{The names of the covariate group as they will appear in the y-axis Facet. Is by default the same as \code{GROUPNAME}.}
-\item{COVNAME}{The label for each row in each facet in the Forest plot. For exampe Males and Females for the GROUPNAME Sex.}
-\item{PARAMETER}{The parameters to be plotted in the Forest plot. Comes from \code{functionListName} in the call to \code{\link{getForestDFSCM}}.}
-\item{PARAMETERLABEL}{The labels for \code{PARAMETER} as they will appear in the Forest plot. Is by default the same as \code{PARAMETER}. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).}
-\item{REF}{The parameter value to be used for the reference line, either REFTRUE or REFFUNC in \code{dfres} or 1 if \code{plotRelative=TRUE}.}
+\item{GROUPNAME}{The names of the covariate group, as specified in the call to
+\code{\link{createInputForestData}}.}
+\item{GROUPNAMELABEL}{The names of the covariate group as they will appear in the y-axis
+Facet. Is by default the same as \code{GROUPNAME}.}
+\item{COVNAME}{The label for each row in each facet in the Forest plot. For exampe Males and
+Females for the GROUPNAME Sex.}
+\item{PARAMETER}{The parameters to be plotted in the Forest plot. Comes from
+\code{functionListName} in the call to \code{\link{getForestDFSCM}}.}
+\item{PARAMETERLABEL}{The labels for \code{PARAMETER} as they will appear in the Forest plot.
+Is by default the same as \code{PARAMETER}. Used for faceting the errorbar panels in the
+Forest plot in the x-direction (columns).}
+\item{REF}{The parameter value to be used for the reference line, either REFTRUE or REFFUNC
+in \code{dfres} or 1 if \code{plotRelative=TRUE}.}
 \item{point}{The value used to plot the point estimate for each \code{COVNAME}.}
 \item{q1 and q2}{The values used to plot the lower (q1) and (q2) interval edges of the confidence intervals.}
-\item{reference}{A character string indicating what was used as the reference, either \code{func} or \code{true}, for the parameter function or the first row in \code{dfParameters}}
-\item{STATISTIC}{A character variable with the numerical summary for each \code{COVNAME} to be used in the statistics table.}
-\item{STATISTICSLABEL}{Similar to \code{PARAMETERLABEL}. Is the label used for \code{PARAMETER} in the table plots. Used for faceting the table panels in the Forest plot in the x-direction (columns).}
-\item{onlySignificant}{Logical. Should only GROUPNAME with with TRUE in the COVEFF column be included in the Forest plot?}
-\item{setSignEff}{NULL of a list. If a list, it should be a list ov vectors with a string for PARAMETER as the forst element and a string for GROUPNAME as the second element. If they match PARAMETER and GROUPNAME in dfres then
+\item{reference}{A character string indicating what was used as the reference, either
+\code{func} or \code{true}, for the parameter function or the first row in \code{dfParameters}}
+\item{STATISTIC}{A character variable with the numerical summary for each \code{COVNAME} to
+be used in the statistics table.}
+\item{STATISTICSLABEL}{Similar to \code{PARAMETERLABEL}. Is the label used for
+\code{PARAMETER} in the table plots. Used for faceting the table panels in the Forest plot in
+the x-direction (columns).}
+\item{onlySignificant}{Logical. Should only GROUPNAME with with TRUE in the COVEFF column be
+included in the Forest plot?}
+\item{setSignEff}{NULL of a list. If a list, it should be a list ov vectors with a string for
+PARAMETER as the forst element and a string for GROUPNAME as the second element. If they
+match PARAMETER and GROUPNAME in dfres then
 COVEFF will be set to TRUE else be set to FALSE. This will override the existing values in COVEFF.}
 }
 }
@@ -75,18 +101,19 @@ COVEFF will be set to TRUE else be set to FALSE. This will override the existing
 Creates the data.frame that is actually used for generating the Forest plots. Used by \code{forestPlot}.
 }
 \examples{
-dfData  <- read.csv(
+dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
 extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
 
-dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "AGE"), idVar = "ID")
+dfCovs <- setupDfCovs(dfData, covariates = c("WT", "AGE"), idVar = "ID")
 dfSamples <- getSamples(covFile, extFile, n = 50)
 dfres <- getForestDFSCM(dfCovs,
-                        functionList     = list(function(thetas, df, ...) list(CL = thetas[4])),
-                        functionListName = "CL", noBaseThetas = 14,
-                        dfParameters     = dfSamples)
+  functionList = list(function(thetas, df, ...) list(CL = thetas[4])),
+  functionListName = "CL", noBaseThetas = 14,
+  dfParameters = dfSamples
+)
 
 PMXForest:::setupForestPlotData(dfres)
 }

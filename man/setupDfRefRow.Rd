@@ -104,7 +104,7 @@ Generates the reference data frame (`dfRefRow`) required by
 dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
-covs   <- c("WT", "AGE", "SEX", "GENO")
+covs <- c("WT", "AGE", "SEX", "GENO")
 dfCovs <- setupDfCovs(dfData, covariates = covs, idVar = "ID")
 
 # Single-row reference: every covariate at its mode / median
@@ -112,20 +112,26 @@ setupDfRefRow(dfCovs, data = dfData, covariates = covs, idVar = "ID")
 
 # Matrix reference: same shape as dfCovs, active cells set to the reference,
 # inactive cells keep missVal
-setupDfRefRow(dfCovs, data = dfData, covariates = covs, singleRef = FALSE,
-              idVar = "ID")
+setupDfRefRow(dfCovs,
+  data = dfData, covariates = covs, singleRef = FALSE,
+  idVar = "ID"
+)
 
 # Pin WT at the model's normalisation weight and take AGE from the mean
-setupDfRefRow(dfCovs, data = dfData, covariates = covs, idVar = "ID",
-              contRef = list(WT = 75, default = "mean"))
+setupDfRefRow(dfCovs,
+  data = dfData, covariates = covs, idVar = "ID",
+  contRef = list(WT = 75, default = "mean")
+)
 
 # Take every reference from the control stream, so the reference row agrees
 # with a parameter function generated from the same model
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
-covs2   <- c("WT", "SEX", "FOOD", "FORM")
+covs2 <- c("WT", "SEX", "FOOD", "FORM")
 dfCovs2 <- setupDfCovs(dfData, covariates = covs2, idVar = "ID")
-setupDfRefRow(dfCovs2, data = dfData, covariates = covs2, idVar = "ID",
-              contRef = "model", catRef = "model", model = modFile)
+setupDfRefRow(dfCovs2,
+  data = dfData, covariates = covs2, idVar = "ID",
+  contRef = "model", catRef = "model", model = modFile
+)
 }
 \seealso{
 [setupDfCovs()], [createParamFunction()]

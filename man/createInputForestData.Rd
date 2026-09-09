@@ -48,7 +48,9 @@ dfCovs
 dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
-covStats <- getCovStats(dfData, covariates = c("WT", "AGE", "SEX", "GENO"),
-                        idVar = "ID")
+covStats <- getCovStats(dfData,
+  covariates = c("WT", "AGE", "SEX", "GENO"),
+  idVar = "ID"
+)
 createInputForestData(covStats)
 }

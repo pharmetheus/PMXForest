@@ -45,19 +45,26 @@ but functionListName must contain the names with a length of all return for all 
 
 \item{dfParameters}{A data frame with parameter samples from the uncertainty distribution.
 The vector of final parameter estimates is assumed to be in the first row.
-The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.}
+The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ
+columns whichshould not be included.}
 
-\item{quiet}{If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)}
+\item{quiet}{If output should be allowed during the function call, default= TRUE. (This option
+is mainly for debugging purposes.)}
 
-\item{probs}{A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}
+\item{probs}{A vector of probabilities that should be computed for each of the parameters from
+functionList. These will be used as the
+as the uncertainties in the Forest plots. The probs vector position one and two will be used
+for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}
 
-\item{pointFunction}{The function used to calculate the point for each covariate in the forest plot. default=median
+\item{pointFunction}{The function used to calculate the point for each covariate in the forest
+plot. default=median
 This function is also used for the reference covariate combination}
 
-\item{dfRefRow}{A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
+\item{dfRefRow}{A data frame  (one row or equal number of rows as dfCovs) with the covariate
+values that will be used as the reference, if NULL the typical subject is used as reference.}
 
-\item{cGrouping}{A vector of numbers defining how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
+\item{cGrouping}{A vector of numbers defining how to group the y-axis of the Forest plot, the
+length of the vector should match the number of rows in dfCovs.
 If NULL (default) an educated guess of the grouping will be set}
 
 \item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization}
@@ -86,18 +93,22 @@ dummy column names created when `oneHot` is used. Defaults to `"_"`. Set to
 A data frame with summary statistics for each parameters and covariate combinations:
 }
 \description{
-Get a data frame with Forest border for each univariate or multivariate covariate (and value(s)) in the input data frame. If a list a data frame will be created from the list, see function dfCreateInputForestData
+Get a data frame with Forest border for each univariate or multivariate covariate
+(and value(s)) in the input data frame. If a list a data frame will be created from the list,
+see function dfCreateInputForestData
 }
 \examples{
-dfData  <- read.csv(
+dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
 extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
 
 # Covariate rows and uncertainty samples (run7 has 14 THETAs)
-dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "AGE", "CRCL", "FOOD"),
-                         idVar = "ID")
+dfCovs <- setupDfCovs(dfData,
+  covariates = c("WT", "AGE", "CRCL", "FOOD"),
+  idVar = "ID"
+)
 dfSamples <- getSamples(covFile, extFile, n = 50)
 
 # Rebuild the part of the model needed for CL

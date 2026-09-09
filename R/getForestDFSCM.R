@@ -1,6 +1,8 @@
 #' getForestDFSCM
 #'
-#' @description Get a data frame with Forest border for each univariate or multivariate covariate (and value(s)) in the input data frame. If a list a data frame will be created from the list, see function dfCreateInputForestData
+#' @description Get a data frame with Forest border for each univariate or multivariate covariate
+#' (and value(s)) in the input data frame. If a list a data frame will be created from the list,
+#' see function dfCreateInputForestData
 #'
 #' @import doParallel
 #' @import foreach
@@ -18,14 +20,21 @@
 #' @param noBaseThetas the number of parameters from `dfParameters` to pass to the functions in `functionList`.
 #' @param dfParameters A data frame with parameter samples from the uncertainty distribution.
 #' The vector of final parameter estimates is assumed to be in the first row.
-#' The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.
-#' @param quiet If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)
-#' @param probs A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-#' as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).
-#' @param pointFunction The function used to calculate the point for each covariate in the forest plot. default=median
+#' The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ
+#' columns whichshould not be included.
+#' @param quiet If output should be allowed during the function call, default= TRUE. (This option
+#' is mainly for debugging purposes.)
+#' @param probs A vector of probabilities that should be computed for each of the parameters from
+#' functionList. These will be used as the
+#' as the uncertainties in the Forest plots. The probs vector position one and two will be used
+#' for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).
+#' @param pointFunction The function used to calculate the point for each covariate in the forest
+#' plot. default=median
 #' This function is also used for the reference covariate combination
-#' @param dfRefRow A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.
-#' @param cGrouping A vector of numbers defining how to group the y-axis of the Forest plot, the length of the vector should match the number of rows in dfCovs.
+#' @param dfRefRow A data frame  (one row or equal number of rows as dfCovs) with the covariate
+#' values that will be used as the reference, if NULL the typical subject is used as reference.
+#' @param cGrouping A vector of numbers defining how to group the y-axis of the Forest plot, the
+#' length of the vector should match the number of rows in dfCovs.
 #' If NULL (default) an educated guess of the grouping will be set
 #' @param ncores the number of cores to use for the calculations, default = 1 which means no parallellization
 #' @param cstrPackages a character vector with package names needed to run the calculations in parallel, default = NULL
@@ -105,7 +114,11 @@ getForestDFSCM <- function(dfCovs,
                            oneHotSep = "_",
                            ...) {
   if (!is.null(dfRefRow) && nrow(dfRefRow) != 1 && nrow(dfRefRow) != nrow(dfCovs)) {
-    stop("The number of reference rows (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to dfCovs (change reference for each covariate combination)")
+    stop(
+      "The number of reference rows (dfRefRow) should be either NULL (missing used as reference), one ",
+      "(this row used as reference) or equal to dfCovs (change reference for each covariate ",
+      "combination)"
+    )
   }
 
   ## Remove samples with problems. Will use THETA1 == NA as an indicator for a problematic sample
@@ -299,8 +312,16 @@ getForestDFSCM <- function(dfCovs,
       # stay ordered as lower/upper even when the reference value is negative.
       # Fall back to quant/base when the base is NA so an all-NA reference yields
       # NA columns rather than erroring in quantile().
-      quant_reffunc <- if (is.na(func_base)) quant / func_base else quantile(dft$VALUE / func_base, probs = probs, names = FALSE, na.rm = TRUE)
-      quant_reffinal <- if (is.na(true_base)) quant / true_base else quantile(dft$VALUE / true_base, probs = probs, names = FALSE, na.rm = TRUE)
+      quant_reffunc <- if (is.na(func_base)) {
+        quant / func_base
+      } else {
+        quantile(dft$VALUE / func_base, probs = probs, names = FALSE, na.rm = TRUE)
+      }
+      quant_reffinal <- if (is.na(true_base)) {
+        quant / true_base
+      } else {
+        quantile(dft$VALUE / true_base, probs = probs, names = FALSE, na.rm = TRUE)
+      }
       groupname <- group
       if (!is.null(groupnames)) groupname <- groupnames[i]
       dfrow <- cbind(dfCovs[i, , drop = FALSE], data.frame(

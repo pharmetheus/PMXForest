@@ -58,7 +58,11 @@ test_that("getSamples handles SIR and Missing Columns", {
 test_that("getSamples handles TTE models (Missing SIGMA/OMEGA logic)", {
   # Trigger Lines 188-198: Logic for models missing SIGMA or OMEGA
   runno <- "tte_weibull"
-  bootFile <- system.file("extdata", "tte", "bootstrap_tte_weibull_n500", paste0("raw_results_", runno, ".csv"), package = "PMXForest")
+  bootFile <- system.file(
+    "extdata", "tte", "bootstrap_tte_weibull_n500",
+    paste0("raw_results_", runno, ".csv"),
+    package = "PMXForest"
+  )
   extFile <- system.file("extdata", "tte", paste0(runno, ".ext"), package = "PMXForest")
 
   tmp_tte <- getSamples(bootFile, extFile)
@@ -116,7 +120,10 @@ test_that("getSamples comprehensive coverage", {
 
   # 4. Trigger Missing OMEGA logic (Lines 194-195)
   # Using the TTE model which lacks OMEGAs in raw results
-  tteBoot <- system.file("extdata", "tte", "bootstrap_tte_weibull_n500", "raw_results_tte_weibull.csv", package = "PMXForest")
+  tteBoot <- system.file(
+    "extdata", "tte", "bootstrap_tte_weibull_n500", "raw_results_tte_weibull.csv",
+    package = "PMXForest"
+  )
   tteExt <- system.file("extdata", "tte", "tte_weibull.ext", package = "PMXForest")
   res_tte <- getSamples(tteBoot, tteExt)
   expect_true("OMEGA.1.1." %in% names(res_tte))

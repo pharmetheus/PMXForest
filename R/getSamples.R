@@ -96,7 +96,9 @@ getSamples <- function(input,
     if (!file.exists(extFile)) stop(paste("Can not find", extFile))
   }
 
-  if (class(input) != "data.frame" && tools::file_ext(input) == "csv" && is.null(extFile)) stop("Need to provide an .ext file when input is a .csv file.")
+  if (class(input) != "data.frame" && tools::file_ext(input) == "csv" && is.null(extFile)) {
+    stop("Need to provide an .ext file when input is a .csv file.")
+  }
 
   # Load the ext data
   # This section ensures dfExt is available for all subsequent blocks
