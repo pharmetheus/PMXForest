@@ -1,57 +1,362 @@
-# PMXForest 1.2.15.9007 (development version)
+# PMXForest 1.3.0
 
-## Breaking Changes
-* **`refLevels` is deprecated, replaced by `catRef`.** `getCovStats()`, `setupDfCovs()`, `setupDfRefRow()` and `setupCovExpressionsList()` all gain `catRef`, symmetric with `contRef`. `refLevels` still works and forwards to `catRef`, with a deprecation warning; supplying both is an error.
-* **An explicit `catRef` (or `refLevels`) now sets the reference *value* as well as the one-hot column names.** Previously `refLevels` only chose which level was dropped when encoding, while the reference state was always the most common level in the data - so `refLevels = list(RACE = 1)` produced columns keyed on level 1 but a background sitting at the modal level. The two are now one setting: the level you name is both the level dropped when encoding and the state the reference takes. Calls that do **not** pass `refLevels`/`catRef` are unaffected - the encoding still drops the lowest level and the reference still comes from the mode.
-* `getCovStats()` now explicitly sorts binary covariate levels alphanumerically (e.g., always returning `c(0, 1)`) rather than returning them based on their order of appearance in the dataset. This ensures deterministic and reproducible row ordering in downstream forest plots.
+This release adds a way to generate the parameter function from the control
+stream instead of writing it by hand, convenience functions for the other
+`getForestDFSCM()` inputs, and a set of fixes - two of which change numbers in
+plots you have already made. Start with **Changes to existing behaviour**.
 
-## New Features
-* **Source and time stamps on plots:** Added `addStamp()`, which appends a caption recording where and when a figure was produced — `<working directory name>/<input file>/<chunk label>` plus the creation time — so a plot pasted into a report can be traced back to the code that made it. Inside a `knitr` chunk the file and label are picked up automatically; outside one they are unknown and simply omitted rather than left as empty path segments. This is a native reimplementation of the stamp Pharmetheus' internal `PhRame::add_stamp()` applies, written against `ggplot2` alone so the **public** packages can use it — `PhRame` is internal, so depending on it would break for external users. Only the "return the annotated plot" behaviour is reproduced; saving and printing are left to the caller.
-* **Streamlined Covariate Setup:** Introduced `setupDfCovs()`, a high-level wrapper that natively pipelines `getCovStats()` and `createInputForestData()`. This significantly reduces user friction during standard workflow setup.
-* **Flexible Covariate Background States:** `setupDfCovs()` includes `additionalCovs` and `useMissVal` arguments. This allows users to include supplementary covariates (such as those from FREM workflows) and toggle whether inactive cells hold `missVal` or computed baseline references. Reference values are strictly computed on deduplicated data (one record per `idVar`) to prevent longitudinal sampling skew.
-* **Automated Reference Row Generation:** Added `setupDfRefRow()` to generate the reference data frame required by `getForestDF` functions. Using a geometry-matching strategy, it maps computed baseline reference values (mode, median, or mean) onto the `dfCovs` structure. It supports both single-row outputs (`singleRef = TRUE`) and full matrix overlays (`singleRef = FALSE`) that perfectly preserve background missingness.
-* **Shared one-hot encoder:** Added `oneHotEncode()`, which adds `<covariate><sep><level>` dummy columns (numeric `0`/`1`) to a data frame following the convention shared with NONMEM FREM data sets and `PMXFrem::createFREMModel()`. It is idempotent on data that already carries the dummy columns.
-* **Explicit reference levels:** `getCovStats()`, `setupDfCovs()`, and `setupDfRefRow()` gained `refLevels` (a named list, e.g. `list(GENO = 2)`) and `sep`, so the generated one-hot columns can be aligned with a model whose reference category is not the lowest level. Defaults are unchanged (lowest level as reference, `"_"` separator).
-* **`oneHot` in the forest-data functions:** `getForestDFSCM()` and `getForestDFemp()` gained optional `oneHot` and `oneHotSep` arguments. When `oneHot` is supplied, raw multi-level categorical columns are one-hot encoded before the parameter functions run - in `dfCovs`/`dfRefRow` for `getForestDFSCM()`, in `dfData` for `getForestDFemp()` - so a single parameter function written against the dummy columns serves both workflows. `oneHotSep` (default `"_"`) sets the name separator; use `""` for columns named like `GENO1`. `oneHot` defaults to `NULL` (no encoding, output unchanged).
-* **Statistics-table number format:** `forestPlot()` gained a `decimals` argument alongside `sigdigits`; supply one or the other. With neither set (the default), the statistics table now uses **2 decimal places on the relative scale** and 2 significant digits on the absolute scale. Relative covariate effects cluster around 1, where 2 significant digits (the previous behaviour) discarded the second decimal - the default relative-scale table now shows values such as `1.03` rather than `1.0`. Only the printed numbers change; points, intervals and axis labels are unaffected. Calls that pass `sigdigits` explicitly are unchanged.
-* **Filtering a data set the way the model does:** Added `filterByModel()`, which reads the `IGNORE` and `ACCEPT` statements from a control stream's `$DATA` record and applies them, returning the rows the model actually used. Summarising the raw analysis file instead gives quantiles and reference values for a population the model never saw: on the bundled `run7` model the file holds 964 subjects but the model reads 754, and CRCL's 5th percentile moves from 74.9 to 77.7.
+## Changes to existing behaviour
 
-  Columns are matched **by position, not by name**. NONMEM skips the header line and takes its names from `$INPUT`, so the two can disagree - in the bundled data file they do, with `$INPUT`'s `DV` being the file's `LNDV` - and filtering by name would silently read the wrong column. Columns beyond `$INPUT` are ignored, `DROP` columns still occupy a position, and a `SYNONYM=REAL` pair can be referred to by either name. `useInputNames = TRUE` returns the data as NONMEM sees it, renamed. The single-character form (`IGNORE=C`) is a rule about the raw record rather than the data and cannot be applied; it is skipped with a warning, silently for the conventional `@` and `#` header markers.
-* **Reference values can be taken from the model, or set per covariate:** `contRef` and `catRef` in `setupDfCovs()` and `setupDfRefRow()` now accept either a single setting applied to every covariate, or a named list with an entry per covariate and an optional `default` component. `contRef` takes a number, `"mean"`, `"median"` or `"model"`; `catRef` takes a level, `"mode"`, `"lowest"` or `"model"`. For example `contRef = list(WT = 75, AGE = "mean", default = "median")`. `"model"` reads the reference out of the NONMEM control stream through the new `model` argument, which accepts either a `.mod` path or the list returned by `createParamFunction()`.
+* **Forest plots built from SIR files will change.** `getSamples()`'s
+  SIR-detection check looked for a `samples_order` column that PsN does not
+  produce (the column is `sample_order`), so SIR files were routed through the
+  bootstrap path. That path filters on `ofv != 0`, and therefore returned the
+  full SIR *proposal* distribution rather than the importance-resampled
+  parameter vectors (`resamples == 1`). It now returns the resampled vectors,
+  with the final estimates prepended as the first row, as for every other input
+  type. For a well-converged SIR run the confidence intervals shift by a few
+  percent, not systematically in one direction; for a poorly initialised run the
+  change can be larger. Bootstrap and `.cov` inputs are unaffected - those files
+  carry neither column, so the check was always false for them. `getSamples()`
+  also gains `quiet` (default `FALSE`), which prints a message when a SIR file
+  is detected.
 
-  This addresses a mismatch that was easy to miss. A parameter function must return something when a covariate is inactive, and it falls back to the model's own reference - the normalisation constant in `(WT/75)`, or the level in the branch PsN's scm marks `; Most common`. `setupDfRefRow()` meanwhile took the median weight and the modal level from the data. Where those differed, every row in which that covariate was inactive was displaced from 1: on the bundled `run7` model, by `(75/85.4)^0.75 = 0.907` for CL, `(75/85.4)^1 = 0.878` for V, and `1/(1-0.145) = 1.17` for Frel. Setting `contRef = "model"` and `catRef = "model"` takes both from `$PK` so the reference row and the parameter function cannot disagree. The defaults are unchanged, so existing plots are reproduced exactly.
-* **Parameter functions generated from the control stream:** Added `createParamFunction()`, which translates the `$PK` block of a NONMEM control stream into R source for a `paramFunction` of the form `function(thetas, df, ...)`. It returns the source as text for you to read, check and edit - nothing is evaluated. Every `ETA(n)` is set to 0, so the function returns typical values. All missing-covariate handling is hoisted into a single annotated preamble at the top of the generated function, with each reference value taken from the control stream itself: explicit `IF(WT.EQ.-99)` handling, the branch PsN's scm marks `; Most common`, the branch assigning the identity value, or the normalisation constant in `(WT/75)` / `(AGE-50)`. A weaker fifth rule proposes the level no `IF()` tests and warns; a covariate matching no rule is an error, and can be supplied through `covRef`. The parser accepts assignments, `IF` statements and closed-form arithmetic, and refuses anything else - `$DES`, compartment amounts `A(n)`, verbatim FORTRAN, `DO` loops, `CALL` - naming the file and line rather than guessing.
+* **The statistics table shows more digits on the relative scale.** With
+  neither `sigdigits` nor `decimals` set - the default - the table now uses 2
+  decimal places on the relative scale, and 2 significant digits on the absolute
+  scale as before. Relative covariate effects cluster around 1, where 2
+  significant digits discarded the second decimal, so a row that read `1.0` now
+  reads `1.03`. Only the printed numbers change; points, intervals and axis
+  labels are unaffected. Calls passing `sigdigits` explicitly are unchanged.
+  `forestPlot()` gains `decimals` alongside `sigdigits`; supply one or the other.
 
-  Secondary parameters (AUC, Cmax, event probabilities - anything reached through `$ERROR` or `$DES`) are supplied through the `secondary` argument: a named list where each entry is either a line of R code (`secondary = list(AUC = "df$DOSE / CL")`) or the path to an `.R` file of arbitrary code, including a `deSolve` or `mrgsolve` simulation (`secondary = list(CMAX = "cmax.R")`). A file's text is **inlined** into the generated source, so the result stays a self-contained artifact. Each entry is spliced in inside `local({ ... })`, so it sees `thetas` / `df` / `...` and every structural parameter by name (covariate columns as `df$NAME`) while its own temporaries do not leak; entries are emitted in order so a later one may use an earlier one. The names are appended to `functionListName` (so `getForestDFSCM()` picks them up) and recorded in the new `secondaryNames` element, with `primaryNames` holding the `$PK` parameters alone. A string that looks like a path (`.R` / `.r`) but does not exist is an error rather than a mistyped snippet, and every entry is `parse()`d up front. An entry's value may also be a list `list(source = <string>, dose = 100, tau = 12, ...)` - the `source` is the code/file, and every other named atomic element is emitted as `name <- value` immediately before it inside the same `local({ })`, so a shipped or reusable secondary file can be parametrised at the call site instead of hard-coding constants; a bare string is just `source` with no constants. The resolver is exported as `nmResolveSecondary()` for reuse. Without `secondary`, the emitted source keeps the marked extension point for adding them by hand.
-* **The `$PK` parse is now reusable:** the front end of `createParamFunction()` is exported as `nmParsePK()`, which reads a control stream and returns the parsed `$PK` statement tree (with `ETA()` references intact), the covariates and their reference values, the THETA count and the exponential-IIV `etaMap` - without emitting any source. `nmDeparse()` (render one expression node as R source, choosing the substitution for `ETA()`) and `nmFormatNum()` are exported alongside it. This lets other packages build their own emitters on the same tested parser; PMXFrem uses it for FREM parameter functions. `createParamFunction()` now calls `nmParsePK()` internally and is otherwise unchanged.
-* **Checking a generated parameter function:** Added `verifyParamFunction()`, which evaluates the generated function over a NONMEM `$TABLE` file and compares the result with the values NONMEM itself wrote. Table output is written after `IGNORE`/`ACCEPT` have been applied, so taking both the parameters and the covariates from the table removes any need to reproduce the `$DATA` filtering. Where a parameter is written `P = <expr> * EXP(ETA(n))`, the tabled individual value is divided by `exp(ETA(n))` to recover the typical value; a `TVP` column is used directly. Anything missing from the table produces a loud warning and a `PASS` of `NA` rather than a silent comparison. It returns a single `TRUE` / `FALSE` (`TRUE` only if every requested parameter was checked and passed, so it can be used directly in an `if`) with the per-parameter table attached as `attr(., "checks")`. By default it checks only the `$PK` parameters; `secondary` parameters are skipped, since a secondary quantity such as AUC is generally not a `$TABLE` column and not reducible to a typical value.
-* **Empirical covariate setup:** Added `setupCovExpressionsList()`, the empirical-workflow counterpart of `setupDfCovs()`. It turns a data frame plus a vector of covariate names into the named `covExpressionsList` and a matching `cdfCovsNames` label vector consumed by `getForestDFemp()`, reusing the deduplicated level and quantile logic of `getCovStats()`. Continuous covariates split at the `probs` quantile tails (or the median via `contSplit = "median"`); multi-level categoricals emit one row per level (`includeReference = FALSE` drops the reference). Each entry in `additionalCovs` gets its own rows and, in addition, a fixed condition on it (a level for categoricals; a `prob` or `value` split with a direction for continuous) is combined into every other covariate's expression. Every generated expression is checked against the deduplicated data and the function stops if any selects fewer than `minSubjects` (default 10) subjects.
+* **An explicit `catRef` (or `refLevels`) now sets the reference *value* as well
+  as the one-hot column names.** Previously `refLevels` only chose which level
+  was dropped when encoding, while the reference state was always the most
+  common level in the data - so `refLevels = list(RACE = 1)` produced columns
+  keyed on level 1 but a background sitting at the modal level. The two are now
+  one setting. Calls that pass neither are unaffected: the encoding still drops
+  the lowest level and the reference still comes from the mode.
 
-## Internal
-* **Faster result assembly in `getForestDFSCM()` / `getForestDFemp()`.** Both built their per-parameter-vector result with a per-cell `data.frame()` plus a growing `bind_rows()` loop, at both the inner (`internalCalc`) and outer (combine) level. They now fill typed column vectors and construct the data frame once. Output is unchanged. The assembly step alone is roughly **50-80x** faster on a representative shape (300 parameter rows x 20 covariate rows x ~36k intermediate rows: 10.7 s -> ~0.15 s); the effect on total runtime depends on how expensive `functionList` is (dominant for closed-form parameter functions, negligible when each call runs a simulation).
+* **`refLevels` is deprecated in favour of `catRef`.** `getCovStats()`,
+  `setupDfCovs()`, `setupDfRefRow()` and `setupCovExpressionsList()` all take
+  `catRef`, symmetric with `contRef`. `refLevels` still works and forwards to
+  `catRef` with a deprecation warning; supplying both is an error.
 
-## Bug Fixes
-* **`verifyParamFunction()` with an explicitly named parameter:** Naming a `secondary` parameter (e.g. `parameters = "AUC"`) crashed with "subscript out of bounds" instead of warning that it could not be reconciled against the table - `x$etaMap[[p]]` throws rather than returning nothing when `p` has no entry, which every secondary parameter doesn't. Now guarded so the intended warning ("Cannot recover typical values...") and `PASS = NA` row are produced instead. Naming a parameter the generated function does not return **at all** (a typo, or a `secondary` that was never defined) likewise crashed in the per-parameter `vapply`; it now produces a "not returned by the generated function" warning and a `PASS = NA` row. The first case was found via `covr::package_coverage()`, which exercises this path; the routine `devtools::test()` suite did not (the test helper had the same bug, masking it).
-* **`nmResolveSecondary()` missed an unnamed constant:** A `secondary` list entry like `list(source = "x", 100)` (a constant with no name) should have been rejected with "must be ... named", but indexing the entry's extra elements with `v[setdiff(names(v), "source")]` silently dropped it instead - indexing a list by `""` never matches in R, regardless of whether an element is actually named `""`, so the unnamed constant vanished before the name check ran and a confusing "not valid R names: NA" error surfaced further down instead. Rewritten as boolean indexing (`v[names(v) != "source"]`).
-* **Windows / PSOCK parallelisation in `getForestDFSCM()` / `getForestDFemp()`:** With `ncores > 1` on a platform that uses PSOCK workers (Windows), the `foreach` loop could crash with "object not found" because its static global detection does not reliably follow the internal `internalCalc` closure's free variables. The local environment is now bundled explicitly (`.export = c(ls(environment()), cstrExports)`), mirroring the fix made to `PMXFrem::getExplainedVar()` in PMXFrem 2.0.0. The parallel cluster is also now torn down via `on.exit(stopImplicitCluster(), add = TRUE)`, so it is released even if the function errors mid-run. Fork-based parallelism (Linux/macOS) and single-core runs are unaffected; results are identical.
-* **`getForestDFSCM()` with a single covariate:** A `dfCovs` with only one covariate column failed - `dfCovs[i, ]` dropped to a vector, so the covariate column in the result was named `dfCovs[i, ]` (or, more recently, the call errored in `getCovNameString()` with "argument of length 0"). The three remaining `dfCovs[i, ]` accesses now use `drop = FALSE`; single- and multi-covariate `dfCovs` behave the same. (Original ticket dates back to PMXForest 1.0.5/1.0.6.)
-* **`tibble` inputs to `getForestDFSCM()` / `getForestDFemp()`:** Passing `dfCovs` (or `dfRefRow`, or `dfData`) as a `tibble` failed with an unclear `vctrs` "Can't subset columns past the end" error, because the internal code relies on base-R `[` dropping a single-column selection to a vector, which a tibble does not do. These arguments are now coerced with `as.data.frame()` on entry, so `tibble` and `data.frame` inputs behave identically. (`PMXFrem::getForestDFFREM()` has the same pattern and needs the same fix.)
-* **SIR raw_results handling in `getSamples()`:** The SIR-detection check looked for a `samples_order` column that PsN does not produce (the column is `sample_order`), so SIR files were routed through the bootstrap code path. That path filters on `ofv != 0` and therefore returned the full SIR *proposal* distribution instead of the importance-resampled parameter vectors (`resamples == 1`). `getSamples()` now returns the resampled vectors, with the final estimates prepended as the first row (as for the other inputs). **Forest plots built from SIR files will change**: for a well-converged SIR run the confidence intervals shift by a few percent (and not systematically in one direction); for a poorly initialised run the change can be larger. `getSamples()` also gains a `quiet` argument (default `FALSE`) that prints a message when a SIR file is detected.
-* **Reversed relative confidence intervals:** Fixed a bug in `getForestDFSCM()` and `getForestDFemp()` where the `Q*_REL_REFFUNC` and `Q*_REL_REFFINAL` columns had their lower and upper limits swapped when the `functionList` function returned a negative reference value. The relative quantiles are now computed from the ratio directly instead of dividing the absolute quantiles by the (possibly negative) reference, so the interval endpoints stay correctly ordered.
-* **Programmatic Evaluation:** Fixed a Non-Standard Evaluation (NSE) bug in `getCovStats()`. The `idVar` argument is now safely evaluated using `rlang::sym()` instead of `rlang::ensym()`, allowing the function to be properly wrapped and called programmatically without scoping errors.
-* **Unexported helpers:** `setupDfCovs()` and `setupDfRefRow()` were added without a `NAMESPACE` entry or help page and were therefore not reachable as `PMXForest::setupDfCovs()` / `setupDfRefRow()`. Documentation has been regenerated so both functions are exported and documented.
+* **`getCovStats()` sorts binary covariate levels.** They were returned in order
+  of appearance in the data, so row order in a Forest plot depended on which
+  subject came first. Now always `c(0, 1)`.
+
+* **`getCovStats()` refuses a covariate with no non-missing value** instead of
+  returning an empty result. `createInputForestData()` emits no rows for such a
+  covariate, so it silently vanished from the plot. `setupDfCovs()` inherits the
+  error. `refValues()` already behaved this way.
+
+* **The statistics panel label gains its separating space.** `forestPlot()`'s
+  `statisticsLabel` defaulted to `"Statistics:"` and is prepended verbatim, so
+  every panel was titled `Statistics:CL (L/h)`. The default is now
+  `"Statistics: "`. A label you pass yourself is still used exactly as given, so
+  include the space you want.
+
+## Generating the parameter function from the control stream
+
+The parameter function used to be written by hand, duplicating algebra that
+already exists in `$PK` - the easiest place in the workflow to introduce an
+error no test would catch.
+
+* **`createParamFunction()`** translates a `$PK` block into R source for a
+  `function(thetas, df, ...)`. It returns **text**, for you to read and check;
+  nothing is evaluated on your behalf. Every `ETA(n)` is set to 0, so the
+  function returns typical values. All missing-covariate handling is hoisted
+  into one annotated preamble, each reference value taken from the control
+  stream itself by four rules in decreasing order of confidence: explicit
+  `IF(WT.EQ.-99)` handling; the branch PsN's scm marks `; Most common`; the
+  branch assigning the identity value; the normalisation constant in `(WT/75)`
+  or `(AGE-50)`. A weaker fifth rule proposes the level no `IF()` tests and
+  warns. A covariate matching no rule is an error, and can be supplied through
+  `covRef`.
+
+  The parser accepts assignments, `IF` constructs and closed-form arithmetic,
+  and refuses what it cannot translate faithfully - `$DES`, compartment amounts
+  `A(n)`, verbatim FORTRAN, `DO`, `CALL` - naming the file and line rather than
+  guessing. It also refuses a symbol read before anything assigns it: NONMEM
+  neither initialises `$PK` variables nor clears them between data records, so
+  such a model reads whatever the previous subject left behind, and a parameter
+  function evaluated one row at a time cannot reproduce that.
+
+* **`secondary`** attaches quantities `$PK` does not contain - AUC, `Cmax`, an
+  event probability. Each entry is a line of R code
+  (`secondary = list(AUC = "df$DOSE / CL")`) or the path to an `.R` file of
+  arbitrary code, including a `deSolve` or `mrgsolve` simulation, whose text is
+  **inlined** so the result stays self-contained. Entries are spliced inside
+  `local({ ... })`, so each sees `thetas`, `df` and every structural parameter
+  by name while its own temporaries do not leak, and are emitted in order so a
+  later one may use an earlier one. An entry may also be
+  `list(source = <string>, dose = 100, tau = 12)`, emitting the named constants
+  immediately before the code, so a reusable secondary file can be parametrised
+  at the call site. Names are appended to `functionListName` and recorded in
+  `secondaryNames`, with `primaryNames` holding the `$PK` parameters alone.
+
+* **`verifyParamFunction()`** evaluates the generated function over a NONMEM
+  `$TABLE` and compares it with the values NONMEM wrote, turning "do I trust
+  this translation?" into a pass or a fail. Table output is written after
+  `IGNORE`/`ACCEPT`, so taking both parameters and covariates from the table
+  removes any need to reproduce the `$DATA` filtering. Where `$PK` shows
+  exponential IIV the tabled value is divided by `exp(ETA(n))` to recover the
+  typical value. It returns a single `TRUE`/`FALSE`, usable directly in an `if`,
+  with the per-parameter table in `attr(., "checks")`. Only the exponential-IIV
+  idiom `P = <expr> * EXP(ETA(n))` is recognised, so a MU-referenced model
+  yields an empty `etaMap` and nothing to compare.
+
+* **The parser is reusable.** `nmParsePK()` returns the parsed `$PK` tree with
+  `ETA()` intact, the covariates and their references, the THETA count and the
+  `etaMap`, without emitting source. `nmDeparse()`, `nmFormatNum()` and
+  `nmResolveSecondary()` are exported alongside it, so other packages can build
+  their own emitters on the same tested parser; PMXFrem uses it for FREM
+  parameter functions.
+
+## Building the other inputs from the data
+
+* **`setupDfCovs()`** composes `getCovStats()` and `createInputForestData()`
+  into one call: continuous covariates become their 5th and 95th percentiles,
+  categorical ones one row per level. `additionalCovs` adds supplementary
+  covariates (FREM workflows, for instance) and `useMissVal` toggles whether
+  inactive cells hold `missVal` or a computed baseline. Statistics are computed
+  on deduplicated data - one record per `idVar` - so longitudinal data cannot
+  skew them.
+
+* **`setupDfRefRow()`** builds the reference row `getForestDF*()` expects,
+  mapping computed baseline values onto the `dfCovs` geometry. `singleRef = TRUE`
+  gives one row; `singleRef = FALSE` gives a full overlay preserving background
+  missingness.
+
+* **`setupCovExpressionsList()`** is the empirical counterpart of
+  `setupDfCovs()`, producing the `covExpressionsList` and matching
+  `cdfCovsNames` that `getForestDFemp()` consumes. Continuous covariates split
+  at the `probs` tails or the median (`contSplit = "median"`); multi-level
+  categoricals emit one row per level. Every generated expression is checked
+  against the data and the call stops if one selects fewer than `minSubjects`
+  subjects (default 10). It applies the same level and quantile rules as
+  `getCovStats()` but implements them separately, because the two return
+  different shapes - a change to one does not follow into the other.
+
+* **`filterByModel()`** applies the `IGNORE` and `ACCEPT` statements in a
+  control stream's `$DATA` record, returning the rows the model actually used.
+  Summarising the raw analysis file instead describes a population the model
+  never saw: on the bundled `run7`, the file holds 964 subjects and the model
+  reads 754, and CRCL's 5th percentile moves from 74.9 to 77.7.
+
+  Columns are matched **by position, not by name**. NONMEM skips the header and
+  takes its names from `$INPUT`, so the two can disagree - in the bundled data
+  file they do, `$INPUT`'s `DV` being the file's `LNDV` - and matching by name
+  would silently read the wrong column. Columns beyond `$INPUT` are ignored,
+  `DROP` columns still occupy a position, and either half of a `SYNONYM=REAL`
+  pair may be used. `useInputNames = TRUE` returns the data renamed as NONMEM
+  sees it. The single-character form (`IGNORE=C`) is a rule about the raw record
+  rather than the data and cannot be applied; it is skipped with a warning,
+  silently for the conventional `@` and `#`.
+
+* **`oneHotEncode()`** adds `<covariate><sep><level>` dummy columns following
+  the convention shared with NONMEM FREM data sets and
+  `PMXFrem::createFREMModel()`. It is idempotent on data that already carries
+  them. `getForestDFSCM()` and `getForestDFemp()` gain `oneHot` / `oneHotSep`,
+  so raw multi-level columns are encoded before the parameter function runs and
+  one function written against the dummies serves both workflows. `oneHot`
+  defaults to `NULL`; output is unchanged without it.
+
+## Keeping the reference row and the parameter function in agreement
+
+`contRef` and `catRef` in `setupDfCovs()` and `setupDfRefRow()` now accept
+either a single setting for every covariate, or a named list with an entry per
+covariate and an optional `default`. `contRef` takes a number, `"mean"`,
+`"median"` or `"model"`; `catRef` a level, `"mode"`, `"lowest"` or `"model"` -
+for example `contRef = list(WT = 75, AGE = "mean", default = "median")`.
+`"model"` reads the reference from the control stream through the new `model`
+argument, which takes a `.mod` path or the list `createParamFunction()` returns.
+
+This addresses a mismatch that was easy to miss. A parameter function must
+return something when a covariate is inactive, and it falls back to the model's
+own reference - the normalisation constant in `(WT/75)`, or the level in the
+branch marked `; Most common`. `setupDfRefRow()` meanwhile took the median and
+the modal level from the data. Where those differed, every row in which that
+covariate was inactive was displaced from 1: on `run7`, by
+`(75/85.4)^0.75 = 0.907` for CL, `(75/85.4) = 0.878` for V and
+`1/(1-0.145) = 1.17` for Frel. Taking both from `$PK` removes the
+disagreement. Defaults are unchanged, so existing plots are reproduced exactly.
+
+Note that `"model"` as a bare scalar applies to every covariate, so one
+covariate absent from `$PK` fails the call; use the named-list form. A
+one-hot coded categorical needs a literal level rather than `"model"`, because
+`$PK` names the dummies (`GENO1`, `GENO3`, `GENO4`) and never the covariate they
+encode.
+
+## Plots
+
+* **`addStamp()`** appends a caption recording where and when a figure was
+  produced - the working directory name, and inside a `knitr` chunk the input
+  file and chunk label, plus the creation time - so a plot pasted into a report
+  can be traced back to the code that made it. Segments that are unknown are
+  omitted rather than left as empty path elements. It is a native
+  reimplementation of the stamp `PhRame::add_stamp()` applies, written against
+  `ggplot2` alone so the public packages can use it; `PhRame` is internal, so
+  depending on it would break for external users. Only the "return the annotated
+  plot" behaviour is reproduced - saving and printing are left to the caller.
+
+## Bug fixes
+
+* **A covariate could be read from the wrong column.** The missing-value
+  preamble of a generated parameter function used `df$WT`, and `$`
+  partial-matches on a data frame - so a data set carrying `WTKG` but no `WT`
+  silently used `WTKG` as the covariate instead of falling back to the
+  reference. Name families like this are ordinary; `run7`'s own `$INPUT` has
+  `NCI`/`NCIL` and `RACEL`/`RACEL1`. The generated code now uses `df[["WT"]]`.
+
+* **`MOD()` translated to the wrong arithmetic**, in two independent ways.
+  `%%` binds tighter than `*` and `/` in R while `MOD()` is a call, so
+  `MOD(A*B, C)` emitted `A * B %% C`; and Fortran `MOD()` truncates towards
+  zero where R's `%%` floors, so they disagree for a negative first argument.
+  `MOD(a, b)` now emits `a - b * trunc(a / b)`, which is correct for either
+  sign and needs no special parenthesisation.
+
+* **The documented rule 1 could never fire.** Covariates were taken to be
+  `$INPUT` columns *never assigned* in `$PK`, but the primary reference rule
+  reads `IF(WT.EQ.-99) WT = 75`, which assigns `WT` - so such a covariate was
+  excluded before the rule was consulted, no preamble was emitted, and the
+  generated function referred to an unbound variable. Covariates are now those
+  `$PK` reads before assigning, which is what NONMEM does: data items are
+  populated before `$PK` runs.
+
+* **`covRef` was spliced in unchecked.** A misspelled name was silently ignored
+  and left the derived reference in place, a non-numeric value produced source
+  that parsed but failed when called, and a length-2 value died inside a
+  formatting helper naming neither the argument nor the covariate. Names must
+  now be covariates of the model and values a single finite number.
+
+* **`getCovStats()` leaked `NA` into level counting and quantiles.**
+  `x != missVal` is `NA` where `x` is `NA`, and indexing rows by a logical `NA`
+  keeps an all-`NA` row rather than dropping it. A binary covariate with a
+  genuine `NA` therefore silently changed shape - the `NA` counted as a third
+  level, returning a nested one-hot list where the documentation promises a
+  sorted vector - and a continuous one reached `quantile()`, whose `na.rm` is
+  `FALSE`, and failed with an error naming neither the covariate nor the cause.
+  `setupDfCovs()` inherited both.
+
+* **A per-covariate length error was reported unhelpfully.**
+  `contRef = c(70, 80)` was rejected clearly, but the same mistake written
+  `contRef = list(WT = c(70, 80))` passed the check and failed much later with
+  "replacement has 2 rows, data has 1". The length check now covers the named
+  entry and `default` too.
+
+* **Rounded quantiles could collapse onto one another.**
+  `setupCovExpressionsList()` rounds its cut points with `signif()`, and when
+  two distinct quantiles round to the same value the documented contrast
+  inverts: the two rows then cover every subject instead of leaving those
+  between them in neither. `minSubjects` cannot catch it, because both rows are
+  non-empty. It now warns.
+
+* **`verifyParamFunction()` with an explicitly named parameter:** naming a
+  `secondary` parameter crashed with "subscript out of bounds" instead of
+  warning that it could not be reconciled against the table. Naming a parameter
+  the function does not return at all likewise crashed. Both now warn and report
+  `PASS = NA`. Found through `covr::package_coverage()`, which exercises the
+  path; the routine test suite did not, because the test helper had the same
+  bug and masked it.
+
+* **`nmResolveSecondary()` missed an unnamed constant.** An entry such as
+  `list(source = "x", 100)` should have been rejected as unnamed, but the extra
+  elements were selected with `v[setdiff(names(v), "source")]`, and indexing a
+  list by `""` never matches in R - so the constant vanished before the name
+  check ran and a confusing error surfaced further down. Rewritten as boolean
+  indexing.
+
+* **Windows / PSOCK parallelisation** in `getForestDFSCM()` /
+  `getForestDFemp()`: with `ncores > 1` on a PSOCK platform the `foreach` loop
+  could fail with "object not found", because its static global detection does
+  not reliably follow the internal closure's free variables. The local
+  environment is now exported explicitly, mirroring the fix in
+  `PMXFrem::getExplainedVar()`. The cluster is also torn down through
+  `on.exit()`, so it is released if the function errors mid-run. Fork-based
+  parallelism and single-core runs are unaffected; results are identical.
+
+* **`getForestDFSCM()` with a single covariate:** a `dfCovs` with one covariate
+  column failed, because `dfCovs[i, ]` dropped to a vector. The remaining
+  accesses now use `drop = FALSE`. (Original ticket dates to 1.0.5/1.0.6.)
+
+* **`tibble` inputs** to `getForestDFSCM()` / `getForestDFemp()` failed with an
+  unclear `vctrs` error, because the internal code relies on base-R `[`
+  dropping a single-column selection to a vector. `dfCovs`, `dfRefRow` and
+  `dfData` are now coerced with `as.data.frame()` on entry.
+
+* **Reversed relative confidence intervals:** the `Q*_REL_REFFUNC` and
+  `Q*_REL_REFFINAL` columns had their limits swapped when the parameter
+  function returned a negative reference value. The relative quantiles are now
+  computed from the ratio directly rather than by dividing the absolute
+  quantiles by a possibly negative reference.
+
+* **`1:length(x)` in loop bounds:** `1:0` is `c(1, 0)`, so a loop over an empty
+  vector ran twice with out-of-range indices instead of not running. Replaced
+  with `seq_along()` / `seq_len()` throughout.
+
+* **Programmatic evaluation:** `getCovStats()`'s `idVar` is now evaluated with
+  `rlang::sym()` rather than `rlang::ensym()`, so the function can be wrapped
+  and called programmatically without scoping errors.
+
+* **Unexported helpers:** `setupDfCovs()` and `setupDfRefRow()` were added
+  without `NAMESPACE` entries or help pages, and so were not reachable as
+  `PMXForest::setupDfCovs()`. Both are now exported and documented.
 
 ## Documentation
-* Restructured the vignettes into a three-tier set: a Quick-Start, an end-to-end Walkthrough, and four deep dives (forest-plot inputs, R-coded models, secondary parameters, time-to-event models). The vignettes now build with `rmarkdown::html_document` instead of `bookdown`.
-* New **"Secondary Parameters"** deep dive: a two-part walkthrough of the `secondary` argument. Part 1 derives `AUC` / an elimination rate / a half-life in closed form and runs at build time; Part 2 computes a steady-state `Cmax` with an `mrgsolve` simulation and is shown but not executed (its output is illustrative), with the mrgsolve version requirements spelled out.
-* The "forest-plot inputs" deep dive replaces the earlier "covariate data preparation" vignette. It follows the three inputs `getForestDFSCM()` needs - `dfCovs`, the parameter function, and `dfRefRow` - end to end, and shows `createParamFunction()` and the `contRef`/`catRef` `"model"` option keeping the reference row and the parameter function in agreement.
-* Every exported function now has a runnable `@examples` section that works on the bundled `SimVal` model output (`inst/extdata/SimVal`) rather than synthetic data or `\dontrun` snippets. Documented the previously undocumented `forestPlot()` arguments `setSignEff`, `size`, and `xlim`.
+
+* The vignettes are a three-tier set: a Quick start, an end-to-end Walkthrough,
+  and four deep dives (Forest plot inputs, R-coded models, secondary parameters,
+  time-to-event models). They build with `rmarkdown::html_document` rather than
+  `bookdown`.
+
+* **The Quick start and the Walkthrough now teach the convenience functions.**
+  Both generate the parameter function rather than writing one out, and the
+  Walkthrough opens with `filterByModel()`, uses `setupDfCovs()` and
+  `setupDfRefRow()` with references taken from the model, generates its
+  empirical expressions with `setupCovExpressionsList()`, and closes with
+  `addStamp()`. It prints `POINT` beside `REFFUNC` to show that with a
+  model-derived reference the rows for covariates the model does not affect land
+  at exactly 1.
+
+* **The Forest plot inputs deep dive is the explicit layer.** Its introduction
+  maps each convenience function to the primitives underneath, so it can be read
+  in both directions. New sections cover what a parameter function must do -
+  the contract, and why the `-99` guard is needed even when the data has no
+  missing values - and what the generator refuses and why.
+
+* Every exported function has a runnable `@examples` section against the
+  bundled `SimVal` output, and eleven now carry a `@seealso` pointing at the
+  vignette that puts them in context. The previously undocumented `forestPlot()`
+  arguments `setSignEff`, `size` and `xlim` are documented.
+
+* The README uses the current API and `system.file()` paths, so its example runs
+  from an installed package rather than only from the source tree.
 
 ## Internal
-* Declared `rlang` in `Imports`. It was already used through `rlang::sym()` in the deduplication step of `getCovStats()`, `setupDfCovs()`, `setupDfRefRow()` and `setupCovExpressionsList()` but was not listed, which `R CMD check` flagged.
-* Dropped the `table1` dependency. Its only use was `signif_pad()` in the statistics-table formatting, now a small base-R helper (verified to produce identical output).
-* `setupForestPlotData()` is no longer exported (`@keywords internal`). It is an implementation detail of `forestPlot()`, which is unaffected.
-* Test coverage raised from 94.9% to 98.7% (every source file now at or above 98%). Added a `make coverage` target that fails below a 95% floor. The remaining gaps are the parallel (`ncores > 1`) branches and a few unreachable defensive guards.
+
+* **Faster result assembly** in `getForestDFSCM()` / `getForestDFemp()`. Both
+  built their per-parameter-vector result with a per-cell `data.frame()` and a
+  growing `bind_rows()` loop. They now fill typed column vectors and construct
+  the data frame once. Output is unchanged; the assembly step alone is roughly
+  50-80x faster on a representative shape (10.7 s to ~0.15 s). Effect on total
+  runtime depends on how expensive `functionList` is.
+
+* Declared `rlang` in `Imports`, and `withr` in `Suggests`. Both were already
+  used and neither was listed.
+
+* Dropped the `table1` dependency. Its only use was `signif_pad()`, now a small
+  base-R helper verified to produce identical output over a wide fuzz range.
+
+* `setupForestPlotData()` is no longer exported; it is an implementation detail
+  of `forestPlot()`, which is unaffected.
+
+* Test coverage is 96.4% (measured for this release), with a `make coverage`
+  target that fails below a 95% floor. The remaining gaps are the parallel
+  (`ncores > 1`) branches and a few unreachable defensive guards. Added a `.lintr` configuration, and the package is
+  now clean under `lintr` and `styler`.
 
 # PMXForest 1.2.15
 
