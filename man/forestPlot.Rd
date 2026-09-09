@@ -41,7 +41,7 @@ forestPlot(
   ref_area_label = "Reference area",
   point_label = "Point estimate",
   ci_label = "Confidence interval",
-  statisticsLabel = "Statistics:",
+  statisticsLabel = "Statistics: ",
   xlb = ifelse(plotRelative, "Relative parameter value", "Parameter value"),
   commonXlab = FALSE,
   size.legend.text = rel(0.8),
@@ -171,8 +171,10 @@ estimates in the figure legend. Default is "Point estimate".}
 \item{ci_label}{A character string indicating the label to be used for the confidence
 interval in the figure legend. Default is "Confidence interval".}
 
-\item{statisticsLabel}{A vector of character string of the same length as \code{parameters}
-to be used as facet labels for the table plots.}
+\item{statisticsLabel}{Text placed before each parameter label in the facet labels
+of the statistics panels. Prepended verbatim, with no separator added, so
+include any space you want. Default is `"Statistics: "`, giving
+`Statistics: CL`.}
 
 \item{xlb}{x-axis label for the errorbar plots}
 

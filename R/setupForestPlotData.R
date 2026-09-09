@@ -19,7 +19,10 @@
 #'   the number of rows in \code{dfres}.
 #'  Is by default the same as \code{dfres$GROUPNAME}.
 #' @param statisticsLabels A character string that will precede the \code{parameterLabels} in
-#'   the facet labels for the statistics panels. Default is `Statistics:`.
+#'   the facet labels for the statistics panels. It is prepended verbatim, with no
+#'   separator added, so include any space you want: `"Statistics: "` gives
+#'   `Statistics: CL`, `"Statistics:"` gives `Statistics:CL`. Default is
+#'   `"Statistics: "`.
 #' @param sigdigits Number of significant digits for the numbers in the statistics
 #'   table. Mutually exclusive with \code{decimals}. If both \code{sigdigits} and
 #'   \code{decimals} are \code{NULL} (the default), the number of decimals (2) is

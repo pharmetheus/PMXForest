@@ -99,6 +99,27 @@ test_that("setupForestPlotData hits remaining logical branches", {
   expect_true(res_override$COVEFF[2])
 })
 
+test_that("forestPlot's default statisticsLabel separates itself from the parameter", {
+  # The label is prepended verbatim (see the "Stats: " case above), so the
+  # separating space has to be part of the default. Without it the facet strip
+  # read "Statistics:CL (L/h)" - which is what the README figure showed for as
+  # long as that default lacked the space.
+  expect_equal(eval(formals(forestPlot)$statisticsLabel), "Statistics: ")
+
+  df_mock <- data.frame(
+    PARAMETER = c("CL", "V"), GROUPNAME = c("Sex", "Weight"),
+    COVNAME = c("Male", "70kg"), COVNUM = 1:2, COVEFF = c(TRUE, FALSE),
+    REFROW = "NO", REFFUNC = 10, POINT_REL_REFFUNC = 1.234,
+    Q1_REL_REFFUNC = 1.111, Q2_REL_REFFUNC = 1.357, stringsAsFactors = FALSE
+  )
+  res <- setupForestPlotData(
+    df_mock,
+    statisticsLabels = eval(formals(forestPlot)$statisticsLabel)
+  )
+  expect_equal(as.character(res$STATISTICSLABEL[1]), "Statistics: CL")
+  expect_false(grepl("Statistics:[^ ]", as.character(res$STATISTICSLABEL[1])))
+})
+
 test_that("setupForestPlotData accepts groupNameLabels as a per-row vector", {
   df_mock <- data.frame(
     PARAMETER = c("CL", "CL", "CL"),

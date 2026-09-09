@@ -42,7 +42,10 @@ facet strip for the parameter panels.}
 Is by default the same as \code{dfres$GROUPNAME}.}
 
 \item{statisticsLabels}{A character string that will precede the \code{parameterLabels} in
-the facet labels for the statistics panels. Default is `Statistics:`.}
+the facet labels for the statistics panels. It is prepended verbatim, with no
+separator added, so include any space you want: `"Statistics: "` gives
+`Statistics: CL`, `"Statistics:"` gives `Statistics:CL`. Default is
+`"Statistics: "`.}
 
 \item{plotRelative}{Should the plot be made on the relative scale (TRUE or FALSE)}
 

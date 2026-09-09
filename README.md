@@ -129,6 +129,9 @@ parallelized if needed.
 ``` r
 covFile <- "inst/extdata/SimVal/run7.cov"
 extFile <- "inst/extdata/SimVal/run7.ext"
+# Seeded so that rebuilding the README reproduces the figure below rather than
+# redrawing 175 new samples and shifting every confidence interval.
+set.seed(20240101)
 dfSamples <- getSamples(covFile, extFile, n = 175)
 
 
