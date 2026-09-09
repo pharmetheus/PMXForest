@@ -1,0 +1,14 @@
+linters: linters_with_defaults(
+    line_length_linter(120),
+    object_length_linter(40),
+    commented_code_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL,
+    cyclocomp_linter = NULL,
+    # pipe_consistency_linter = NULL,
+    # return_linter = NULL,
+    # indentation_linter = NULL,
+    vector_logic_linter = NULL, # TODO: this should be reactivated at some point
+    brace_linter = NULL
+    )
+exclusions: list("inst")

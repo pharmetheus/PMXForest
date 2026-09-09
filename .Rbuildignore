@@ -12,6 +12,7 @@ RawExampleFiles
 ^\.github$
 ^Makefile$
 ^\.covrignore$
+^\.lintr$
 ^_pkgdown\.yml$
 ^docs$
 ^\.claude$
