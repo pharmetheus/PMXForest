@@ -98,4 +98,5 @@ out$etaMap
 }
 \seealso{
 [createParamFunction()]
+  `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole workflow.
 }

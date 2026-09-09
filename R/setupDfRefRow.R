@@ -65,6 +65,8 @@
 #' @export
 #'
 #' @seealso [setupDfCovs()], [createParamFunction()]
+#'   `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole
+#'   workflow.
 #'
 #' @examples
 #' dfData <- read.csv(

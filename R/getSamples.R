@@ -45,6 +45,9 @@
 #'   NONMEM edge case), the function will `stop()` and prompt the user to
 #'   provide a manually aligned data.frame to `extFile`.
 #'
+#' @seealso
+#'   `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+#'
 #' @export
 #'
 #' @examples

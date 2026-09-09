@@ -36,6 +36,9 @@
 #'   geom_point()
 #' addStamp(p)
 #'
+#' @seealso
+#'   `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+#'
 #' @export
 addStamp <- function(p, size = 6, source = NULL) {
   if (!inherits(p, "ggplot")) {

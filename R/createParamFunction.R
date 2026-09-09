@@ -110,6 +110,7 @@
 #'
 #' @seealso [verifyParamFunction()] to check the generated function against a
 #'   NONMEM `$TABLE`; [getForestDFSCM()], [getForestDFemp()].
+#'   `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole workflow.
 #'
 #' @export
 #'

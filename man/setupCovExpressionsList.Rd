@@ -210,4 +210,5 @@ dfresEmp[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "POINT_REL_REFFUNC")]
 \seealso{
 [getForestDFemp()], [getCovStats()], [setupDfCovs()],
   [setupDfRefRow()]
+  `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole workflow.
 }

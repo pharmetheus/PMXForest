@@ -122,4 +122,6 @@ setupDfCovs(dfData,
 }
 \seealso{
 \code{\link{getCovStats}}, \code{\link{createInputForestData}}
+  `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole
+  workflow.
 }

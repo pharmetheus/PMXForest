@@ -48,3 +48,6 @@ p <- ggplot(mtcars, aes(wt, mpg)) +
 addStamp(p)
 
 }
+\seealso{
+`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+}

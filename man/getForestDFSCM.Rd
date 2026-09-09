@@ -132,3 +132,6 @@ dfres <- getForestDFSCM(
 )
 head(dfres[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
 }
+\seealso{
+`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+}

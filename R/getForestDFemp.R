@@ -16,6 +16,9 @@
 #' @inheritParams getForestDFSCM
 #'
 #' @return A data frame
+#' @seealso
+#'   `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+#'
 #' @export
 #'
 #' @examples

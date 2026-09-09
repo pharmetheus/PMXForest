@@ -82,4 +82,5 @@ head(names(filterByModel(dfData, modFile, useInputNames = TRUE, quiet = TRUE)), 
 }
 \seealso{
 [createParamFunction()], [setupDfCovs()], [getCovStats()]
+  `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
 }

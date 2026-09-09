@@ -35,9 +35,14 @@ dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXFo
 ## ---------------------------------------------------------------------------
 ## 1. The hand-written parameter function
 ##
-## Transcribed from vignettes/Part2-walkthrough.Rmd. Note how the -99 guard is
-## repeated at every covariate reference, and how the same covariate is tested
-## more than once.
+## This is now the only place the hand-written run7 function survives - the
+## Walkthrough it was transcribed from generates its function with
+## createParamFunction(). That is the right home for it: the script exists to
+## compare a hand-written function against a generated one, so keeping the
+## hand-written half here rather than in a tutorial is the point.
+##
+## Note how the -99 guard is repeated at every covariate reference, and how the
+## same covariate is tested more than once.
 ## ---------------------------------------------------------------------------
 
 manualFunction <- function(thetas, df, ...) {
