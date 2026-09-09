@@ -50,18 +50,33 @@ set.seed(865765)
 
 # Introduction
 
-`getForestDFSCM()` takes four inputs. This vignette covers how each is built, and
-— just as important — how to keep them consistent with one another.
+`getForestDFSCM()` takes four inputs. The [Quick start](Part1-quick-start.html)
+and the [Walkthrough](Part2-walkthrough.html) build all four with the
+convenience functions, which is the right way to work. This vignette is for the
+times that is not enough: when you need to know what a convenience function
+decided on your behalf, override one step of it, or build an input the wrappers
+do not cover.
 
-| Input | What it is | Built by |
-| --- | --- | --- |
-| `dfCovs` | one row per Forest plot row, inactive cells at `-99` | `setupDfCovs()`, `createInputForestData()` |
-| `functionList` | the parameter function, typical values from thetas and covariates | `createParamFunction()`, or written by hand |
-| `dfRefRow` | the reference subject the other rows are expressed relative to | `setupDfRefRow()` |
-| `dfParameters` | parameter uncertainty samples | `getSamples()` |
+So the table below reads in both directions. Left to right, it is what each
+input is and which one call produces it. Right to left, it is what that call
+does underneath — the function to reach for when you want to take over.
+
+| Input | What it is | One call | What that call does underneath |
+| --- | --- | --- | --- |
+| `dfCovs` | one row per Forest plot row, inactive cells at `-99` | `setupDfCovs()` | `getCovStats()` picks the values to plot, then `createInputForestData()` lays them out as rows |
+| `functionList` | the parameter function: typical values from thetas and covariates | `createParamFunction()` | `nmParsePK()` parses `$PK`, `nmCovRef()` finds a reference for each covariate, then the tree is emitted as R source |
+| `dfRefRow` | the reference subject the other rows are expressed relative to | `setupDfRefRow()` | `refResolve()` resolves one reference per covariate (`refValues()` from the data, the `$PK` for `"model"`), shaped into a single row matching `dfCovs` |
+| `dfParameters` | parameter uncertainty samples | `getSamples()` | this is the primitive — it reads the `.cov`, bootstrap or SIR file directly |
+| `covExpressionsList` | which subjects each empirical row summarises | `setupCovExpressionsList()` | applies the same level and quantile rules as `getCovStats()`, but **implements them separately** rather than calling it, because the two return different shapes |
 
 The empirical entry point `getForestDFemp()` takes a `covExpressionsList` in place
 of `dfCovs`; that is covered in Section 7.
+
+Two of those rows are worth pausing on. `setupDfCovs()` is a genuine composition
+— you can call `getCovStats()` and `createInputForestData()` yourself and get the
+same object, which Section 1 does step by step. `setupCovExpressionsList()` is
+not: it duplicates the logic. If you change how one of them chooses levels or
+quantiles, the other does not follow.
 
 The data set throughout is the PK analysis data used in the
 [Walkthrough](Part2-walkthrough.html), and the model is the `run7` control stream
@@ -258,6 +273,65 @@ into the parameters to plot. Writing it by hand duplicates code that already
 exists in the control stream, and it is the easiest place in the whole workflow to
 introduce a silent error.
 
+## 2.1 What a parameter function must do
+
+Before generating one, it is worth knowing what is being generated — both to
+read the output critically and to write one yourself when the generator cannot
+(Section 2.3).
+
+The contract is:
+
+```r
+function(thetas, df, ...) {
+  # ... rebuild the model's typical values ...
+  list(CL, FREL, AUC, V)
+}
+```
+
+* `thetas` is a numeric vector, in the order the THETAs appear in the model.
+* `df` is a **one-row** data frame of covariate values — one Forest plot row.
+  Because it is one row, `if (df$WT != -99)` is a scalar condition, which is
+  what makes the guards below legal.
+* `...` absorbs anything else `getForestDFSCM()` passes through, such as the
+  extra arguments the [time-to-event vignette](Part3-deep-dive-tte-models.html)
+  uses.
+* The return value is a list of the quantities to plot, named by
+  `functionListName`.
+
+Two defensive checks apply to every covariate the function reads:
+
+* `any(names(df) == "WT")` — the column may be **absent entirely**.
+* `df$WT != -99` — the cell may hold the missing-value indicator, which `dfCovs`
+  uses for every covariate that is *inactive on that row*.
+
+The second is the one that surprises people. **It is needed even when the
+original NONMEM data has no missing covariate values at all**, because `-99` here
+does not mean "missing in the data" — it means "this row is not about this
+covariate". A `dfCovs` row that varies `WT` carries `-99` in `SEX`, `FOOD` and
+the genotype columns, and a function that reads `df$SEX` without the guard will
+compute a covariate effect for a row that was never meant to have one.
+
+Written out for a single covariate, the shape is:
+
+```r
+FRELSEX <- 1
+if (any(names(df) == "SEX") && df$SEX != -99 && df$SEX == 2) {
+  FRELSEX <- 1 + thetas[14]
+}
+```
+
+Note the ordering: the column check comes first, so `df$SEX` is only evaluated
+once it is known to exist. Note also `df[["SEX"]]` would be safer still — `$`
+partial-matches on a data frame, so a data set carrying `SEXF` but not `SEX`
+would silently supply the wrong column. The generated function uses the
+bracket form for exactly this reason.
+
+A full hand-written function for `run7`, kept deliberately as a comparison
+against the generated one, is in `inst/validation/compare-paramFunction.R` in
+the installed package.
+
+## 2.2 Generating one
+
 `createParamFunction()` translates the `$PK` block into R **source text** for you
 to read, check and edit. Nothing is evaluated on your behalf.
 
@@ -297,6 +371,44 @@ A weaker fifth rule proposes the level that no `IF()` tests and **warns**;
 confirm it through `covRef`, as above for `GENO1` and `GENO3`. A covariate
 matching no rule at all is an error, not a guess.
 
+## 2.3 When the generator refuses
+
+The parser accepts assignments, `IF` constructs and closed-form arithmetic. It
+refuses anything it cannot translate faithfully, naming the file and line rather
+than guessing:
+
+| Refused | Why |
+| --- | --- |
+| `A(1)` — a compartment amount | needs an ODE solution, which no closed-form function can supply |
+| `DO`, `WHILE`, `CALL`, `GOTO`, `RETURN` | control flow with no expression equivalent |
+| verbatim FORTRAN | not NM-TRAN, so not parseable as such |
+| `EPS()` / `ERR()` | residual error has no place in a typical-value function |
+| a symbol read before anything assigns it | see below |
+
+That last one is worth explaining, because NONMEM accepts it and R will not.
+NONMEM does not initialise `$PK` variables, and it does not clear them between
+data records — so a variable read before it is assigned holds whatever the
+*previous subject* left there. A parameter function is evaluated one row at a
+time with no such carry-over, so it cannot reproduce that behaviour, and
+`createParamFunction()` refuses rather than quietly substituting a zero. If you
+hit this, give the variable an unconditional value in `$PK` above the line that
+reads it.
+
+A branch chain with no `ELSE` is *accepted*, because `scm` writes exhaustive
+ones — `run7.mod` itself sets `FRELFORM` from two one-line `IF`s covering
+`FORM` 0 and 1 — and no static check can tell an exhaustive chain from a
+non-exhaustive one. If no branch fires at run time the generated function stops
+with `object not found`, which is the honest outcome.
+
+When the generator refuses, write the function by hand to the contract in
+Section 2.1. Two vignettes do exactly that, for models the generator cannot
+reach:
+
+* [Time-to-event models](Part3-deep-dive-tte-models.html) — hazard and CDF
+  functions, including passing extra arguments through `...`.
+* [R-coded models](Part3-deep-dive-r-coded-models.html) — a model that never had
+  a `$PK` block to parse.
+
 ## Secondary parameters are yours
 
 AUC, Cmax and event probabilities are not derivable from `$PK` — the dose used
@@ -308,9 +420,11 @@ point for you to add them:
 cat(grep("Secondary parameters", gen$code, value = TRUE))
 ```
 
-The parser accepts assignments, `IF` statements and closed-form arithmetic, and
-refuses everything else — `$DES`, compartment amounts `A(n)`, verbatim FORTRAN,
-`DO` loops, `CALL` — naming the file and line rather than translating it wrongly.
+You do not have to add them by editing the emitted text. `secondary` takes them
+as an argument, either as a line of R code or as the path to a whole `.R` file —
+an `mrgsolve` or `deSolve` simulation, say — which is inlined so the result
+stays self-contained. That is a topic in itself, and it has its own vignette:
+[Secondary parameters](Part3-deep-dive-secondary-parameters.html).
 
 ## Checking the translation: `verifyParamFunction()`
 
@@ -391,6 +505,45 @@ setupDfRefRow(dfCovs, dfData, covariates,
 
 `contRef` applies to `setupDfCovs()` too — to `additionalCovs`, and to primary
 covariates when `useMissVal = FALSE`.
+
+### `"model"` needs the covariate to be in `$PK`
+
+`"model"` reads the reference out of the control stream, by the same rules
+Section 2 lists. That makes it the setting that keeps the reference row and the
+parameter function consistent — Section 4 is about why that matters — but it
+only works for covariates `$PK` actually mentions.
+
+**As a bare scalar it applies to every covariate, so one unmentioned covariate
+fails the whole call.** `run7`'s `$PK` never mentions `AGE`:
+
+```r
+setupDfRefRow(dfCovs, dfData, covariates, idVar = "ID", contRef = "model", model = modFile)
+#> Error: No reference value for covariate AGE could be derived from the model.
+#> Give it explicitly, e.g. contRef = list(AGE = <value>).
+```
+
+Use the named-list form and let everything else fall back:
+
+```r
+contRef = list(WT = "model", default = "median")
+```
+
+**A one-hot coded categorical needs a literal level, not `"model"`.** `$PK`
+names the dummies `GENO1`, `GENO3`, `GENO4` — never bare `GENO` — so the model
+holds a reference for each dummy but none for the covariate they encode:
+
+```r
+catRef = list(GENO = "model")
+#> Error: No reference value for covariate GENO could be derived from the model.
+#> Give it explicitly, e.g. catRef = list(GENO = <level>).
+#> The $PK names GENO4, GENO1, GENO3 rather than GENO itself, so a reference was
+#> found for each of those but not for the covariate they encode. Give the level
+#> you want as the reference.
+```
+
+So `catRef = list(SEX = "model", FORM = "model", FOOD = "model", GENO = 2)`:
+`SEX`, `FORM` and `FOOD` are coded directly in `$PK` and resolve; `GENO` is
+given the level you want.
 
 ::: {.callout-warning}
 `setupDfRefRow()` keys the reference values by the column names `setupDfCovs()`

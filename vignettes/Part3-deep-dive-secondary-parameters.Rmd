@@ -61,6 +61,13 @@ automatically. Its `secondary` argument attaches the derived quantities in the
 same call, so the whole parameter function -- structural part and secondary
 part -- is generated as one object that `getForestDFSCM()` can consume directly.
 
+This vignette assumes you have met `createParamFunction()` already. If not,
+[Preparing Forest plot inputs](Part3-deep-dive-forest-plot-inputs.html) covers
+what a parameter function must do (Section 2.1), how one is generated from `$PK`
+(2.2) and when the generator refuses (2.3); the
+[Walkthrough](Part2-walkthrough.html) puts it in the context of a whole Forest
+plot.
+
 Each `secondary` entry names a variable to add to the return list; its value is
 **one of**
 
