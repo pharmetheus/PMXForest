@@ -49,83 +49,96 @@ ggplot2::theme_set(ggplot2::theme_bw())
 ```
 
 
-### Specify the covariate information
+### Point at the model and the data
 
-The following code sets up a data frame with information about the coavriate combinations to visualise. It also specifies how the covariates values should appear and how the covariate groups should be described in the plot.
+Everything below uses the `run7` example bundled with the package, so it runs
+anywhere `PMXForest` is installed.
 
 ```{r}
-dfCovs <- createInputForestData(
-  list(
-    "FOOD" = c(0, 1),
-    "GENO" = list(
-      "GENO1" = c(1, 0, 0, 0),
-      "GENO3" = c(0, 0, 1, 0),
-      "GENO4" = c(0, 0, 0, 1)
-    ),
-    "WT" = c(65, 115),
-    "SEX" = c(1, 2)
-  )
+modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
+dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
+extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+```
+
+`filterByModel()` applies the model's own `IGNORE`/`ACCEPT` statements, so the
+covariate summaries below describe the subjects the model was actually fitted to.
+
+```{r, message = TRUE}
+dfData <- filterByModel(read.csv(dataFile), modFile)
+```
+
+### Specify the covariate information
+
+`setupDfCovs()` turns the data into one row per Forest plot row: the 5th and 95th
+percentiles of a continuous covariate, one row per level of a categorical one.
+`catRef = list(GENO = 2)` makes 2D6 EM the reference and `sep = ""` names the
+one-hot columns the way the control stream does.
+
+```{r}
+dfCovs <- setupDfCovs(
+  data = dfData,
+  covariates = c("FOOD", "GENO", "WT", "SEX"),
+  catRef = list(GENO = 2),
+  sep = "",
+  idVar = "ID"
 )
 
 covnames <- c(
-  "Fasted", "Fed", "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
-  "WT 65 kg", "WT 115 kg", "Male", "Female"
+  "Fasted", "Fed",
+  "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
+  paste0("WT ", dfCovs$WT[7:8], " kg"),
+  "Male", "Female"
 )
 
 covariateGroupNames <- c("Food status", "2D6 Genotype", "Weight", "Sex")
 ```
 
-
 ### Describe how the parameters are related to the covariates
 
-The paramFunction specifies the relationship between the covariates and the parameters of interest. It is not typically not necessary to translate the whole NONMEM model to R code or specify any differential equations. (PMXForest can be used together with mrgsolve, rxode2, etc for more complex problems, but this is usually not necessary.) The code below also specifies how the parameter names should apepar in the Forest plot.
+The parameter function turns the estimates and one row of covariate values into
+the quantities to plot. `createParamFunction()` writes it by translating the
+model's `$PK` block, so the relationship is not retyped in R and cannot drift
+away from the model. `secondary` adds `AUC` after an 80 mg dose, which is not in
+`$PK` because the dose is not.
 
 ```{r}
-paramFunction <- function(thetas, df, ...) {
-  if (df$WT != -99) {
-    TVCL <- thetas[4] * (df$WT / 75)**thetas[2]
-  } else {
-    TVCL <- thetas[4]
-  }
+gen <- createParamFunction(
+  modFile,
+  parameters = "CL",
+  covRef = list(GENO1 = 0, GENO3 = 0),
+  secondary = list(AUC = "80 / (CL / FREL)"),
+  quiet = TRUE
+)
+```
 
-  CLGENO <- 1
-  if (df$GENO1 != -99 && df$GENO1 == 1) CLGENO <- (1 + thetas[8])
-  if (df$GENO3 != -99 && df$GENO3 == 1) CLGENO <- (1 + thetas[9])
-  if (df$GENO4 != -99 && df$GENO4 == 1) CLGENO <- (1 + thetas[10])
+The result is source text. Read it against the control stream, then evaluate it:
 
-  CLFOOD <- 1
-  if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) CLFOOD <- (1 + thetas[11])
-
-  CL <- CLFOOD * CLGENO * TVCL
-  AUC <- 80 / CL
-
-  return(list(CL, AUC))
-}
-
+```{r}
+paramFunction <- eval(parse(text = paste(gen$code, collapse = "\n")))
 functionListName <- c("CL (L/h)", "AUC (mgh/L)")
 ```
 
 ### Generate the data for the plot
 
-
-PMXForest takes care of the simulations/predicitons needed for the plot, including the generation of uncertainty. In the example below, the uncertainty is taken from the variance-covariance information from NONMEM ($COV). The sampling is done by the getSamples function and the actual calculations are done by getForestDFSCM. The calculations can be parallelized if needed.
-
+PMXForest takes care of the simulations and predictions needed for the plot,
+including the uncertainty. Here it is taken from the NONMEM `$COV` step:
+`getSamples()` draws the parameter vectors and `getForestDFSCM()` does the
+calculations, in parallel if asked. `gen$noBaseThetas` is the THETA count read
+from the model, so it does not have to be typed in and kept up to date.
 
 ```{r}
-covFile <- "inst/extdata/SimVal/run7.cov"
-extFile <- "inst/extdata/SimVal/run7.ext"
 # Seeded so that rebuilding the README reproduces the figure below rather than
 # redrawing 175 new samples and shifting every confidence interval.
 set.seed(20240101)
 dfSamples <- getSamples(covFile, extFile, n = 175)
-
 
 dfres <- getForestDFSCM(
   dfCovs = dfCovs,
   cdfCovsNames = covnames,
   functionList = list(paramFunction),
   functionListName = functionListName,
-  noBaseThetas = 14,
+  noBaseThetas = gen$noBaseThetas,
   dfParameters = dfSamples
 )
 ```
@@ -134,7 +147,7 @@ dfres <- getForestDFSCM(
 
 With the above information is an easy task to generate the Forest plot.
 
-```{r,fig.width=12}
+```{r forest-plot, fig.width=12}
 forestPlot(dfres, groupNameLabels = covariateGroupNames, size = 10)
 ```
 

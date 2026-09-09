@@ -45,6 +45,7 @@
 #' @return A data frame containing the rows the model used.
 #'
 #' @seealso [createParamFunction()], [setupDfCovs()], [getCovStats()]
+#'   `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
 #'
 #' @export
 #'

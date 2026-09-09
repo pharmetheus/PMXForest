@@ -92,3 +92,6 @@ dfParameters <- getSamples(bootFile, extFile)
 getSamples(dfParameters) # use the rows as-is
 getSamples(dfParameters, n = 50) # or resample from their covariance
 }
+\seealso{
+`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+}

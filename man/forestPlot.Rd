@@ -326,3 +326,6 @@ forestPlot(dfres,
   xlb = "Relative CL"
 )
 }
+\seealso{
+`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+}

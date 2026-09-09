@@ -55,6 +55,9 @@
 #'
 #' @return A data frame with summary statistics for each parameters and covariate combinations:
 #'
+#' @seealso
+#'   `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+#'
 #' @export
 #'
 #' @examples

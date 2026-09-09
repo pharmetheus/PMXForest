@@ -154,6 +154,9 @@
 #'
 #' The graphical settings use standard \code{ggplot} syntax.
 #' @return A \code{ggpubr::ggarrange} object, a list of plots or a \code{data.frame}.
+#' @seealso
+#'   `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+#'
 #' @export
 #'
 #' @examples
