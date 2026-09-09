@@ -17,7 +17,7 @@
 #' @export
 #'
 #' @examples
-#' dfData  <- read.csv(
+#' dfData <- read.csv(
 #'   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 #' )
 #' extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
@@ -57,31 +57,30 @@
 #' )
 #' head(dfresEmp[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
 getForestDFemp <- function(dfData,
-                          covExpressionsList,
-                          noBaseThetas,
-                          dfParameters,
-                          cdfCovsNames = NULL,
-                          functionList = list(function(basethetas, dfrow, ...) {
-                            return(basethetas[1])
-                          }),
-                          functionListName = "PAR1",
-                          strID = "ID",
-                          quiet = TRUE,
-                          metricFunction = mean,
-                          probs = c(0.05, 0.95),
-                          pointFunction = median,
-                          dfRefRow = NULL,
-                          cGrouping = NULL,
-                          ncores = 1,
-                          cstrPackages = NULL,
-                          cstrExports = NULL,
-                          iMiss=-99,
-                          oneHot = NULL,
-                          oneHotSep = "_",
-                          ...) {
-
+                           covExpressionsList,
+                           noBaseThetas,
+                           dfParameters,
+                           cdfCovsNames = NULL,
+                           functionList = list(function(basethetas, dfrow, ...) {
+                             return(basethetas[1])
+                           }),
+                           functionListName = "PAR1",
+                           strID = "ID",
+                           quiet = TRUE,
+                           metricFunction = mean,
+                           probs = c(0.05, 0.95),
+                           pointFunction = median,
+                           dfRefRow = NULL,
+                           cGrouping = NULL,
+                           ncores = 1,
+                           cstrPackages = NULL,
+                           cstrExports = NULL,
+                           iMiss = -99,
+                           oneHot = NULL,
+                           oneHotSep = "_",
+                           ...) {
   ## Check input
-  if(!is.null(cdfCovsNames) & (length(cdfCovsNames) != length(covExpressionsList))) stop("cdfCovsNames should have the same length as covExpressionsList.")
+  if (!is.null(cdfCovsNames) & (length(cdfCovsNames) != length(covExpressionsList))) stop("cdfCovsNames should have the same length as covExpressionsList.")
 
   ## Remove samples with problems. Will use THETA1 == NA as an indicator for a problematic samples
   dfParameters <- dfParameters %>% filter(!is.na(THETA1))
@@ -92,10 +91,10 @@ getForestDFemp <- function(dfData,
   if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) dfRefRow <- as.data.frame(dfRefRow)
 
   ## Create a fake dfCovs
-  dfCovs <- data.frame(COV=rep(iMiss,length(covExpressionsList)))
+  dfCovs <- data.frame(COV = rep(iMiss, length(covExpressionsList)))
 
-  if (!is.null(dfRefRow) && ((is.data.frame(dfRefRow) && nrow(dfRefRow)!=1 && nrow(dfRefRow)!=nrow(dfCovs)) ||
-                             (is.expression(dfRefRow[[1]]) && length(dfRefRow)!=1 && length(dfRefRow)!=nrow(dfCovs)))) {
+  if (!is.null(dfRefRow) && ((is.data.frame(dfRefRow) && nrow(dfRefRow) != 1 && nrow(dfRefRow) != nrow(dfCovs)) ||
+    (is.expression(dfRefRow[[1]]) && length(dfRefRow) != 1 && length(dfRefRow) != nrow(dfCovs)))) {
     stop("The number of reference rows/expressions (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to covExpressionsList (change reference for each covariate expression)")
   }
 
@@ -111,38 +110,44 @@ getForestDFemp <- function(dfData,
     ## would produce no dummy columns at all and the parameter function would
     ## silently compute the baseline as if every dummy were absent.
     oneHotSpec <- normalizeOneHotSpec(oneHot, dfData, iMiss, FALSE)
-    dfData <- oneHotEncode(dfData, spec = oneHotSpec, sep = oneHotSep,
-                           missVal = iMiss, dropOriginal = FALSE)
+    dfData <- oneHotEncode(dfData,
+      spec = oneHotSpec, sep = oneHotSep,
+      missVal = iMiss, dropOriginal = FALSE
+    )
     if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
       dfRefRow <- suppressWarnings(
-        oneHotEncode(dfRefRow, spec = oneHotSpec, sep = oneHotSep,
-                     missVal = iMiss, dropOriginal = FALSE)
+        oneHotEncode(dfRefRow,
+          spec = oneHotSpec, sep = oneHotSep,
+          missVal = iMiss, dropOriginal = FALSE
+        )
       )
     }
   }
 
   if (is.null(cGrouping)) cGrouping <- 1:length(covExpressionsList)
 
-  groupnames<-names(covExpressionsList)
+  groupnames <- names(covExpressionsList)
 
   ## Register to allow for paralell computing. Tear the cluster down on exit
   ## (including on error) rather than only at the end of a successful run.
-  if (ncores>1) {
+  if (ncores > 1) {
     registerDoParallel(cores = ncores)
     on.exit(stopImplicitCluster(), add = TRUE)
   }
 
   ## Calculate the parameters
   nOut <- length(functionListName)
-  internalCalc<-function(k) {
+  internalCalc <- function(k) {
     thetas <- as.numeric(dfParameters[k, 1:noBaseThetas])
 
     ## Per-subject typical values. Fill typed vectors and build the data.frame
     ## once (a per-cell data.frame() + bind_rows() loop over nrow(dfData) x
     ## nOut rows is the dominant cost for large data sets).
     nRow <- nrow(dfData) * nOut
-    v_ITER <- integer(nRow); v_SUBJ <- integer(nRow)
-    v_NAME <- character(nRow); v_VALUE <- numeric(nRow)
+    v_ITER <- integer(nRow)
+    v_SUBJ <- integer(nRow)
+    v_NAME <- character(nRow)
+    v_VALUE <- numeric(nRow)
     p <- 0L
     for (m in 1:nrow(dfData)) {
       n <- 1L
@@ -150,28 +155,36 @@ getForestDFemp <- function(dfData,
         val <- functionList[[j]](thetas = thetas, df = dfData[m, ], ...)
         for (l in seq_along(val)) {
           p <- p + 1L
-          v_ITER[p] <- k; v_SUBJ[p] <- m
-          v_NAME[p] <- functionListName[n]; v_VALUE[p] <- val[[l]]
+          v_ITER[p] <- k
+          v_SUBJ[p] <- m
+          v_NAME[p] <- functionListName[n]
+          v_VALUE[p] <- val[[l]]
           n <- n + 1L
         }
       }
     }
-    if (p != nRow) { idx <- seq_len(p)
-      v_ITER <- v_ITER[idx]; v_SUBJ <- v_SUBJ[idx]
-      v_NAME <- v_NAME[idx]; v_VALUE <- v_VALUE[idx] }
-    dftmp <- data.frame(ITER = v_ITER, SUBJ = v_SUBJ, NAME = v_NAME,
-                        VALUE = v_VALUE, stringsAsFactors = FALSE)
+    if (p != nRow) {
+      idx <- seq_len(p)
+      v_ITER <- v_ITER[idx]
+      v_SUBJ <- v_SUBJ[idx]
+      v_NAME <- v_NAME[idx]
+      v_VALUE <- v_VALUE[idx]
+    }
+    dftmp <- data.frame(
+      ITER = v_ITER, SUBJ = v_SUBJ, NAME = v_NAME,
+      VALUE = v_VALUE, stringsAsFactors = FALSE
+    )
 
-    dfvalbase<-data.frame() #Prepare for a different reference per expressionList index
+    dfvalbase <- data.frame() # Prepare for a different reference per expressionList index
     # The default ref=1
     valbase <- rep(1, length(functionListName))
-    for (m in 1:length(covExpressionsList)) { #Allow different ref rows per covExpressionList
+    for (m in 1:length(covExpressionsList)) { # Allow different ref rows per covExpressionList
       n <- 1
       # Calculate the ref for this sample
       for (j in 1:length(functionList)) {
         if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
-          if (m==1 || nrow(dfRefRow)>1) {
-            valbase_tmp <- functionList[[j]](thetas = thetas, df = dfRefRow[min(m,nrow(dfRefRow)),], ...)
+          if (m == 1 || nrow(dfRefRow) > 1) {
+            valbase_tmp <- functionList[[j]](thetas = thetas, df = dfRefRow[min(m, nrow(dfRefRow)), ], ...)
             listcount <- length(valbase_tmp)
 
             for (l in 1:listcount) {
@@ -181,7 +194,7 @@ getForestDFemp <- function(dfData,
           }
         }
       }
-      dfvalbase<-rbind(dfvalbase,data.frame(rbind(valbase)))
+      dfvalbase <- rbind(dfvalbase, data.frame(rbind(valbase)))
     }
 
 
@@ -189,7 +202,7 @@ getForestDFemp <- function(dfData,
       for (j in 1:length(functionListName)) {
         valbase[j] <- metricFunction(subset(dftmp, ITER == k & NAME == functionListName[j])$VALUE)
       }
-      dfvalbase<-as.data.frame(data.frame(rbind(valbase))[rep(1,length(covExpressionsList)),])
+      dfvalbase <- as.data.frame(data.frame(rbind(valbase))[rep(1, length(covExpressionsList)), ])
     }
 
     ## Compute statistic for each "cov value"
@@ -205,10 +218,11 @@ getForestDFemp <- function(dfData,
       # Get the values out
       dft <- subset(dftmp, ITER == k & SUBJ %in% subjs)
 
-      #If we have an expression reference
+      # If we have an expression reference
       if (!is.null(dfRefRow) && is.expression(dfRefRow[[1]])) {
-        if (i==1 || length(dfRefRow)>1)
+        if (i == 1 || length(dfRefRow) > 1) {
           subjsref <- subset(dfData, eval(dfRefRow[[i]]))$TMPINDEX1
+        }
         if (is.null(subjsref) || length(subjsref) == 0) {
           stop(paste0("Error: no available data for reference subset: ", as.character(dfRefRow[[i]])))
         }
@@ -218,35 +232,37 @@ getForestDFemp <- function(dfData,
 
 
       for (m in 1:length(functionListName)) {
-        #Get the metric value
+        # Get the metric value
         val <- metricFunction(subset(dft, NAME == functionListName[m])$VALUE)
-        #Get the metric ref value if expression ref
+        # Get the metric ref value if expression ref
         if (!is.null(dfRefRow) && is.expression(dfRefRow[[1]])) {
-          VB<-metricFunction(subset(dfr, NAME == functionListName[m])$VALUE)
+          VB <- metricFunction(subset(dfr, NAME == functionListName[m])$VALUE)
         } else {
-          VB=dfvalbase[i,m]
+          VB <- dfvalbase[i, m]
         }
 
         # Store the val
         q <- q + 1L
-        rest[[q]] <- data.frame(ITER = k, SUBJ = -1L, NAME = functionListName[m],
-                                VALUE = val, COVS = i, NSUBJSCOVGROUP = NSubjs,
-                                VALUEBASE = VB, stringsAsFactors = FALSE)
+        rest[[q]] <- data.frame(
+          ITER = k, SUBJ = -1L, NAME = functionListName[m],
+          VALUE = val, COVS = i, NSUBJSCOVGROUP = NSubjs,
+          VALUEBASE = VB, stringsAsFactors = FALSE
+        )
       }
     }
-    dfrest <- bind_rows(rest[seq_len(q)])   # one combine, not a growing loop
+    dfrest <- bind_rows(rest[seq_len(q)]) # one combine, not a growing loop
     return(dfrest)
   }
 
-  if (ncores>1) {
+  if (ncores > 1) {
     parts <- foreach(
-    k = 1:nrow(dfParameters), .packages = cstrPackages,
-    ## Bundle the whole local environment for PSOCK workers (Windows); foreach's
-    ## static global detection does not reliably follow `internalCalc`'s free
-    ## variables. `cstrExports` covers anything outside this frame.
-    .export = c(ls(environment()), cstrExports),
-    .verbose = !quiet
-  ) %dopar% {
+      k = 1:nrow(dfParameters), .packages = cstrPackages,
+      ## Bundle the whole local environment for PSOCK workers (Windows); foreach's
+      ## static global detection does not reliably follow `internalCalc`'s free
+      ## variables. `cstrExports` covers anything outside this frame.
+      .export = c(ls(environment()), cstrExports),
+      .verbose = !quiet
+    ) %dopar% {
       internalCalc(k)
     }
   } else {
@@ -259,59 +275,59 @@ getForestDFemp <- function(dfData,
   for (i in 1:length(covExpressionsList)) {
     if (is.null(cdfCovsNames)) {
       covname <- as.character(covExpressionsList[[i]])
-    }
-    else {
+    } else {
       covname <- cdfCovsNames[i]
     }
     group <- cGrouping[i]
-    groupname<-groupnames[i]
+    groupname <- groupnames[i]
 
     for (j in 1:length(functionListName)) {
       dft <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j] &
         dfres$SUBJ == -1, ]
-         quant <- quantile(dft$VALUE,
+      quant <- quantile(dft$VALUE,
         probs = probs, names = FALSE,
         na.rm = T
       )
-      #Calculate the point value of the forest plot
-      FUNCVAL=pointFunction(dft$VALUE)
+      # Calculate the point value of the forest plot
+      FUNCVAL <- pointFunction(dft$VALUE)
 
-      #Define the relative without parameter uncertainty
-      dft$RELINTERNAL <- dft$VALUE/dft$VALUEBASE
-      #Get quantile and pointvalue when uncertainty is not taken into account
-      quantrel <- quantile(dft$RELINTERNAL,probs = probs, names = FALSE,na.rm = T)
-      FUNCNOVAR=pointFunction(dft$RELINTERNAL)
+      # Define the relative without parameter uncertainty
+      dft$RELINTERNAL <- dft$VALUE / dft$VALUEBASE
+      # Get quantile and pointvalue when uncertainty is not taken into account
+      quantrel <- quantile(dft$RELINTERNAL, probs = probs, names = FALSE, na.rm = T)
+      FUNCNOVAR <- pointFunction(dft$RELINTERNAL)
 
-      #Calculate reference value based one the pointFunction
-      func_base<-pointFunction(dft$VALUEBASE)
+      # Calculate reference value based one the pointFunction
+      func_base <- pointFunction(dft$VALUEBASE)
       true_base <- dft$VALUEBASE[dft$ITER == 1]
 
-      #Quantiles of the value relative to the reference. Computed on the ratio
-      #directly (rather than dividing `quant` by the scalar base) so the endpoints
-      #stay ordered as lower/upper even when the reference value is negative.
-      #Fall back to quant/base when the base is NA so an all-NA reference yields
-      #NA columns rather than erroring in quantile().
-      quant_reffunc  <- if (is.na(func_base))  quant/func_base  else quantile(dft$VALUE/func_base,  probs = probs, names = FALSE, na.rm = T)
-      quant_reffinal <- if (is.na(true_base)) quant/true_base else quantile(dft$VALUE/true_base, probs = probs, names = FALSE, na.rm = T)
-      dfrow <- cbind(data.frame(COV=as.character(covExpressionsList[[i]])), data.frame(
+      # Quantiles of the value relative to the reference. Computed on the ratio
+      # directly (rather than dividing `quant` by the scalar base) so the endpoints
+      # stay ordered as lower/upper even when the reference value is negative.
+      # Fall back to quant/base when the base is NA so an all-NA reference yields
+      # NA columns rather than erroring in quantile().
+      quant_reffunc <- if (is.na(func_base)) quant / func_base else quantile(dft$VALUE / func_base, probs = probs, names = FALSE, na.rm = T)
+      quant_reffinal <- if (is.na(true_base)) quant / true_base else quantile(dft$VALUE / true_base, probs = probs, names = FALSE, na.rm = T)
+      dfrow <- cbind(data.frame(COV = as.character(covExpressionsList[[i]])), data.frame(
         GROUP = group,
         GROUPNAME = groupname,
         COVNUM = i, COVNAME = covname, PARAMETER = functionListName[j],
-        REFFUNC = func_base, REFFINAL = true_base, POINT=FUNCVAL, POINT_NOVAR_REL_REFFUNC=FUNCNOVAR,
-        POINT_REL_REFFUNC = FUNCVAL/func_base, POINT_REL_REFFINAL = FUNCVAL/true_base,
-        COVEFF = !all(dft$RELINTERNAL==1)))
+        REFFUNC = func_base, REFFINAL = true_base, POINT = FUNCVAL, POINT_NOVAR_REL_REFFUNC = FUNCNOVAR,
+        POINT_REL_REFFUNC = FUNCVAL / func_base, POINT_REL_REFFINAL = FUNCVAL / true_base,
+        COVEFF = !all(dft$RELINTERNAL == 1)
+      ))
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k)]] <- quant[k]
-        dfp[[paste0("Q",k,"_REL_REFFUNC")]] <-  quant_reffunc[k]
-        dfp[[paste0("Q",k,"_REL_REFFINAL")]] <-  quant_reffinal[k]
+        dfp[[paste0("Q", k, "_REL_REFFUNC")]] <- quant_reffunc[k]
+        dfp[[paste0("Q", k, "_REL_REFFINAL")]] <- quant_reffinal[k]
         dfrow <- cbind(dfrow, dfp[, 2:4])
       }
       for (k in 1:length(probs)) {
         dfp <- data.frame(X1 = 1)
-        dfp[[paste0("Q",k,"_NOVAR_REL_REFFUNC")]] <- quantrel[k]
+        dfp[[paste0("Q", k, "_NOVAR_REL_REFFUNC")]] <- quantrel[k]
         dfrow <- cbind(dfrow, dfp[, 2])
-        names(dfrow)[ncol(dfrow)] <- paste0("Q", k,"_NOVAR_REL_REFFUNC")
+        names(dfrow)[ncol(dfrow)] <- paste0("Q", k, "_NOVAR_REL_REFFUNC")
       }
       dfret <- rbind(dfret, dfrow)
     }
@@ -320,12 +336,12 @@ getForestDFemp <- function(dfData,
   ## (cluster teardown is handled by on.exit() registered above)
 
   ## Add a column with YES/NO depending on if refRow was provided or if it was set to the default NULL
-  dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow),"NO","YES"))
+  dfret <- dfret %>% mutate(REFROW = ifelse(is.null(dfRefRow), "NO", "YES"))
 
   ## Make sure GROUPNAME, COVNAME, PARAMETER are factors
-  dfret$GROUPNAME <- factor(dfret$GROUPNAME,levels=unique(dfret$GROUPNAME))
-  dfret$COVNAME   <- factor(dfret$COVNAME,levels=unique(dfret$COVNAME))
-  dfret$PARAMETER <- factor(dfret$PARAMETER,levels=unique(dfret$PARAMETER))
+  dfret$GROUPNAME <- factor(dfret$GROUPNAME, levels = unique(dfret$GROUPNAME))
+  dfret$COVNAME <- factor(dfret$COVNAME, levels = unique(dfret$COVNAME))
+  dfret$PARAMETER <- factor(dfret$PARAMETER, levels = unique(dfret$PARAMETER))
 
   return(dfret)
 }

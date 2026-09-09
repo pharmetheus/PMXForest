@@ -70,7 +70,7 @@
 #' dfData <- read.csv(
 #'   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 #' )
-#' covs   <- c("WT", "AGE", "SEX", "GENO")
+#' covs <- c("WT", "AGE", "SEX", "GENO")
 #' dfCovs <- setupDfCovs(dfData, covariates = covs, idVar = "ID")
 #'
 #' # Single-row reference: every covariate at its mode / median
@@ -78,53 +78,61 @@
 #'
 #' # Matrix reference: same shape as dfCovs, active cells set to the reference,
 #' # inactive cells keep missVal
-#' setupDfRefRow(dfCovs, data = dfData, covariates = covs, singleRef = FALSE,
-#'               idVar = "ID")
+#' setupDfRefRow(dfCovs,
+#'   data = dfData, covariates = covs, singleRef = FALSE,
+#'   idVar = "ID"
+#' )
 #'
 #' # Pin WT at the model's normalisation weight and take AGE from the mean
-#' setupDfRefRow(dfCovs, data = dfData, covariates = covs, idVar = "ID",
-#'               contRef = list(WT = 75, default = "mean"))
+#' setupDfRefRow(dfCovs,
+#'   data = dfData, covariates = covs, idVar = "ID",
+#'   contRef = list(WT = 75, default = "mean")
+#' )
 #'
 #' # Take every reference from the control stream, so the reference row agrees
 #' # with a parameter function generated from the same model
 #' modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
-#' covs2   <- c("WT", "SEX", "FOOD", "FORM")
+#' covs2 <- c("WT", "SEX", "FOOD", "FORM")
 #' dfCovs2 <- setupDfCovs(dfData, covariates = covs2, idVar = "ID")
-#' setupDfRefRow(dfCovs2, data = dfData, covariates = covs2, idVar = "ID",
-#'               contRef = "model", catRef = "model", model = modFile)
+#' setupDfRefRow(dfCovs2,
+#'   data = dfData, covariates = covs2, idVar = "ID",
+#'   contRef = "model", catRef = "model", model = modFile
+#' )
 setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
                           singleRef = TRUE, contRef = "median", catRef = NULL,
                           model = NULL, refLevels = NULL, minLevels = 10,
                           idVar = "ID", missVal = -99, nsig = 3, sep = "_") {
-
-  catRef   <- refLevelsToCatRef(refLevels, catRef, "setupDfRefRow")
+  catRef <- refLevelsToCatRef(refLevels, catRef, "setupDfRefRow")
   all_covs <- unique(c(covariates, additionalCovs))
 
   # 1. Resolve one reference value per covariate.
-  refs <- refResolve(data, all_covs, contRef = contRef, catRef = catRef,
-                     model = model, minLevels = minLevels, idVar = idVar,
-                     missVal = missVal, nsig = nsig, catFallback = "mode")
+  refs <- refResolve(data, all_covs,
+    contRef = contRef, catRef = catRef,
+    model = model, minLevels = minLevels, idVar = idVar,
+    missVal = missVal, nsig = nsig, catFallback = "mode"
+  )
 
   unsure <- names(refs)[!vapply(refs, `[[`, logical(1), "confident")]
   if (length(unsure) > 0) {
     warning("The reference value for ", paste(unsure, collapse = ", "),
-            " was inferred from the model rather than stated by it. Check it, ",
-            "and set it explicitly through contRef / catRef if it is wrong.",
-            call. = FALSE)
+      " was inferred from the model rather than stated by it. Check it, ",
+      "and set it explicitly through contRef / catRef if it is wrong.",
+      call. = FALSE
+    )
   }
 
   # 2. Map the references onto the columns of dfCovs. A multi-level categorical
   #    appears as one-hot dummies, so its reference has to be expanded.
-  dedup   <- data %>% dplyr::distinct(!!rlang::sym(idVar), .keep_all = TRUE)
+  dedup <- data %>% dplyr::distinct(!!rlang::sym(idVar), .keep_all = TRUE)
   ref_map <- list()
 
   for (cov in all_covs) {
-    v     <- refValues(dedup, cov, missVal)
-    type  <- refCovType(v, minLevels)
+    v <- refValues(dedup, cov, missVal)
+    type <- refCovType(v, minLevels)
     value <- refs[[cov]]$value
 
     if (type == "multi") {
-      levs   <- sort(unique(v))
+      levs <- sort(unique(v))
       # The level dropped when encoding: an explicit catRef, else the lowest.
       encLev <- refEncodingLevel(catRef, cov, levs, model, missVal)
       if (is.null(encLev)) encLev <- refMode(v)
@@ -144,14 +152,18 @@ setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
     ## filled with NA below, and every parameter computed on this row would then
     ## be NA - silently, since the parameter function is handed a valid row.
     ## Usually this means a covariate was passed to setupDfCovs() but not here.
-    unmapped <- setdiff(names(df_out),
-                        c(names(ref_map), "COVARIATEGROUPS", "COVNAME"))
+    unmapped <- setdiff(
+      names(df_out),
+      c(names(ref_map), "COVARIATEGROUPS", "COVNAME")
+    )
     if (length(unmapped) > 0) {
       warning("No reference value was resolved for the dfCovs column(s) ",
-              paste(unmapped, collapse = ", "),
-              "; they are set to NA in the reference row, which makes every ",
-              "parameter computed on it NA. Add them to `covariates` / ",
-              "`additionalCovs`.", call. = FALSE)
+        paste(unmapped, collapse = ", "),
+        "; they are set to NA in the reference row, which makes every ",
+        "parameter computed on it NA. Add them to `covariates` / ",
+        "`additionalCovs`.",
+        call. = FALSE
+      )
     }
 
     for (col in names(df_out)) {
@@ -166,7 +178,6 @@ setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
     }
     row.names(df_out) <- NULL
     return(df_out)
-
   } else {
     df_out <- dfCovs
     for (col in names(df_out)) {

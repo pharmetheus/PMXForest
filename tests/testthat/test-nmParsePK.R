@@ -9,8 +9,10 @@ r_of <- function(txt) {
 
 ## Parse a whole $PK body given as a character vector.
 stmts_of <- function(lines, file = "unit.mod") {
-  mod <- data.frame(lineno = seq_along(lines), code = lines,
-                    comment = "", stringsAsFactors = FALSE)
+  mod <- data.frame(
+    lineno = seq_along(lines), code = lines,
+    comment = "", stringsAsFactors = FALSE
+  )
   nmParseStatements(mod, file)
 }
 
@@ -27,23 +29,23 @@ test_that("the lexer handles numbers, symbols and dot operators", {
 test_that("dot operators translate to their R equivalents", {
   expect_equal(r_of("SEX.EQ.1"), "SEX == 1")
   expect_equal(r_of("SEX.NE.1"), "SEX != 1")
-  expect_equal(r_of("A.GE.1"),   "A >= 1")
-  expect_equal(r_of("A.LE.1"),   "A <= 1")
-  expect_equal(r_of("A.GT.1"),   "A > 1")
-  expect_equal(r_of("A.LT.1"),   "A < 1")
+  expect_equal(r_of("A.GE.1"), "A >= 1")
+  expect_equal(r_of("A.LE.1"), "A <= 1")
+  expect_equal(r_of("A.GT.1"), "A > 1")
+  expect_equal(r_of("A.LT.1"), "A < 1")
   # .EQN. must win over .EQ. despite sharing a prefix.
-  expect_equal(r_of("A.EQN.2"),  "A == 2")
+  expect_equal(r_of("A.EQN.2"), "A == 2")
   expect_equal(r_of("A.EQ.1.AND.B.EQ.2"), "A == 1 & B == 2")
-  expect_equal(r_of("A.EQ.1.OR.B.EQ.2"),  "A == 1 | B == 2")
+  expect_equal(r_of("A.EQ.1.OR.B.EQ.2"), "A == 1 | B == 2")
 })
 
 test_that("arithmetic keeps NONMEM's meaning", {
   expect_equal(r_of("(WT/75)**THETA(2)"), "(WT / 75)^thetas[2]")
-  expect_equal(r_of("A+B*C"),   "A + B * C")
+  expect_equal(r_of("A+B*C"), "A + B * C")
   expect_equal(r_of("(A+B)*C"), "(A + B) * C")
-  expect_equal(r_of("A-B-C"),   "A - B - C")
+  expect_equal(r_of("A-B-C"), "A - B - C")
   expect_equal(r_of("A-(B-C)"), "A - (B - C)")
-  expect_equal(r_of("A/B/C"),   "A / B / C")
+  expect_equal(r_of("A/B/C"), "A / B / C")
   expect_equal(r_of("A/(B/C)"), "A / (B / C)")
   # ** is right-associative in Fortran, as ^ is in R. The values must differ:
   # with 2,2,2 both associativities give 16, so the assertion could not fail.
@@ -58,8 +60,10 @@ test_that("MOD() keeps Fortran's meaning, not R's `%%`", {
   # 1. Precedence. MOD() is a call, but `%any%` binds tighter than * and / in
   #    R, so emitting `%%` turned MOD(A*B, C) into A * (B %% C).
   expect_equal(eval(parse(text = chartr("ABC", "732", r_of("MOD(A*B,C)")))), 1)
-  expect_equal(eval(parse(text = chartr("ABC", "732", r_of("MOD(A/B,C)")))),
-               (7 / 3) - 2 * trunc((7 / 3) / 2))
+  expect_equal(
+    eval(parse(text = chartr("ABC", "732", r_of("MOD(A/B,C)")))),
+    (7 / 3) - 2 * trunc((7 / 3) / 2)
+  )
   # and MOD() nested inside an outer operator stays intact
   expect_equal(eval(parse(text = chartr("ABC", "732", r_of("C*MOD(A,B)")))), 2)
 
@@ -74,19 +78,19 @@ test_that("MOD() keeps Fortran's meaning, not R's `%%`", {
 })
 
 test_that("intrinsic functions map to R", {
-  expect_equal(r_of("EXP(X)"),   "exp(X)")
-  expect_equal(r_of("LOG(X)"),   "log(X)")
-  expect_equal(r_of("SQRT(X)"),  "sqrt(X)")
+  expect_equal(r_of("EXP(X)"), "exp(X)")
+  expect_equal(r_of("LOG(X)"), "log(X)")
+  expect_equal(r_of("SQRT(X)"), "sqrt(X)")
   expect_equal(r_of("LOG10(X)"), "log10(X)")
   expect_equal(r_of("MAX(A,B)"), "max(A, B)")
 })
 
 test_that("constructs needing an ODE solution or unknown syntax are refused", {
   expect_error(r_of("A(2)*1000"), "compartment amount")
-  expect_error(r_of("EPS(1)"),    "cannot appear in \\$PK")
-  expect_error(r_of("FOO(X)"),    "unsupported function")
-  expect_error(r_of("A @ B"),     "unrecognised character")
-  expect_error(r_of("(A+B"),      "unbalanced parentheses")
+  expect_error(r_of("EPS(1)"), "cannot appear in \\$PK")
+  expect_error(r_of("FOO(X)"), "unsupported function")
+  expect_error(r_of("A @ B"), "unrecognised character")
+  expect_error(r_of("(A+B"), "unbalanced parentheses")
 })
 
 test_that("assignments, one-line IFs and IF blocks all parse", {
@@ -100,22 +104,28 @@ test_that("assignments, one-line IFs and IF blocks all parse", {
   expect_true(s[[1]]$oneline)
   expect_length(s[[1]]$then, 1)
 
-  s <- stmts_of(c("IF (SEX.EQ.1) THEN", "  CL = THETA(1)", "ELSE",
-                  "  CL = THETA(2)", "END IF"))
+  s <- stmts_of(c(
+    "IF (SEX.EQ.1) THEN", "  CL = THETA(1)", "ELSE",
+    "  CL = THETA(2)", "END IF"
+  ))
   expect_equal(s[[1]]$type, "if")
   expect_null(s[[1]]$oneline)
   expect_length(s[[1]]$then, 1)
   expect_length(s[[1]]$else_, 1)
 
-  s <- stmts_of(c("IF (A.EQ.1) THEN", "  X = 1", "ELSE IF (A.EQ.2) THEN",
-                  "  X = 2", "ELSE", "  X = 3", "ENDIF"))
+  s <- stmts_of(c(
+    "IF (A.EQ.1) THEN", "  X = 1", "ELSE IF (A.EQ.2) THEN",
+    "  X = 2", "ELSE", "  X = 3", "ENDIF"
+  ))
   expect_length(s[[1]]$elifs, 1)
   expect_length(s[[1]]$else_, 1)
 })
 
 test_that("malformed or unsupported statements are refused with a line number", {
-  expect_error(stmts_of(c("CL = THETA(1)", "DO WHILE (X.LT.2)")),
-               "unit\\.mod:2")
+  expect_error(
+    stmts_of(c("CL = THETA(1)", "DO WHILE (X.LT.2)")),
+    "unit\\.mod:2"
+  )
   expect_error(stmts_of(c("CALL SUBR(X)")), "CALL")
   expect_error(stmts_of(c("IF (A.EQ.1) THEN", "  X = 1")), "never closed")
   expect_error(stmts_of(c('"  CALL FOO')), "verbatim FORTRAN")
@@ -149,20 +159,24 @@ test_that("the highest THETA index is found, including inside IF blocks", {
 })
 
 test_that("the exponential-IIV pattern is recorded, other forms are not", {
-  s <- stmts_of(c("CL = TVCL*EXP(ETA(3))", "V = EXP(ETA(4))*TVV",
-                  "MAT = TVMAT+ETA(5)"))
+  s <- stmts_of(c(
+    "CL = TVCL*EXP(ETA(3))", "V = EXP(ETA(4))*TVV",
+    "MAT = TVMAT+ETA(5)"
+  ))
   m <- nmEtaMap(s)
   expect_equal(m[["CL"]], 3L)
-  expect_equal(m[["V"]],  4L)
+  expect_equal(m[["V"]], 4L)
   expect_false("MAT" %in% names(m))
 })
 
 test_that("$THETA records are counted by theta, not by line", {
   cnt <- function(x) {
-    nmCountThetas(data.frame(lineno = seq_along(x), code = x, comment = "",
-                             stringsAsFactors = FALSE))
+    nmCountThetas(data.frame(
+      lineno = seq_along(x), code = x, comment = "",
+      stringsAsFactors = FALSE
+    ))
   }
-  expect_equal(cnt("$THETA 1 2 3"), 3)                      # not 1
+  expect_equal(cnt("$THETA 1 2 3"), 3) # not 1
   expect_equal(cnt("$THETA (0,11.9)"), 1)
   expect_equal(cnt(c("$THETA (0,1) (0,2)", "$THETA 3")), 3)
   expect_equal(cnt("$THETA 1 FIX"), 1)
@@ -173,8 +187,10 @@ test_that("$THETA records are counted by theta, not by line", {
 
 test_that("$INPUT names are read, with DROP columns and synonyms handled", {
   inp <- function(x) {
-    nmInputNames(data.frame(lineno = seq_along(x), code = x, comment = "",
-                            stringsAsFactors = FALSE))
+    nmInputNames(data.frame(
+      lineno = seq_along(x), code = x, comment = "",
+      stringsAsFactors = FALSE
+    ))
   }
   expect_equal(inp("$INPUT ID DV WT"), c("ID", "DV", "WT"))
   expect_equal(inp("$INP ID DV"), c("ID", "DV"))
@@ -219,8 +235,10 @@ test_that("reference rules are tried in order of confidence", {
 })
 
 test_that("the identity-value branch is recognised without a marker (rule 2b)", {
-  s <- stmts_of(c("IF(FORM.EQ.1) FRELFORM = 1",
-                  "IF(FORM.EQ.0) FRELFORM = 1+THETA(1)"))
+  s <- stmts_of(c(
+    "IF(FORM.EQ.1) FRELFORM = 1",
+    "IF(FORM.EQ.0) FRELFORM = 1+THETA(1)"
+  ))
   r <- nmCovRef(s, "FORM", -99)
   expect_equal(r$FORM$value, 1)
   expect_true(r$FORM$confident)
@@ -252,8 +270,10 @@ test_that("the normalisation constant is found inside a nested expression", {
 })
 
 test_that("references are derived from inside IF blocks too", {
-  s <- stmts_of(c("IF (STUDY.EQ.1) THEN", "  CLWT = (WT/75)**THETA(1)",
-                  "ELSE", "  CLWT = 1", "END IF"))
+  s <- stmts_of(c(
+    "IF (STUDY.EQ.1) THEN", "  CLWT = (WT/75)**THETA(1)",
+    "ELSE", "  CLWT = 1", "END IF"
+  ))
   expect_equal(nmCovRef(s, "WT", -99)$WT$value, 75)
 })
 
@@ -285,7 +305,9 @@ test_that("emitted IF blocks keep their else and else-if branches", {
   expect_true(any(grepl("^\\s*\\} else \\{", code)))
   # the branch bodies round-trip through R
   f <- eval(parse(text = c("function(A) {", code, "X }")))
-  expect_equal(f(1), 1); expect_equal(f(2), 2); expect_equal(f(3), 3)
+  expect_equal(f(1), 1)
+  expect_equal(f(2), 2)
+  expect_equal(f(3), 3)
 })
 
 test_that("nmHasEta sees an ETA at any depth", {
@@ -303,39 +325,46 @@ test_that("trailing tokens and malformed statements are refused", {
   expect_error(stmts_of("IF (A.EQ.1)"), "without THEN")
   expect_error(stmts_of("X(1) = 2"), "assignment to a plain variable")
   # an unsupported construct is refused wherever it appears, including in a block
-  expect_error(stmts_of(c("IF (A.EQ.1) THEN", "  DO I=1,2", "END IF")),
-               "unit\\.mod:2")
+  expect_error(
+    stmts_of(c("IF (A.EQ.1) THEN", "  DO I=1,2", "END IF")),
+    "unit\\.mod:2"
+  )
 })
 
 test_that("constant folding covers every identity it claims", {
-  fold <- function(txt) nmDeparse(nmSimplify(
-    nmParseExpr(nmParser(nmLex(txt, 1L, "u"), 1L, "u"))))
-  expect_equal(fold("0+X"),        "X")
-  expect_equal(fold("X+0"),        "X")
-  expect_equal(fold("X-0"),        "X")
-  expect_equal(fold("1*X"),        "X")
-  expect_equal(fold("X*1"),        "X")
-  expect_equal(fold("X/1"),        "X")
-  expect_equal(fold("X**1"),       "X")
-  expect_equal(fold("LOG(1)"),     "0")
-  expect_equal(fold("EXP(0)"),     "1")
+  fold <- function(txt) {
+    nmDeparse(nmSimplify(
+      nmParseExpr(nmParser(nmLex(txt, 1L, "u"), 1L, "u"))
+    ))
+  }
+  expect_equal(fold("0+X"), "X")
+  expect_equal(fold("X+0"), "X")
+  expect_equal(fold("X-0"), "X")
+  expect_equal(fold("1*X"), "X")
+  expect_equal(fold("X*1"), "X")
+  expect_equal(fold("X/1"), "X")
+  expect_equal(fold("X**1"), "X")
+  expect_equal(fold("LOG(1)"), "0")
+  expect_equal(fold("EXP(0)"), "1")
   # A negated literal folds to a number. "-2" alone cannot show this: it
   # deparses as "-2" whether or not the fold ran. These need the fold, because
   # the identity tests match a `num` node and not a negated one.
-  expect_equal(fold("EXP(-0)"),    "1")
-  expect_equal(fold("X+-0"),       "X")
-  expect_equal(fold("-2"),         "-2")
+  expect_equal(fold("EXP(-0)"), "1")
+  expect_equal(fold("X+-0"), "X")
+  expect_equal(fold("-2"), "-2")
   # nothing that is not an identity is touched
-  expect_equal(fold("X/2"),        "X / 2")
-  expect_equal(fold("X**2"),       "X^2")
-  expect_equal(fold("LOG(X)"),     "log(X)")
-  expect_equal(fold("-X"),         "-X")
+  expect_equal(fold("X/2"), "X / 2")
+  expect_equal(fold("X**2"), "X^2")
+  expect_equal(fold("LOG(X)"), "log(X)")
+  expect_equal(fold("-X"), "-X")
 })
 
 test_that("statement walkers descend into every branch of an IF block", {
-  s <- stmts_of(c("IF (A.EQ.1) THEN", "  X = -THETA(1)",
-                  "ELSE IF (B.EQ.2) THEN", "  X = THETA(7)",
-                  "ELSE", "  X = THETA(3)*C", "END IF"))
+  s <- stmts_of(c(
+    "IF (A.EQ.1) THEN", "  X = -THETA(1)",
+    "ELSE IF (B.EQ.2) THEN", "  X = THETA(7)",
+    "ELSE", "  X = THETA(3)*C", "END IF"
+  ))
   sym <- nmSymbols(s)
   expect_setequal(sym$assigned, "X")
   # symbols from the condition, the else-if and the else branch are all seen
@@ -355,7 +384,9 @@ test_that("deparse renders ETA and unary nodes, and rejects an unknown node", {
   eta <- list(type = "eta", index = 2L)
   expect_equal(nmDeparse(eta), "0")
   expect_equal(nmDeparse(eta, etaValue = "etas[2]"), "etas[2]")
-  expect_equal(nmDeparse(list(type = "unop", op = "!",
-                              arg = list(type = "sym", name = "A"))), "!A")
+  expect_equal(nmDeparse(list(
+    type = "unop", op = "!",
+    arg = list(type = "sym", name = "A")
+  )), "!A")
   expect_error(nmDeparse(list(type = "nonsense")), "cannot deparse node type")
 })

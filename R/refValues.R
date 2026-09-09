@@ -29,8 +29,11 @@ refValues <- function(dedup, cov, missVal) {
   }
   v <- dedup[[cov]]
   v <- v[v != missVal & !is.na(v)]
-  if (length(v) == 0) stop("Covariate ", cov, " contains only missing values.",
-                           call. = FALSE)
+  if (length(v) == 0) {
+    stop("Covariate ", cov, " contains only missing values.",
+      call. = FALSE
+    )
+  }
   v
 }
 
@@ -38,8 +41,7 @@ refValues <- function(dedup, cov, missVal) {
 #' @noRd
 refCovType <- function(v, minLevels) {
   n <- length(unique(v))
-  if (n > minLevels) "continuous" else if (n == 2) "binary" else
-    if (n > 2) "multi" else "single"
+  if (n > minLevels) "continuous" else if (n == 2) "binary" else if (n > 2) "multi" else "single"
 }
 
 #' Explain why `"model"` could not resolve a covariate
@@ -53,10 +55,14 @@ refCovType <- function(v, minLevels) {
 #' @noRd
 refModelHint <- function(cov, known) {
   dummies <- known[startsWith(known, cov) & known != cov]
-  if (length(dummies) == 0) return("")
-  paste0("\nThe $PK names ", paste(dummies, collapse = ", "), " rather than ",
-         cov, " itself, so a reference was found for each of those but not for ",
-         "the covariate they encode. Give the level you want as the reference.")
+  if (length(dummies) == 0) {
+    return("")
+  }
+  paste0(
+    "\nThe $PK names ", paste(dummies, collapse = ", "), " rather than ",
+    cov, " itself, so a reference was found for each of those but not for ",
+    "the covariate they encode. Give the level you want as the reference."
+  )
 }
 
 #' Pull the spec for one covariate out of a scalar-or-list argument
@@ -73,12 +79,18 @@ refSpec <- function(arg, cov, fallback) {
   one <- function(v, what) {
     if (length(v) != 1) {
       stop("A `contRef` / `catRef` ", what, " must be a single value; ",
-           "use a named list for per-covariate settings.", call. = FALSE)
+        "use a named list for per-covariate settings.",
+        call. = FALSE
+      )
     }
     v
   }
-  if (is.null(arg)) return(fallback)
-  if (!is.list(arg)) return(one(arg, "given as a vector"))
+  if (is.null(arg)) {
+    return(fallback)
+  }
+  if (!is.list(arg)) {
+    return(one(arg, "given as a vector"))
+  }
   if (!is.null(arg[[cov]])) {
     return(one(arg[[cov]], paste0("given for ", cov)))
   }
@@ -98,30 +110,37 @@ refSpec <- function(arg, cov, fallback) {
 refModelValues <- function(model, missVal) {
   if (is.null(model)) {
     stop("`model` is required when a reference is set to \"model\". Supply the ",
-         "control stream path, or the list returned by createParamFunction().",
-         call. = FALSE)
+      "control stream path, or the list returned by createParamFunction().",
+      call. = FALSE
+    )
   }
   if (is.list(model)) {
     if (is.null(model$covRef)) {
       stop("`model` must be a control stream path or the list returned by ",
-           "createParamFunction().", call. = FALSE)
+        "createParamFunction().",
+        call. = FALSE
+      )
     }
     return(model$covRef)
   }
   if (!is.character(model) || length(model) != 1) {
     stop("`model` must be a control stream path or the list returned by ",
-         "createParamFunction().", call. = FALSE)
+      "createParamFunction().",
+      call. = FALSE
+    )
   }
 
   mod <- nmReadModel(model)
-  pk  <- nmRecord(mod, "\\$PK\\b")
+  pk <- nmRecord(mod, "\\$PK\\b")
   if (nrow(pk) == 0) {
     stop("No $PK record found in ", basename(model),
-         ", so no reference values can be read from it.", call. = FALSE)
+      ", so no reference values can be read from it.",
+      call. = FALSE
+    )
   }
   stmts <- nmSimplifyStmts(nmParseStatements(pk, model))
-  syms  <- nmSymbols(stmts)
-  covs  <- intersect(syms$used, setdiff(nmInputNames(mod), syms$assigned))
+  syms <- nmSymbols(stmts)
+  covs <- intersect(syms$used, setdiff(nmInputNames(mod), syms$assigned))
   nmCovRef(stmts, covs, missVal)
 }
 
@@ -136,46 +155,59 @@ refModelValues <- function(model, missVal) {
 refResolve <- function(data, covariates, contRef = "median", catRef = NULL,
                        model = NULL, minLevels = 10, idVar = "ID",
                        missVal = -99, nsig = 3, catFallback = "mode") {
-
   dedup <- data %>% dplyr::distinct(!!rlang::sym(idVar), .keep_all = TRUE)
 
   ## Parse the control stream once, and only if something actually asks for it.
   wants <- function(arg) {
-    if (is.null(arg)) return(FALSE)
-    any(vapply(if (is.list(arg)) arg else list(arg),
-               function(x) is.character(x) && identical(x[1], "model"),
-               logical(1)))
+    if (is.null(arg)) {
+      return(FALSE)
+    }
+    any(vapply(
+      if (is.list(arg)) arg else list(arg),
+      function(x) is.character(x) && identical(x[1], "model"),
+      logical(1)
+    ))
   }
   modelRefs <- if (wants(contRef) || wants(catRef)) {
     refModelValues(model, missVal)
-  } else NULL
+  } else {
+    NULL
+  }
 
   out <- list()
   for (cov in covariates) {
-    v    <- refValues(dedup, cov, missVal)
+    v <- refValues(dedup, cov, missVal)
     type <- refCovType(v, minLevels)
     cont <- type == "continuous"
-    spec <- refSpec(if (cont) contRef else catRef, cov,
-                    if (cont) "median" else catFallback)
+    spec <- refSpec(
+      if (cont) contRef else catRef, cov,
+      if (cont) "median" else catFallback
+    )
 
     if (is.numeric(spec)) {
       # An explicit value is used as given, never rounded.
-      out[[cov]] <- list(value = spec, source = "supplied directly",
-                         confident = TRUE)
+      out[[cov]] <- list(
+        value = spec, source = "supplied directly",
+        confident = TRUE
+      )
       next
     }
     if (!is.character(spec) || length(spec) != 1) {
       stop("The reference setting for covariate ", cov,
-           " must be a single value or one of \"mean\", \"median\", \"mode\", ",
-           "\"lowest\" or \"model\".", call. = FALSE)
+        " must be a single value or one of \"mean\", \"median\", \"mode\", ",
+        "\"lowest\" or \"model\".",
+        call. = FALSE
+      )
     }
 
     ## A character-coded covariate takes its level as a string, e.g.
     ## catRef = list(RACE = "White"). Only a level that is actually observed is
     ## accepted here, so a mistyped keyword still reaches the stop() below.
     if (is.character(v) && !spec %in% refKeywords && spec %in% v) {
-      out[[cov]] <- list(value = spec, source = "supplied directly",
-                         confident = TRUE)
+      out[[cov]] <- list(
+        value = spec, source = "supplied directly",
+        confident = TRUE
+      )
       next
     }
 
@@ -184,41 +216,71 @@ refResolve <- function(data, covariates, contRef = "median", catRef = NULL,
         r <- modelRefs[[cov]]
         if (is.null(r)) {
           stop("No reference value for covariate ", cov,
-               " could be derived from the model. Give it explicitly, e.g. ",
-               if (cont) paste0("contRef = list(", cov, " = <value>)")
-               else paste0("catRef = list(", cov, " = <level>)"), ".",
-               refModelHint(cov, names(modelRefs)),
-               call. = FALSE)
+            " could be derived from the model. Give it explicitly, e.g. ",
+            if (cont) {
+              paste0("contRef = list(", cov, " = <value>)")
+            } else {
+              paste0("catRef = list(", cov, " = <level>)")
+            }, ".",
+            refModelHint(cov, names(modelRefs)),
+            call. = FALSE
+          )
         }
         r
       },
       "mean" = {
-        if (!cont) stop("\"mean\" is not a reference for the categorical ",
-                        "covariate ", cov, ".", call. = FALSE)
-        list(value = signif(mean(v), nsig), source = "mean of the data",
-             confident = TRUE)
+        if (!cont) {
+          stop("\"mean\" is not a reference for the categorical ",
+            "covariate ", cov, ".",
+            call. = FALSE
+          )
+        }
+        list(
+          value = signif(mean(v), nsig), source = "mean of the data",
+          confident = TRUE
+        )
       },
       "median" = {
-        if (!cont) stop("\"median\" is not a reference for the categorical ",
-                        "covariate ", cov, ".", call. = FALSE)
-        list(value = signif(stats::median(v), nsig),
-             source = "median of the data", confident = TRUE)
+        if (!cont) {
+          stop("\"median\" is not a reference for the categorical ",
+            "covariate ", cov, ".",
+            call. = FALSE
+          )
+        }
+        list(
+          value = signif(stats::median(v), nsig),
+          source = "median of the data", confident = TRUE
+        )
       },
       "mode" = {
-        if (cont) stop("\"mode\" is not a reference for the continuous ",
-                       "covariate ", cov, ".", call. = FALSE)
-        list(value = refMode(v), source = "most common level in the data",
-             confident = TRUE)
+        if (cont) {
+          stop("\"mode\" is not a reference for the continuous ",
+            "covariate ", cov, ".",
+            call. = FALSE
+          )
+        }
+        list(
+          value = refMode(v), source = "most common level in the data",
+          confident = TRUE
+        )
       },
       "lowest" = {
-        if (cont) stop("\"lowest\" is not a reference for the continuous ",
-                       "covariate ", cov, ".", call. = FALSE)
-        list(value = sort(unique(v))[1], source = "lowest level in the data",
-             confident = TRUE)
+        if (cont) {
+          stop("\"lowest\" is not a reference for the continuous ",
+            "covariate ", cov, ".",
+            call. = FALSE
+          )
+        }
+        list(
+          value = sort(unique(v))[1], source = "lowest level in the data",
+          confident = TRUE
+        )
       },
       stop("Unknown reference setting \"", spec, "\" for covariate ", cov,
-           ". Use a value, \"mean\", \"median\", \"mode\", \"lowest\" or ",
-           "\"model\".", call. = FALSE)
+        ". Use a value, \"mean\", \"median\", \"mode\", \"lowest\" or ",
+        "\"model\".",
+        call. = FALSE
+      )
     )
   }
   out
@@ -227,14 +289,19 @@ refResolve <- function(data, covariates, contRef = "median", catRef = NULL,
 #' Warn about the deprecated `refLevels` argument and fold it into `catRef`
 #' @noRd
 refLevelsToCatRef <- function(refLevels, catRef, fn) {
-  if (is.null(refLevels)) return(catRef)
+  if (is.null(refLevels)) {
+    return(catRef)
+  }
   if (!is.null(catRef)) {
     stop("Supply either `catRef` or the deprecated `refLevels`, not both.",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   warning("`refLevels` is deprecated in ", fn, "(); use `catRef` instead. ",
-          "`catRef` additionally accepts \"mode\", \"lowest\", \"model\" and a ",
-          "`default` component.", call. = FALSE)
+    "`catRef` additionally accepts \"mode\", \"lowest\", \"model\" and a ",
+    "`default` component.",
+    call. = FALSE
+  )
   refLevels
 }
 
@@ -252,25 +319,28 @@ refEncodingLevel <- function(catRef, cov, levs, model, missVal) {
   } else if (identical(spec, "lowest")) {
     levs[1]
   } else if (identical(spec, "mode")) {
-    NULL                       # resolved by the caller, which has the data
+    NULL # resolved by the caller, which has the data
   } else if (identical(spec, "model")) {
     all <- refModelValues(model, missVal)
-    r   <- all[[cov]]
+    r <- all[[cov]]
     if (is.null(r)) {
       stop("No reference level for covariate ", cov,
-           " could be derived from the model. Give it explicitly, e.g. ",
-           "catRef = list(", cov, " = <level>).",
-           refModelHint(cov, names(all)), call. = FALSE)
+        " could be derived from the model. Give it explicitly, e.g. ",
+        "catRef = list(", cov, " = <level>).",
+        refModelHint(cov, names(all)),
+        call. = FALSE
+      )
     }
     r$value
   } else if (is.character(levs) && length(spec) == 1 &&
-             !spec %in% refKeywords && spec %in% levs) {
+    !spec %in% refKeywords && spec %in% levs) {
     ## A character-coded level, e.g. catRef = list(RACE = "White"). Requiring it
     ## to be an observed level keeps a mistyped keyword reaching the stop below.
     spec
   } else {
     stop("Unknown reference setting \"", spec, "\" for covariate ", cov, ".",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   lev
 }

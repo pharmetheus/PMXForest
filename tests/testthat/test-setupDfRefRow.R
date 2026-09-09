@@ -2,7 +2,7 @@ test_that("setupDfRefRow generates correct singleRef = TRUE geometry", {
   mock_data <- data.frame(
     ID = 1:5,
     WT = c(60, 70, 70, 80, 90), # Median 70
-    SEX = c(1, 1, 1, 0, 0)      # Mode 1
+    SEX = c(1, 1, 1, 0, 0) # Mode 1
   )
 
   df_covs <- setupDfCovs(mock_data, covariates = c("WT", "SEX"), minLevels = 3)
@@ -24,7 +24,7 @@ test_that("setupDfRefRow generates correct singleRef = FALSE geometry", {
   mock_data <- data.frame(
     ID = 1:5,
     WT = c(60, 70, 70, 80, 90), # Median 70
-    SEX = c(1, 1, 1, 0, 0)      # Mode 1
+    SEX = c(1, 1, 1, 0, 0) # Mode 1
   )
 
   # WT and SEX have -99s in inactive cells
@@ -51,11 +51,12 @@ test_that("setupDfRefRow honours refLevels so its columns match setupDfCovs", {
   mock_data <- data.frame(
     ID   = 1:8,
     WT   = c(60, 70, 70, 80, 90, 65, 75, 72),
-    GENO = c(1, 2, 2, 3, 4, 2, 3, 2)   # mode is 2
+    GENO = c(1, 2, 2, 3, 4, 2, 3, 2) # mode is 2
   )
 
   df_covs <- setupDfCovs(
-    mock_data, covariates = c("WT", "GENO"), catRef = list(GENO = 2)
+    mock_data,
+    covariates = c("WT", "GENO"), catRef = list(GENO = 2)
   )
 
   # refLevels is deprecated; it must still work and forward to catRef.
@@ -79,15 +80,17 @@ test_that("setupDfRefRow honours refLevels so its columns match setupDfCovs", {
 
 test_that("setupDfRefRow errors when a covariate is entirely missing", {
   mock_data <- data.frame(
-    ID  = 1:4,
-    WT  = c(60, 70, 80, 90),
+    ID = 1:4,
+    WT = c(60, 70, 80, 90),
     GONE = c(-99, -99, -99, -99)
   )
   df_covs <- setupDfCovs(mock_data, covariates = "WT", idVar = "ID")
 
   expect_error(
-    setupDfRefRow(df_covs, data = mock_data, covariates = c("WT", "GONE"),
-                  idVar = "ID"),
+    setupDfRefRow(df_covs,
+      data = mock_data, covariates = c("WT", "GONE"),
+      idVar = "ID"
+    ),
     "contains only missing values"
   )
 })

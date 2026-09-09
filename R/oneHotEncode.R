@@ -70,15 +70,14 @@
 oneHotEncode <- function(data, spec, sep = "_", missVal = -99,
                          includeReference = FALSE, imputeMissing = FALSE,
                          dropOriginal = FALSE) {
-
   if (!is.data.frame(data)) stop("`data` must be a data.frame.")
 
   normSpec <- normalizeOneHotSpec(spec, data, missVal, includeReference)
 
   for (cov in names(normSpec)) {
-    ref     <- normSpec[[cov]]$ref
-    raw     <- data[[cov]]
-    isMiss  <- is.na(raw) | raw == missVal
+    ref <- normSpec[[cov]]$ref
+    raw <- data[[cov]]
+    isMiss <- is.na(raw) | raw == missVal
 
     for (lev in normSpec[[cov]]$levels) {
       col <- paste0(cov, sep, lev)
@@ -93,11 +92,15 @@ oneHotEncode <- function(data, spec, sep = "_", missVal = -99,
         ## Idempotency: compare only on rows that are not missing in the raw
         ## column, so a pre-existing imputed (missing -> 0) encoding is accepted.
         keep <- if (imputeMissing) seq_along(newVal) else which(!isMiss)
-        ok <- isTRUE(all.equal(as.numeric(data[[col]][keep]),
-                               as.numeric(newVal[keep])))
+        ok <- isTRUE(all.equal(
+          as.numeric(data[[col]][keep]),
+          as.numeric(newVal[keep])
+        ))
         if (!ok) {
-          stop("Column '", col, "' already exists and is inconsistent with the ",
-               "requested one-hot encoding of '", cov, "'.")
+          stop(
+            "Column '", col, "' already exists and is inconsistent with the ",
+            "requested one-hot encoding of '", cov, "'."
+          )
         }
       } else {
         data[[col]] <- newVal
@@ -125,7 +128,6 @@ oneHotEncode <- function(data, spec, sep = "_", missVal = -99,
 #' @keywords internal
 #' @noRd
 normalizeOneHotSpec <- function(spec, data, missVal, includeReference) {
-
   if (is.character(spec)) {
     covs <- spec
     spec <- vector("list", length(covs))
@@ -138,14 +140,13 @@ normalizeOneHotSpec <- function(spec, data, missVal, includeReference) {
 
   out <- list()
   for (cov in names(spec)) {
-
     if (!cov %in% names(data)) {
       warning("One-hot encoding: covariate '", cov, "' not found in the data; skipped.")
       next
     }
 
-    obs  <- data[[cov]]
-    obs  <- obs[!is.na(obs) & obs != missVal]
+    obs <- data[[cov]]
+    obs <- obs[!is.na(obs) & obs != missVal]
     levs <- sort(unique(obs))
 
     el <- spec[[cov]]
@@ -156,8 +157,10 @@ normalizeOneHotSpec <- function(spec, data, missVal, includeReference) {
     ## columns outright. That is how a one-row reference row is encoded to match
     ## a dfCovs/dfData encoding derived elsewhere.
     if (length(levs) < 2 && is.null(wantLevels)) {
-      warning("One-hot encoding: covariate '", cov,
-              "' has fewer than two non-missing levels; skipped.")
+      warning(
+        "One-hot encoding: covariate '", cov,
+        "' has fewer than two non-missing levels; skipped."
+      )
       next
     }
 
@@ -168,15 +171,19 @@ normalizeOneHotSpec <- function(spec, data, missVal, includeReference) {
     } else if (length(el) == 1) {
       ref <- el
     } else {
-      stop("One-hot spec for '", cov,
-           "' must be NULL, a single reference value, or a list with `ref`/`levels`.")
+      stop(
+        "One-hot spec for '", cov,
+        "' must be NULL, a single reference value, or a list with `ref`/`levels`."
+      )
     }
 
     ## Only meaningful when the levels are derived from `data`; with explicit
     ## levels the reference deliberately need not appear in this data frame.
     if (is.null(wantLevels) && !ref %in% levs) {
-      warning("One-hot encoding: reference level ", ref, " for covariate '", cov,
-              "' is not present in the data.")
+      warning(
+        "One-hot encoding: reference level ", ref, " for covariate '", cov,
+        "' is not present in the data."
+      )
     }
 
     if (is.null(wantLevels)) {

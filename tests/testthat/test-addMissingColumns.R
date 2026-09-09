@@ -8,12 +8,12 @@ test_that("addMissingColumns transforms parameters correctly", {
   # 5: OMEGA.5.1. (Non-zero)
   # 6: OBJ
   df_ext <- data.frame(
-    ITERATION  = -1e9,
-    THETA1     = 1.0,
+    ITERATION = -1e9,
+    THETA1 = 1.0,
     OMEGA.3.1. = 0.0,
     OMEGA.3.2. = 0.0,
     OMEGA.5.1. = 0.5,
-    OBJ        = -5000,
+    OBJ = -5000,
     stringsAsFactors = FALSE
   )
 

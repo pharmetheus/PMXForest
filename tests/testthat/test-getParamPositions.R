@@ -1,5 +1,5 @@
 test_that("getParamPositions works correctly with standard files", {
-  bootFile  <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
+  bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
   rr_struct <- file.path(dirname(bootFile), "raw_results_structure")
 
   skip_if_not(file.exists(rr_struct))

@@ -73,12 +73,12 @@ Forest plot instead reads the covariate effect from the analysis data and can
 therefore show covariates that are not in the model.
 
 ```{r}
-modDir   <- "SimVal"
+modDir <- "SimVal"
 dataFile <- system.file("extdata", paste0(modDir, "/DAT-1-MI-PMX-2.csv"), package = "PMXForest")
-extFile  <- system.file("extdata", paste0(modDir, "/run7.ext"), package = "PMXForest")
-covFile  <- system.file("extdata", paste0(modDir, "/run7.cov"), package = "PMXForest")
-bsFile   <- system.file("extdata", paste0(modDir, "/bs7.dir/raw_results_run7bs.csv"), package = "PMXForest")
-sirFile  <- system.file("extdata", paste0(modDir, "/sir7.dir/raw_results_run7.csv"), package = "PMXForest")
+extFile <- system.file("extdata", paste0(modDir, "/run7.ext"), package = "PMXForest")
+covFile <- system.file("extdata", paste0(modDir, "/run7.cov"), package = "PMXForest")
+bsFile <- system.file("extdata", paste0(modDir, "/bs7.dir/raw_results_run7bs.csv"), package = "PMXForest")
+sirFile <- system.file("extdata", paste0(modDir, "/sir7.dir/raw_results_run7.csv"), package = "PMXForest")
 
 dfData <- read.csv(dataFile)
 ```
@@ -104,16 +104,18 @@ all-zero row is level 2.
 ```{r}
 dfCovs <- createInputForestData(
   list(
-    "WT"     = c(65, 115),
-    "AGE"    = c(27, 62),
-    "CRCL"   = c(83, 150),
-    "SEX"    = c(1, 2),
-    "NCIL"   = c(0, 1),
-    "FORM"   = c(0, 1),
-    "FOOD"   = c(0, 1),
-    "GENO"   = list("GENO1" = c(1, 0, 0, 0),
-                    "GENO3" = c(0, 0, 1, 0),
-                    "GENO4" = c(0, 0, 0, 1))
+    "WT" = c(65, 115),
+    "AGE" = c(27, 62),
+    "CRCL" = c(83, 150),
+    "SEX" = c(1, 2),
+    "NCIL" = c(0, 1),
+    "FORM" = c(0, 1),
+    "FOOD" = c(0, 1),
+    "GENO" = list(
+      "GENO1" = c(1, 0, 0, 0),
+      "GENO3" = c(0, 0, 1, 0),
+      "GENO4" = c(0, 0, 0, 1)
+    )
   ),
   iMiss = -99
 )
@@ -137,8 +139,10 @@ covnames <- c(
 )
 stopifnot(length(covnames) == nrow(dfCovs))
 
-covariateGroupNames <- c("Weight", "Age", "Creatinine\nclearance", "Sex",
-                         "NCI", "Formulation", "Food status", "2D6 genotype")
+covariateGroupNames <- c(
+  "Weight", "Age", "Creatinine\nclearance", "Sex",
+  "NCI", "Formulation", "Food status", "2D6 genotype"
+)
 ```
 
 ## 1.2 Streamlined: `setupDfCovs()`
@@ -194,7 +198,6 @@ construction; in the empirical Forest plot (Section 6) they come from the raw
 
 ```{r}
 paramFunction <- function(thetas, df, ...) {
-
   CLFOOD <- 1
   if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) CLFOOD <- 1 + thetas[11]
 
@@ -380,9 +383,11 @@ lsExpr <- list(
   "SEX"  = expression(SEX == 2)
 )
 
-covnamesEmp <- c("NCI = 0", "NCI > 0", "Oral tablet", "FDC", "Fasted", "Fed",
-                 "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
-                 "WT < 70 kg", "WT > 104 kg", "Male", "Female")
+covnamesEmp <- c(
+  "NCI = 0", "NCI > 0", "Oral tablet", "FDC", "Fasted", "Fed",
+  "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
+  "WT < 70 kg", "WT > 104 kg", "Male", "Female"
+)
 stopifnot(length(covnamesEmp) == length(lsExpr))
 ```
 

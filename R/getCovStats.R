@@ -60,18 +60,17 @@
 #'
 #' # Use genotype level 2 as the reference instead of the lowest level
 #' getCovStats(dfData, "GENO", idVar = "ID", catRef = list(GENO = 2))
-getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95),
-                         idVar = "ID", missVal = -99, nsig = 3,
-                         catRef = NULL, model = NULL, refLevels = NULL,
-                         sep = "_") {
-
+getCovStats <- function(data, covariates, minLevels = 10, probs = c(0.05, 0.95),
+                        idVar = "ID", missVal = -99, nsig = 3,
+                        catRef = NULL, model = NULL, refLevels = NULL,
+                        sep = "_") {
   catRef <- refLevelsToCatRef(refLevels, catRef, "getCovStats")
 
   # REFACTORED: Use sym() instead of ensym() to allow programmatic wrapping.
   data <- data %>% distinct(!!sym(idVar), .keep_all = TRUE)
 
   ## Check the input
-  if(!all(covariates %in% names(data))) stop("Not all covariates are present in the data.")
+  if (!all(covariates %in% names(data))) stop("Not all covariates are present in the data.")
 
   retList <- list()
   for (myCov in covariates) {
@@ -89,9 +88,8 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
       if (numLevs == 2) {
         # REFACTORED: Sort binary variables for predictable output ordering
         retList[[myCov]] <- sort(unique(dataTmp[[myCov]]))
-      }
-      else {
-        levs    <- sort(unique(dataTmp[[myCov]]))
+      } else {
+        levs <- sort(unique(dataTmp[[myCov]]))
         numLevs <- length(levs)
         if (numLevs < 2) {
           ## Degenerate: fewer than two non-missing levels, no contrast to form.
@@ -100,8 +98,10 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
           refLev <- refEncodingLevel(catRef, myCov, levs, model, missVal)
           if (is.null(refLev)) refLev <- refMode(dataTmp[[myCov]])
           if (!refLev %in% levs) {
-            stop("Reference level ", refLev, " for covariate '", myCov,
-                 "' is not present in the data.")
+            stop(
+              "Reference level ", refLev, " for covariate '", myCov,
+              "' is not present in the data."
+            )
           }
           covList <- list()
           for (i in seq_len(numLevs)) {
@@ -113,9 +113,8 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
           retList[[myCov]] <- covList
         }
       }
-    }
-    else {
-      retList[[myCov]] <- signif(quantile(dataTmp[[myCov]], p=probs), digits = nsig)
+    } else {
+      retList[[myCov]] <- signif(quantile(dataTmp[[myCov]], p = probs), digits = nsig)
     }
   }
   return(retList)

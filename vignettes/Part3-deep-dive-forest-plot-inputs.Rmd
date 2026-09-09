@@ -69,8 +69,8 @@ bundled with the package.
 
 ```{r}
 dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
-modFile  <- system.file("extdata", "SimVal/run7.mod",           package = "PMXForest")
-dfData   <- read.csv(dataFile)
+modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
+dfData <- read.csv(dataFile)
 ```
 
 # 1. Covariate values: `dfCovs`
@@ -99,8 +99,8 @@ Statistics are computed on the first record per `idVar`, so subjects with dense
 sampling do not pull the quantiles.
 
 ```{r}
-nrow(dfData)                                   # all records
-nrow(distinct(dfData, ID))                     # subjects
+nrow(dfData) # all records
+nrow(distinct(dfData, ID)) # subjects
 ```
 
 `minLevels` (default 10) is the threshold between categorical and continuous. A
@@ -365,8 +365,10 @@ are replaced with the reference value, inactive cells keep `-99`. Use it when th
 reference should track the covariate that varies on each row.
 
 ```{r}
-head(setupDfRefRow(dfCovs, data = dfData, covariates = covariates,
-                   singleRef = FALSE, idVar = "ID"), 4)
+head(setupDfRefRow(dfCovs,
+  data = dfData, covariates = covariates,
+  singleRef = FALSE, idVar = "ID"
+), 4)
 ```
 
 ## `contRef` and `catRef`
@@ -381,8 +383,10 @@ optional `default` component:
 | `catRef` | a level, `"mode"` (default), `"lowest"`, `"model"` |
 
 ```{r}
-setupDfRefRow(dfCovs, dfData, covariates, idVar = "ID",
-              contRef = list(WT = 75, default = "mean"))
+setupDfRefRow(dfCovs, dfData, covariates,
+  idVar = "ID",
+  contRef = list(WT = 75, default = "mean")
+)
 ```
 
 `contRef` applies to `setupDfCovs()` too — to `additionalCovs`, and to primary
@@ -416,8 +420,10 @@ dfCovsM <- setupDfCovs(dfData, covariates = covsMod, idVar = "ID")
 setupDfRefRow(dfCovsM, dfData, covsMod, idVar = "ID")
 
 ## From the control stream
-setupDfRefRow(dfCovsM, dfData, covsMod, idVar = "ID",
-              contRef = "model", catRef = "model", model = modFile)
+setupDfRefRow(dfCovsM, dfData, covsMod,
+  idVar = "ID",
+  contRef = "model", catRef = "model", model = modFile
+)
 ```
 
 `WT` is 85.4 in the data and 75 in the model; `FORM` is 0 in the data and 1 in the
@@ -426,7 +432,7 @@ model. With the data-derived reference, every row that does not vary `WT` sits a
 does not vary `FORM` sits at 1.17 for Frel:
 
 ```{r}
-ext    <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
+ext <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
 thetas <- as.numeric(ext[ext$ITERATION == -1000000000, 2:15])
 
 c(CL = (75 / 85.4)^thetas[2], V = (75 / 85.4)^thetas[3], Frel = 1 / (1 + thetas[12]))
@@ -438,8 +444,10 @@ construction. `model` takes either a control stream path or the list returned by
 parameter function come from one derivation.
 
 ```{r}
-dfRefRow <- setupDfRefRow(dfCovsM, dfData, covsMod, idVar = "ID",
-                          contRef = "model", catRef = "model", model = gen)
+dfRefRow <- setupDfRefRow(dfCovsM, dfData, covsMod,
+  idVar = "ID",
+  contRef = "model", catRef = "model", model = gen
+)
 dfRefRow
 ```
 
@@ -459,9 +467,11 @@ analysis file and the model's population are not the same thing.
 ```{r}
 dfUsed <- filterByModel(dfData, modFile, quiet = TRUE)
 
-c(records_file = nrow(dfData),  records_model = nrow(dfUsed),
+c(
+  records_file = nrow(dfData), records_model = nrow(dfUsed),
   subjects_file = length(unique(dfData$ID)),
-  subjects_model = length(unique(dfUsed$ID)))
+  subjects_model = length(unique(dfUsed$ID))
+)
 ```
 
 Over a fifth of the subjects in the file were never seen by `run7`, and that moves
@@ -482,9 +492,11 @@ this very data set they do:
 
 ```{r}
 mod <- PMXForest:::nmReadModel(modFile)
-data.frame(position   = 9:10,
-           input      = PMXForest:::nmInputPositions(mod)$names[9:10],
-           csv_header = names(dfData)[9:10])
+data.frame(
+  position = 9:10,
+  input = PMXForest:::nmInputPositions(mod)$names[9:10],
+  csv_header = names(dfData)[9:10]
+)
 ```
 
 `$INPUT`'s `DV` is the file's `LNDV`. Filtering by name would read the wrong

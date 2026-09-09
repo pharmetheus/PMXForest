@@ -15,48 +15,49 @@
 #' @examples
 #' ## Final parameter estimates from the SimVal run7 .ext file
 #' extFile <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
-#' finPar  <- subset(extFile, ITERATION == "-1000000000")
-#' mu      <- as.numeric(finPar[, -(c(1, ncol(finPar)))])
+#' finPar <- subset(extFile, ITERATION == "-1000000000")
+#' mu <- as.numeric(finPar[, -(c(1, ncol(finPar)))])
 #'
 #' ## Covariance matrix from the run7 .cov file
 #' dfcov <- read.table(system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
-#'                     fill = TRUE, header = TRUE, sep = "", skip = 1,
-#'                     stringsAsFactors = FALSE)
+#'   fill = TRUE, header = TRUE, sep = "", skip = 1,
+#'   stringsAsFactors = FALSE
+#' )
 #' sigma <- data.matrix(dfcov[, 2:ncol(dfcov)])
 #'
 #' samples <- PMXForest:::mvrnorm_vector(mu = mu, sigma = sigma, iSampleIndex = 10)
 #' dim(samples)
-mvrnorm_vector <- function(mu,sigma,fixed_mu=NULL,dSeed=NULL,iSampleIndex=1)
-{
-  if (iSampleIndex==0) return (mu)
+mvrnorm_vector <- function(mu, sigma, fixed_mu = NULL, dSeed = NULL, iSampleIndex = 1) {
+  if (iSampleIndex == 0) {
+    return(mu)
+  }
 
-  if (is.null(fixed_mu)) fixed_mu <- rep(0,length(mu))
+  if (is.null(fixed_mu)) fixed_mu <- rep(0, length(mu))
 
-  tmp_mu <- mu[which(fixed_mu==0)] #Get the non-fixed mu
+  tmp_mu <- mu[which(fixed_mu == 0)] # Get the non-fixed mu
 
   if (!is.null(dSeed)) set.seed(dSeed)
 
   ## Get the sigma
-  if(!any(fixed_mu!=0)) {
+  if (!any(fixed_mu != 0)) {
     mySigma <- sigma
   } else {
-    mySigma <- sigma[-which(fixed_mu==1),-which(fixed_mu==1)]
+    mySigma <- sigma[-which(fixed_mu == 1), -which(fixed_mu == 1)]
   }
 
-  samples <- MASS::mvrnorm(n=iSampleIndex,tmp_mu,Sigma = mySigma)
+  samples <- MASS::mvrnorm(n = iSampleIndex, tmp_mu, Sigma = mySigma)
 
-  #samples <- mvrnorm(n=iSampleIndex,tmp_mu,sigma[-which(fixed_mu==1),-which(fixed_mu==1)])
+  # samples <- mvrnorm(n=iSampleIndex,tmp_mu,sigma[-which(fixed_mu==1),-which(fixed_mu==1)])
 
   if (!is.matrix(samples)) {
-    mu[which(fixed_mu==0)]<-samples
+    mu[which(fixed_mu == 0)] <- samples
   } else {
-    mum<-matrix(0,ncol=length(mu),nrow=iSampleIndex) #Create a matrix for the samples
-    for (i in 1:iSampleIndex){
-      mum[i,]<-mu
-      mum[i,which(fixed_mu==0)]<-samples[i,]
+    mum <- matrix(0, ncol = length(mu), nrow = iSampleIndex) # Create a matrix for the samples
+    for (i in 1:iSampleIndex) {
+      mum[i, ] <- mu
+      mum[i, which(fixed_mu == 0)] <- samples[i, ]
     }
     return(mum)
   }
-  return (mu)
+  return(mu)
 }
-

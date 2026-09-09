@@ -2,19 +2,22 @@ modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
 
 simData <- function() {
   read.csv(system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv",
-                       package = "PMXForest"))
+    package = "PMXForest"
+  ))
 }
 
 ## A minimal control stream with a given $INPUT and $DATA record.
 tempMod <- function(input, dataRec) {
   f <- withr::local_tempfile(fileext = ".mod", .local_envir = parent.frame())
-  writeLines(c("$PROBLEM t", input, dataRec, "$PK", "CL = THETA(1)",
-               "$THETA 1"), f)
+  writeLines(c(
+    "$PROBLEM t", input, dataRec, "$PK", "CL = THETA(1)",
+    "$THETA 1"
+  ), f)
   f
 }
 
 test_that("run7's IGNOREs reproduce the records NONMEM actually used", {
-  d    <- simData()
+  d <- simData()
   used <- filterByModel(d, modFile, quiet = TRUE)
 
   # xptab7 was written by this model and has 33885 data rows
@@ -24,14 +27,17 @@ test_that("run7's IGNOREs reproduce the records NONMEM actually used", {
 
   # the three conditions, applied by hand
   expect_equal(used, subset(d, TYPE != 2 & BLQ != 1 & ID != 895),
-               ignore_attr = TRUE)
+    ignore_attr = TRUE
+  )
 })
 
 test_that("filtering changes the covariate quantiles it feeds", {
-  d    <- simData()
+  d <- simData()
   used <- filterByModel(d, modFile, quiet = TRUE)
-  expect_false(identical(getCovStats(d,    "CRCL", idVar = "ID")$CRCL,
-                         getCovStats(used, "CRCL", idVar = "ID")$CRCL))
+  expect_false(identical(
+    getCovStats(d, "CRCL", idVar = "ID")$CRCL,
+    getCovStats(used, "CRCL", idVar = "ID")$CRCL
+  ))
 })
 
 test_that("columns are matched by position, not by name", {
@@ -49,7 +55,7 @@ test_that("columns are matched by position, not by name", {
 test_that("useInputNames returns only the columns the model reads", {
   d <- simData()
   mod <- nmReadModel(modFile)
-  n   <- length(nmInputPositions(mod)$names)
+  n <- length(nmInputPositions(mod)$names)
   expect_equal(ncol(filterByModel(d, modFile, useInputNames = TRUE, quiet = TRUE)), n)
   # the default keeps the caller's own frame intact
   expect_equal(names(filterByModel(d, modFile, quiet = TRUE)), names(d))
@@ -113,12 +119,12 @@ test_that("a model with no filter returns the data unchanged", {
 
 test_that("the conventional header markers do not warn, other characters do", {
   d <- data.frame(ID = 1:3, DV = 1, WT = c(60, 75, 80))
-  fAt   <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=@")
+  fAt <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=@")
   fHash <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=#")
-  fC    <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=C")
-  expect_silent(filterByModel(d, fAt,   quiet = TRUE))
+  fC <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=C")
+  expect_silent(filterByModel(d, fAt, quiet = TRUE))
   expect_silent(filterByModel(d, fHash, quiet = TRUE))
-  expect_warning(filterByModel(d, fC,   quiet = TRUE), "IGNORE=C")
+  expect_warning(filterByModel(d, fC, quiet = TRUE), "IGNORE=C")
 })
 
 test_that("ACCEPT and IGNORE lists together are refused, as in NONMEM", {

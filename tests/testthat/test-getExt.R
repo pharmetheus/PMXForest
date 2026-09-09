@@ -1,5 +1,5 @@
 test_that("Ext files are read properly", {
-  extData <- getExt(system.file("extdata","SimVal/run7.ext",package="PMXForest"))
+  extData <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
   expect_s3_class(extData, "data.frame")
 })
 
@@ -34,5 +34,5 @@ test_that("getExt handles all logic branches", {
 
   # Test error conditions
   expect_error(getExt(file_1_table, set = 2)) # Requesting a table that doesn't exist
-  expect_error(getExt(file_no_table))         # File contains no "TABLE" headers
+  expect_error(getExt(file_no_table)) # File contains no "TABLE" headers
 })

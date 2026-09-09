@@ -126,27 +126,33 @@
 #'
 #' ## Read it in and use it like any other parameter function
 #' paramFunction <- eval(parse(text = out$code))
-#' paramFunction(thetas = rep(1, out$noBaseThetas),
-#'               df     = data.frame(WT = 90, FOOD = 0))
+#' paramFunction(
+#'   thetas = rep(1, out$noBaseThetas),
+#'   df = data.frame(WT = 90, FOOD = 0)
+#' )
 #'
 #' ## Append secondary parameters. An entry is a snippet, an .R file path, or
 #' ## a list with `source` plus constants the code needs:
 #' out2 <- createParamFunction(
-#'   modFile, parameters = c("CL", "V"), quiet = TRUE,
+#'   modFile,
+#'   parameters = c("CL", "V"), quiet = TRUE,
 #'   secondary = list(
-#'     AUC24 = list(source = "dose / CL", dose = 100),   # constant `dose`
-#'     KEL   = "CL / V"))
-#' out2$functionListName        # c("CL", "V", "AUC24", "KEL")
+#'     AUC24 = list(source = "dose / CL", dose = 100), # constant `dose`
+#'     KEL   = "CL / V"
+#'   )
+#' )
+#' out2$functionListName # c("CL", "V", "AUC24", "KEL")
 #' cat(out2$code, sep = "\n")
 createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
                                 functionName = "paramFunction", extFile = NULL,
                                 file = NULL, missVal = -99, quiet = FALSE,
                                 secondary = NULL) {
+  p <- nmParsePK(modFile,
+    parameters = parameters, covRef = covRef,
+    extFile = extFile, missVal = missVal
+  )
 
-  p <- nmParsePK(modFile, parameters = parameters, covRef = covRef,
-                 extFile = extFile, missVal = missVal)
-
-  sec      <- nmResolveSecondary(secondary, quiet = quiet)
+  sec <- nmResolveSecondary(secondary, quiet = quiet)
   secNames <- unname(vapply(sec, `[[`, "", "name"))
 
   # Setting ETA() to 0 leaves artefacts such as `TVCL * exp(0)`; fold them away
@@ -154,32 +160,43 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
   stmts <- nmSimplifyStmts(p$statements)
 
   code <- nmEmit(stmts, p$covRef, p$covariates, p$parameters, functionName,
-                 modFile, missVal, p$noBaseThetas, secondary = sec)
+    modFile, missVal, p$noBaseThetas,
+    secondary = sec
+  )
   class(code) <- c("pmxParamFunction", "character")
 
   if (!is.null(file)) writeLines(code, file)
 
   if (!quiet) {
-    message("Translated $PK of ", basename(modFile), ": ", length(stmts),
-            " statement(s), ", length(p$covariates), " covariate(s), ",
-            p$noBaseThetas, " theta(s)",
-            if (length(secNames))
-              paste0(", ", length(secNames), " secondary parameter(s)") else "",
-            ".")
+    message(
+      "Translated $PK of ", basename(modFile), ": ", length(stmts),
+      " statement(s), ", length(p$covariates), " covariate(s), ",
+      p$noBaseThetas, " theta(s)",
+      if (length(secNames)) {
+        paste0(", ", length(secNames), " secondary parameter(s)")
+      } else {
+        ""
+      },
+      "."
+    )
     for (cov in p$covariates) {
-      message("  ", cov, " reference ", nmFormatNum(p$covRef[[cov]]$value),
-              " - ", p$covRef[[cov]]$source)
+      message(
+        "  ", cov, " reference ", nmFormatNum(p$covRef[[cov]]$value),
+        " - ", p$covRef[[cov]]$source
+      )
     }
     if (!is.null(file)) message("Written to ", file)
   }
 
-  list(code = code,
-       functionListName = c(p$parameters, secNames),
-       primaryNames     = p$parameters,
-       secondaryNames   = secNames,
-       noBaseThetas = p$noBaseThetas, covRef = p$covRef,
-       etaMap = p$etaMap[intersect(names(p$etaMap), p$parameters)],
-       modFile = modFile, missVal = missVal)
+  list(
+    code = code,
+    functionListName = c(p$parameters, secNames),
+    primaryNames = p$parameters,
+    secondaryNames = secNames,
+    noBaseThetas = p$noBaseThetas, covRef = p$covRef,
+    etaMap = p$etaMap[intersect(names(p$etaMap), p$parameters)],
+    modFile = modFile, missVal = missVal
+  )
 }
 
 #' Parse a NONMEM `$PK` block into a reusable structure
@@ -234,19 +251,21 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
 #' p$etaMap
 nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
                       extFile = NULL, missVal = -99) {
-
   mod <- nmReadModel(modFile)
-  pk  <- nmRecord(mod, "\\$PK\\b")
+  pk <- nmRecord(mod, "\\$PK\\b")
   if (nrow(pk) == 0) {
     stop("No $PK record found in ", basename(modFile),
-         ". nmParsePK() parses $PK blocks; a $PRED model must be ",
-         "handled by hand.", call. = FALSE)
+      ". nmParsePK() parses $PK blocks; a $PRED model must be ",
+      "handled by hand.",
+      call. = FALSE
+    )
   }
 
   stmts <- nmParseStatements(pk, modFile)
   if (length(stmts) == 0) {
     stop("The $PK record in ", basename(modFile), " contains no statements.",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   # Recorded while the ETA() references are still in the tree.
   etaMap <- nmEtaMap(stmts)
@@ -260,7 +279,7 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   ## covariates come out in first-use order. Anything read before it is bound
   ## that is *not* in $INPUT cannot be supplied, and is an error here rather
   ## than an "object not found" from inside getForestDFSCM() later.
-  syms       <- nmSymbols(folded)
+  syms <- nmSymbols(folded)
   inputNames <- nmInputNames(mod)
   covariates <- character(0)
   repeat {
@@ -305,39 +324,48 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
     stray <- setdiff(names(covRef), covariates)
     if (length(stray) > 0) {
       stop("covRef names a covariate that ", basename(modFile),
-           " does not use: ", paste(stray, collapse = ", "),
-           ".\nCovariates in this $PK: ",
-           if (length(covariates) == 0) "none" else paste(covariates, collapse = ", "),
-           ".", call. = FALSE)
+        " does not use: ", paste(stray, collapse = ", "),
+        ".\nCovariates in this $PK: ",
+        if (length(covariates) == 0) "none" else paste(covariates, collapse = ", "),
+        ".",
+        call. = FALSE
+      )
     }
     bad <- names(covRef)[!vapply(covRef, function(v) {
       is.numeric(v) && length(v) == 1L && !is.na(v) && is.finite(v)
     }, logical(1))]
     if (length(bad) > 0) {
       stop("Each covRef value must be a single finite number; check: ",
-           paste(bad, collapse = ", "), ".", call. = FALSE)
+        paste(bad, collapse = ", "), ".",
+        call. = FALSE
+      )
     }
   }
   for (cov in names(covRef)) {
-    derived[[cov]] <- list(value = covRef[[cov]], line = NA_integer_,
-                           confident = TRUE, source = "supplied through covRef")
+    derived[[cov]] <- list(
+      value = covRef[[cov]], line = NA_integer_,
+      confident = TRUE, source = "supplied through covRef"
+    )
   }
 
   missingRef <- setdiff(covariates, names(derived))
   if (length(missingRef) > 0) {
     stop("No reference value could be derived from ", basename(modFile),
-         " for: ", paste(missingRef, collapse = ", "),
-         ".\nSupply them through covRef, e.g. covRef = list(",
-         paste(paste0(missingRef, " = <value>"), collapse = ", "), ").",
-         call. = FALSE)
+      " for: ", paste(missingRef, collapse = ", "),
+      ".\nSupply them through covRef, e.g. covRef = list(",
+      paste(paste0(missingRef, " = <value>"), collapse = ", "), ").",
+      call. = FALSE
+    )
   }
 
   unsure <- covariates[!vapply(derived[covariates], `[[`, logical(1), "confident")]
   if (length(unsure) > 0) {
     warning("The reference value for ", paste(unsure, collapse = ", "),
-            " was inferred rather than read from the control stream. Check the ",
-            "preamble of the generated function and override through covRef if ",
-            "it is wrong.", call. = FALSE)
+      " was inferred rather than read from the control stream. Check the ",
+      "preamble of the generated function and override through covRef if ",
+      "it is wrong.",
+      call. = FALSE
+    )
   }
 
   ## Parameters to return.
@@ -347,7 +375,9 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
     unknown <- setdiff(parameters, syms$assigned)
     if (length(unknown) > 0) {
       stop("Not assigned in the $PK block of ", basename(modFile), ": ",
-           paste(unknown, collapse = ", "), ".", call. = FALSE)
+        paste(unknown, collapse = ", "), ".",
+        call. = FALSE
+      )
     }
   }
 
@@ -361,14 +391,17 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   maxTheta <- nmMaxTheta(folded)
   if (noBaseThetas < maxTheta) {
     stop("The model declares ", noBaseThetas, " THETA(s) but $PK references ",
-         "THETA(", maxTheta, ") in ", basename(modFile),
-         ". Refusing to continue: the theta indices would be wrong.",
-         call. = FALSE)
+      "THETA(", maxTheta, ") in ", basename(modFile),
+      ". Refusing to continue: the theta indices would be wrong.",
+      call. = FALSE
+    )
   }
 
-  list(statements = stmts, covariates = covariates, covRef = derived,
-       parameters = parameters, noBaseThetas = noBaseThetas, etaMap = etaMap,
-       inputNames = inputNames, modFile = modFile, missVal = missVal)
+  list(
+    statements = stmts, covariates = covariates, covRef = derived,
+    parameters = parameters, noBaseThetas = noBaseThetas, etaMap = etaMap,
+    inputNames = inputNames, modFile = modFile, missVal = missVal
+  )
 }
 
 #' Print generated parameter-function source

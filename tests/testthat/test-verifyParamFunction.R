@@ -5,9 +5,11 @@ writeNmTable <- function(df, path) {
   writeLines(c(
     "TABLE NO.  1",
     paste0(" ", paste(formatC(names(df), width = 11, flag = "-"), collapse = " ")),
-    apply(df, 1, function(r)
+    apply(df, 1, function(r) {
       paste0(" ", paste(formatC(as.numeric(r), format = "E", digits = 4, width = 11),
-                        collapse = " ")))
+        collapse = " "
+      ))
+    })
   ), path)
   path
 }
@@ -29,13 +31,14 @@ makeTable <- function(out, thetas, n = 20, withEta = TRUE, withCovs = TRUE) {
   )
   fun <- eval(parse(text = out$code))
   # rbind rather than t(vapply()), which would transpose for a single parameter
-  tv <- do.call(rbind, lapply(seq_len(n), function(i)
-    unlist(fun(thetas, covs[i, , drop = FALSE]))))
+  tv <- do.call(rbind, lapply(seq_len(n), function(i) {
+    unlist(fun(thetas, covs[i, , drop = FALSE]))
+  }))
 
   tab <- covs
   etas <- stats::rnorm(n, sd = 0.2)
   for (p in out$functionListName) {
-    idx <- if (p %in% names(out$etaMap)) out$etaMap[[p]] else NULL  # secondaries have none
+    idx <- if (p %in% names(out$etaMap)) out$etaMap[[p]] else NULL # secondaries have none
     if (withEta && !is.null(idx)) {
       # NONMEM tables individual values: TV * exp(eta)
       tab[[p]] <- tv[, p] * exp(etas)
@@ -58,7 +61,7 @@ test_that("a faithful function passes against the table it produced", {
     createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE)
   )
   thetas <- run7Thetas()
-  f   <- withr::local_tempfile(fileext = ".tab")
+  f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(makeTable(out, thetas), f)
 
   v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
@@ -70,8 +73,10 @@ test_that("a faithful function passes against the table it produced", {
 
   d <- attr(v, "checks")
   expect_s3_class(d, "data.frame")
-  expect_named(d, c("PARAMETER", "TABLECOLUMN", "N", "MAXABSDIFF",
-                    "MAXRELDIFF", "PASS"))
+  expect_named(d, c(
+    "PARAMETER", "TABLECOLUMN", "N", "MAXABSDIFF",
+    "MAXRELDIFF", "PASS"
+  ))
   expect_equal(d$PARAMETER, c("CL", "V"))
   expect_true(all(d$PASS))
   # the individual values were reconciled by dividing out the exponential IIV
@@ -88,8 +93,10 @@ test_that("a wrong function fails", {
   writeNmTable(makeTable(out, thetas), f)
 
   # A deliberately mistranslated function: the WT exponent uses the wrong theta.
-  broken <- eval(parse(text = sub("thetas\\[2\\]", "thetas[3]",
-                                  paste(out$code, collapse = "\n"))))
+  broken <- eval(parse(text = sub(
+    "thetas\\[2\\]", "thetas[3]",
+    paste(out$code, collapse = "\n")
+  )))
   v <- verifyParamFunction(out, f, thetas, fun = broken, quiet = TRUE)
   expect_false(as.logical(v))
   d <- attr(v, "checks")
@@ -122,8 +129,10 @@ test_that("a missing covariate warns loudly and voids the result", {
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(makeTable(out, thetas, withCovs = FALSE), f)
 
-  expect_warning(v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
-                 "not columns of")
+  expect_warning(
+    v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+    "not columns of"
+  )
   # PASS is NA rather than TRUE/FALSE: the comparison is not a valid check,
   # and an unverifiable parameter makes the scalar FALSE.
   expect_false(as.logical(v))
@@ -141,8 +150,10 @@ test_that("a parameter absent from the table warns and is reported unverified", 
 
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(tab, f)
-  expect_warning(v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
-                 "not a column of")
+  expect_warning(
+    v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+    "not a column of"
+  )
   d <- attr(v, "checks")
   expect_true(d$PASS[d$PARAMETER == "CL"])
   expect_true(is.na(d$PASS[d$PARAMETER == "MAT"]))
@@ -157,12 +168,14 @@ test_that("an individual column with no ETA column warns", {
   )
   thetas <- run7Thetas()
   tab <- makeTable(out, thetas)
-  tab$ETA3 <- NULL          # CL is tabled but cannot be reduced to typical
+  tab$ETA3 <- NULL # CL is tabled but cannot be reduced to typical
 
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(tab, f)
-  expect_warning(v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
-                 "Cannot recover typical values")
+  expect_warning(
+    v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+    "Cannot recover typical values"
+  )
   expect_true(is.na(attr(v, "checks")$PASS))
   expect_false(as.logical(v))
 })
@@ -173,7 +186,7 @@ test_that("rows are deduplicated on the covariate combination", {
   )
   thetas <- run7Thetas()
   tab <- makeTable(out, thetas, n = 5)
-  tab <- tab[rep(seq_len(nrow(tab)), each = 4), ]   # 4 records per subject
+  tab <- tab[rep(seq_len(nrow(tab)), each = 4), ] # 4 records per subject
 
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(tab, f)
@@ -189,7 +202,7 @@ test_that("the detail attribute carries the per-row comparison", {
   f <- withr::local_tempfile(fileext = ".tab")
   writeNmTable(makeTable(out, thetas, n = 8), f)
 
-  v      <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
   detail <- attr(attr(v, "checks"), "detail")
   expect_named(detail, "CL")
   expect_named(detail$CL, c("generated", "table", "absdiff", "reldiff"))
@@ -221,8 +234,10 @@ test_that("quiet = FALSE reports each parameter", {
 
 test_that("secondary parameters are skipped by default", {
   out <- suppressWarnings(
-    createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE,
-                        secondary = list(AUC = "80 / CL"))
+    createParamFunction(modFile,
+      parameters = c("CL", "V"), quiet = TRUE,
+      secondary = list(AUC = "80 / CL")
+    )
   )
   thetas <- run7Thetas()
   f <- withr::local_tempfile(fileext = ".tab")
@@ -233,7 +248,7 @@ test_that("secondary parameters are skipped by default", {
 
   v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
   d <- attr(v, "checks")
-  expect_setequal(d$PARAMETER, c("CL", "V"))   # AUC not checked
+  expect_setequal(d$PARAMETER, c("CL", "V")) # AUC not checked
   expect_true(as.logical(v))
 
   # ... but naming it explicitly forces the check. AUC is in the table (a raw
@@ -271,8 +286,12 @@ test_that("bad input is rejected", {
   out <- suppressWarnings(
     createParamFunction(modFile, parameters = "CL", quiet = TRUE)
   )
-  expect_error(verifyParamFunction(list(), "nowhere.tab", 1),
-               "returned by createParamFunction")
-  expect_error(verifyParamFunction(out, "does-not-exist.tab", 1),
-               "Table file not found")
+  expect_error(
+    verifyParamFunction(list(), "nowhere.tab", 1),
+    "returned by createParamFunction"
+  )
+  expect_error(
+    verifyParamFunction(out, "does-not-exist.tab", 1),
+    "Table file not found"
+  )
 })

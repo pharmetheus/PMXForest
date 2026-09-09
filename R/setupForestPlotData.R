@@ -40,34 +40,34 @@
 #' @keywords internal
 #'
 #' @examples
-#' dfData  <- read.csv(
+#' dfData <- read.csv(
 #'   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 #' )
 #' extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 #' covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
 #'
-#' dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "AGE"), idVar = "ID")
+#' dfCovs <- setupDfCovs(dfData, covariates = c("WT", "AGE"), idVar = "ID")
 #' dfSamples <- getSamples(covFile, extFile, n = 50)
 #' dfres <- getForestDFSCM(dfCovs,
-#'                         functionList     = list(function(thetas, df, ...) list(CL = thetas[4])),
-#'                         functionListName = "CL", noBaseThetas = 14,
-#'                         dfParameters     = dfSamples)
+#'   functionList = list(function(thetas, df, ...) list(CL = thetas[4])),
+#'   functionListName = "CL", noBaseThetas = 14,
+#'   dfParameters = dfSamples
+#' )
 #'
 #' PMXForest:::setupForestPlotData(dfres)
 setupForestPlotData <- function(dfres,
-                                parameters            = unique(dfres$PARAMETER),
-                                parameterLabels       = NULL,
+                                parameters = unique(dfres$PARAMETER),
+                                parameterLabels = NULL,
                                 parameterLabelsPrefix = NULL,
-                                groupNameLabels       = NULL,
-                                statisticsLabels      = NULL,
-                                plotRelative          = TRUE,
-                                noVar                 = FALSE,
-                                reference             = "func",
-                                sigdigits             = NULL,
-                                decimals              = NULL,
-                                onlySignificant       = FALSE,
-                                setSignEff            = NULL) {
-
+                                groupNameLabels = NULL,
+                                statisticsLabels = NULL,
+                                plotRelative = TRUE,
+                                noVar = FALSE,
+                                reference = "func",
+                                sigdigits = NULL,
+                                decimals = NULL,
+                                onlySignificant = FALSE,
+                                setSignEff = NULL) {
   ## Resolve the statistics-table number format. Explicit `sigdigits` or
   ## `decimals` always wins; otherwise the default depends on the scale:
   ## fixed decimals on the relative scale, significant digits on the absolute.
@@ -84,16 +84,16 @@ setupForestPlotData <- function(dfres,
   }
 
   ## Input checks
-  if(!is.null(parameterLabels)) {
-    if(!((length(parameterLabels) == length(parameters)) |
-         (length(parameterLabels) ==nrow(dfres)))) {
+  if (!is.null(parameterLabels)) {
+    if (!((length(parameterLabels) == length(parameters)) |
+      (length(parameterLabels) == nrow(dfres)))) {
       stop("The number of parameter labels must either be the same as the number of parameters or have the same length as the number of rows in dfres.")
     }
   }
 
-  if(!is.null(groupNameLabels)) {
-    if(!((length(groupNameLabels) == length(unique(dfres$GROUPNAME))) |
-         (length(groupNameLabels)  == nrow(dfres)))) {
+  if (!is.null(groupNameLabels)) {
+    if (!((length(groupNameLabels) == length(unique(dfres$GROUPNAME))) |
+      (length(groupNameLabels) == nrow(dfres)))) {
       stop("The number of group name labels must either be the same as the number of unique values in GROUPNAME or have the same length as the number of rows in dfres.")
     }
   }
@@ -101,85 +101,82 @@ setupForestPlotData <- function(dfres,
   ## Filter the parameters to use and redefine the levels definition (in case it is different from default)
   dfres <- dfres %>%
     filter(PARAMETER %in% parameters) %>%
-    mutate(PARAMETER=factor(PARAMETER,levels=parameters)) %>%
-    arrange(COVNUM,PARAMETER)
+    mutate(PARAMETER = factor(PARAMETER, levels = parameters)) %>%
+    arrange(COVNUM, PARAMETER)
 
 
   ## Define the PARAMETERLABEL column
-  if(!is.null(parameterLabels)) {
+  if (!is.null(parameterLabels)) {
     dfres$PARAMETERLABEL <- parameterLabels
-    dfres$PARAMETERLABEL <- factor(dfres$PARAMETERLABEL,levels=unique(dfres$PARAMETERLABEL))
+    dfres$PARAMETERLABEL <- factor(dfres$PARAMETERLABEL, levels = unique(dfres$PARAMETERLABEL))
   } else {
     dfres$PARAMETERLABEL <- dfres$PARAMETER
   }
 
   ## Name the STATISTICS column
-  if(is.null(statisticsLabels)) {
+  if (is.null(statisticsLabels)) {
     dfres$STATISTICSLABEL <- dfres$PARAMETERLABEL
   } else {
-    dfres$STATISTICSLABEL <- factor(paste0(statisticsLabels,dfres$PARAMETERLABEL),levels = paste0(statisticsLabels,unique(dfres$PARAMETERLABEL)))
+    dfres$STATISTICSLABEL <- factor(paste0(statisticsLabels, dfres$PARAMETERLABEL), levels = paste0(statisticsLabels, unique(dfres$PARAMETERLABEL)))
   }
 
   ## Add the parameter labels prefix if requested.
-  if(!is.null(parameterLabelsPrefix)) {
+  if (!is.null(parameterLabelsPrefix)) {
     dfres$PARAMETERLABEL <- paste0(parameterLabelsPrefix, dfres$PARAMETERLABEL)
-    dfres$PARAMETERLABEL <- factor(dfres$PARAMETERLABEL,levels=unique(dfres$PARAMETERLABEL))
+    dfres$PARAMETERLABEL <- factor(dfres$PARAMETERLABEL, levels = unique(dfres$PARAMETERLABEL))
   }
 
   ## Name the GROUPNAME column
-  if(!is.null(groupNameLabels)) {
-
-    if(length(groupNameLabels) == length(unique(dfres$GROUPNAME))) {
+  if (!is.null(groupNameLabels)) {
+    if (length(groupNameLabels) == length(unique(dfres$GROUPNAME))) {
       names(groupNameLabels) <- unique(dfres$GROUPNAME)
 
       dfres$GROUPNAMELABEL <- dfres$GROUPNAME
 
       for (gName in unique(dfres$GROUPNAME)) {
-        dfres$GROUPNAMELABEL <- ifelse(dfres$GROUPNAME == gName,groupNameLabels[gName],dfres$GROUPNAMELABEL)
+        dfres$GROUPNAMELABEL <- ifelse(dfres$GROUPNAME == gName, groupNameLabels[gName], dfres$GROUPNAMELABEL)
       }
-
     } else {
       dfres$GROUPNAMELABEL <- groupNameLabels
     }
-
   } else {
     dfres$GROUPNAMELABEL <- dfres$GROUPNAME
   }
 
   # Retain order
-  dfres$GROUPNAMELABEL <- factor(dfres$GROUPNAMELABEL,levels=unique(dfres$GROUPNAMELABEL[order(dfres$GROUPNAME)]))
+  dfres$GROUPNAMELABEL <- factor(dfres$GROUPNAMELABEL, levels = unique(dfres$GROUPNAMELABEL[order(dfres$GROUPNAME)]))
 
 
   ## Determine which statistic to use
-  vars <- getPlotVars(plotRelative,noVar,reference)
+  vars <- getPlotVars(plotRelative, noVar, reference)
 
   ## Set COVEFF if setSignEff is non-null
-  if(!is.null(setSignEff)) {
-    dfres <- setCOVEFF(dfres,setSignEff)
+  if (!is.null(setSignEff)) {
+    dfres <- setCOVEFF(dfres, setSignEff)
   }
 
   ## Remove the non-significant covariates if onlySignificant
-  if(onlySignificant) {
-    dfres <- droplevels(dfres %>% filter(PARAMETER%in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF==TRUE)))
+  if (onlySignificant) {
+    dfres <- droplevels(dfres %>% filter(PARAMETER %in% parameters) %>% group_by(GROUPNAME) %>% filter(any(COVEFF == TRUE)))
   }
 
   ## Create the plot data
   plotData <- dfres %>%
-    select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,!!vars) %>%
+    select(GROUPNAME, GROUPNAMELABEL, COVNUM, COVEFF, COVNAME, PARAMETER, PARAMETERLABEL, STATISTICSLABEL, !!vars) %>%
     # select(GROUPNAME,GROUPNAMELABEL,COVNUM,COVEFF,COVNAME,PARAMETER,PARAMETERLABEL,STATISTICSLABEL,REF=vars["ref"],point=vars["point"],q1=vars["q1"],q2=vars["q2"]) %>%
-    mutate(reference=reference) %>%
-    group_by(PARAMETER,COVNAME) %>%
-    mutate(REF=ifelse(plotRelative,1,REF)) %>%
-    ungroup %>%
-    #mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME))) %>%
+    mutate(reference = reference) %>%
+    group_by(PARAMETER, COVNAME) %>%
+    mutate(REF = ifelse(plotRelative, 1, REF)) %>%
+    ungroup() %>%
+    # mutate(COVNAME = factor(COVNUM,labels=unique(COVNAME))) %>%
     mutate(
       meanlabel  = fmtNum(point),
       lowcilabel = fmtNum(q1),
       upcilabel  = fmtNum(q2),
-      STATISTIC  = paste0(meanlabel, " [", lowcilabel, "-", upcilabel,"]"),
-      STATISTIC  = stringr::str_pad(STATISTIC,max(stringr::str_length(STATISTIC)),side="right",' ')
+      STATISTIC  = paste0(meanlabel, " [", lowcilabel, "-", upcilabel, "]"),
+      STATISTIC  = stringr::str_pad(STATISTIC, max(stringr::str_length(STATISTIC)), side = "right", " ")
     ) %>%
-    select(-meanlabel,-lowcilabel,-upcilabel,-COVNUM)
+    select(-meanlabel, -lowcilabel, -upcilabel, -COVNUM)
 
   return(plotData)
 }
@@ -197,9 +194,9 @@ setupForestPlotData <- function(dfres,
 #' @return A character vector the same length as \code{x}.
 #' @noRd
 signifPad <- function(x, digits = 3) {
-  eps <- x * 10^(-(digits + 3))                       # nudge so .5 rounds up
-  rx  <- signif(x + eps, digits)
-  cx  <- formatC(rx, digits = digits, format = "fg", flag = "#")
-  cx  <- sub("[^0-9]+$", "", cx)                      # drop a bare trailing "." / spaces
+  eps <- x * 10^(-(digits + 3)) # nudge so .5 rounds up
+  rx <- signif(x + eps, digits)
+  cx <- formatC(rx, digits = digits, format = "fg", flag = "#")
+  cx <- sub("[^0-9]+$", "", cx) # drop a bare trailing "." / spaces
   ifelse(is.na(x), NA_character_, cx)
 }

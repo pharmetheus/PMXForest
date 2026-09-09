@@ -27,13 +27,13 @@ nmReadModel <- function(modFile) {
 
   # A ";" always starts a comment in NONMEM abbreviated code; there are no
   # string literals to protect it from.
-  pos     <- regexpr(";", raw, fixed = TRUE)
-  code    <- ifelse(pos > 0, substr(raw, 1, pos - 1), raw)
+  pos <- regexpr(";", raw, fixed = TRUE)
+  code <- ifelse(pos > 0, substr(raw, 1, pos - 1), raw)
   comment <- ifelse(pos > 0, substr(raw, pos + 1, nchar(raw)), "")
 
   data.frame(
-    lineno  = seq_along(raw),
-    code    = trimws(code, which = "right"),
+    lineno = seq_along(raw),
+    code = trimws(code, which = "right"),
     comment = trimws(comment),
     stringsAsFactors = FALSE
   )
@@ -50,11 +50,13 @@ nmReadModel <- function(modFile) {
 #' @noRd
 nmRecord <- function(mod, record) {
   starts <- grep(paste0("^\\s*", record), mod$code, ignore.case = TRUE)
-  if (length(starts) == 0) return(mod[0, , drop = FALSE])
+  if (length(starts) == 0) {
+    return(mod[0, , drop = FALSE])
+  }
 
   start <- starts[1]
-  rest  <- grep("^\\s*\\$", mod$code)
-  rest  <- rest[rest > start]
+  rest <- grep("^\\s*\\$", mod$code)
+  rest <- rest[rest > start]
   stop_ <- if (length(rest) == 0) nrow(mod) else rest[1] - 1
 
   out <- mod[start:stop_, , drop = FALSE]
@@ -70,11 +72,15 @@ nmRecord <- function(mod, record) {
 #' @noRd
 nmInputNames <- function(mod) {
   rec <- nmRecord(mod, "\\$INP(U(T)?)?\\b")
-  if (nrow(rec) == 0) return(character(0))
+  if (nrow(rec) == 0) {
+    return(character(0))
+  }
 
   items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "[[:space:],]+"))
   items <- items[nzchar(items)]
-  if (length(items) == 0) return(character(0))
+  if (length(items) == 0) {
+    return(character(0))
+  }
 
   # DROP/SKIP columns are not read by NONMEM, so they are not covariates.
   items <- items[!grepl("(^|=)(DROP|SKIP)$", items, ignore.case = TRUE)]
@@ -96,12 +102,14 @@ nmInputNames <- function(mod) {
 #' @noRd
 nmInputPositions <- function(mod) {
   rec <- nmRecord(mod, "\\$INP(U(T)?)?\\b")
-  if (nrow(rec) == 0) return(list(names = character(0), aliases = character(0)))
+  if (nrow(rec) == 0) {
+    return(list(names = character(0), aliases = character(0)))
+  }
 
   items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "[[:space:],]+"))
   items <- items[nzchar(items)]
 
-  nms     <- character(length(items))
+  nms <- character(length(items))
   aliases <- character(0)
   for (i in seq_along(items)) {
     parts <- strsplit(items[i], "=", fixed = TRUE)[[1]]
@@ -122,16 +130,18 @@ nmInputPositions <- function(mod) {
 #' @noRd
 nmCountThetas <- function(mod) {
   starts <- grep("^\\s*\\$THE(T(A)?)?\\b", mod$code, ignore.case = TRUE)
-  if (length(starts) == 0) return(0L)
+  if (length(starts) == 0) {
+    return(0L)
+  }
 
   allStarts <- grep("^\\s*\\$", mod$code)
   n <- 0L
   for (s in starts) {
-    nxt   <- allStarts[allStarts > s]
+    nxt <- allStarts[allStarts > s]
     stop_ <- if (length(nxt) == 0) nrow(mod) else nxt[1] - 1
-    txt   <- paste(mod$code[s:stop_], collapse = " ")
-    txt   <- sub("^\\s*\\$THE(T(A)?)?\\b", "", txt, ignore.case = TRUE)
-    n     <- n + nmCountThetaRecord(txt)
+    txt <- paste(mod$code[s:stop_], collapse = " ")
+    txt <- sub("^\\s*\\$THE(T(A)?)?\\b", "", txt, ignore.case = TRUE)
+    n <- n + nmCountThetaRecord(txt)
   }
   n
 }
@@ -149,7 +159,7 @@ nmCountThetaRecord <- function(txt) {
     if (m < 0) break
     grp <- substr(txt, m, m + attr(m, "match.length") - 1)
     rep <- sub(".*[xX]\\s*([0-9]+)\\s*$", "\\1", grp)
-    n   <- n + if (grepl("[xX]\\s*[0-9]+\\s*$", grp)) as.integer(rep) else 1L
+    n <- n + if (grepl("[xX]\\s*[0-9]+\\s*$", grp)) as.integer(rep) else 1L
     txt <- paste0(substr(txt, 1, m - 1), " ", substr(txt, m + attr(m, "match.length"), nchar(txt)))
   }
   # Remaining bare values, each optionally with an xN repeat count.
@@ -175,9 +185,9 @@ nmCountThetaRecord <- function(txt) {
 ## a fractional part, and longest-first so ".EQN." beats ".EQ.".
 nmDotOps <- c(
   ".EQN." = "==", ".NEN." = "!=",
-  ".AND." = "&",  ".NOT." = "!", ".OR." = "|",
-  ".EQ."  = "==", ".NE."  = "!=", ".GE." = ">=",
-  ".GT."  = ">",  ".LE."  = "<=", ".LT." = "<"
+  ".AND." = "&", ".NOT." = "!", ".OR." = "|",
+  ".EQ." = "==", ".NE." = "!=", ".GE." = ">=",
+  ".GT." = ">", ".LE." = "<=", ".LT." = "<"
 )
 
 nmFunctions <- c(
@@ -192,20 +202,25 @@ nmFunctions <- c(
 #' @noRd
 nmLex <- function(text, lineno, modFile) {
   toks <- list()
-  i    <- 1L
-  n    <- nchar(text)
+  i <- 1L
+  n <- nchar(text)
 
   bad <- function(ch) {
     stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":", lineno,
-         " - unrecognised character '", ch, "' in:\n  ", trimws(text),
-         "\ncreateParamFunction() handles assignments, IF statements and ",
-         "closed-form arithmetic only.", call. = FALSE)
+      " - unrecognised character '", ch, "' in:\n  ", trimws(text),
+      "\ncreateParamFunction() handles assignments, IF statements and ",
+      "closed-form arithmetic only.",
+      call. = FALSE
+    )
   }
 
   while (i <= n) {
     ch <- substr(text, i, i)
 
-    if (grepl("\\s", ch)) { i <- i + 1L; next }
+    if (grepl("\\s", ch)) {
+      i <- i + 1L
+      next
+    }
 
     # Dot operator, checked before a number so ".EQ." is unambiguous.
     matched <- FALSE
@@ -245,19 +260,40 @@ nmLex <- function(text, lineno, modFile) {
     # Operators and punctuation.
     two <- substr(text, i, i + 1L)
     if (two == "**") {
-      toks[[length(toks) + 1L]] <- list(type = "op", value = "^"); i <- i + 2L; next
+      toks[[length(toks) + 1L]] <- list(type = "op", value = "^")
+      i <- i + 2L
+      next
     }
     if (two %in% c("==", "/=", "<=", ">=")) {
       toks[[length(toks) + 1L]] <- list(type = "op", value = sub("/=", "!=", two))
-      i <- i + 2L; next
+      i <- i + 2L
+      next
     }
     if (ch %in% c("+", "-", "*", "/", "^", "<", ">")) {
-      toks[[length(toks) + 1L]] <- list(type = "op", value = ch); i <- i + 1L; next
+      toks[[length(toks) + 1L]] <- list(type = "op", value = ch)
+      i <- i + 1L
+      next
     }
-    if (ch == "=") { toks[[length(toks) + 1L]] <- list(type = "assign"); i <- i + 1L; next }
-    if (ch == "(") { toks[[length(toks) + 1L]] <- list(type = "lparen"); i <- i + 1L; next }
-    if (ch == ")") { toks[[length(toks) + 1L]] <- list(type = "rparen"); i <- i + 1L; next }
-    if (ch == ",") { toks[[length(toks) + 1L]] <- list(type = "comma");  i <- i + 1L; next }
+    if (ch == "=") {
+      toks[[length(toks) + 1L]] <- list(type = "assign")
+      i <- i + 1L
+      next
+    }
+    if (ch == "(") {
+      toks[[length(toks) + 1L]] <- list(type = "lparen")
+      i <- i + 1L
+      next
+    }
+    if (ch == ")") {
+      toks[[length(toks) + 1L]] <- list(type = "rparen")
+      i <- i + 1L
+      next
+    }
+    if (ch == ",") {
+      toks[[length(toks) + 1L]] <- list(type = "comma")
+      i <- i + 1L
+      next
+    }
 
     bad(ch)
   }
@@ -270,16 +306,18 @@ nmLex <- function(text, lineno, modFile) {
 
 ## Binary operator precedence, low to high. `^` is right-associative, matching
 ## both Fortran's `**` and R's `^`.
-nmBinPrec <- c("|" = 1, "&" = 2,
-               "==" = 4, "!=" = 4, "<" = 4, ">" = 4, "<=" = 4, ">=" = 4,
-               "+" = 5, "-" = 5, "*" = 6, "/" = 6, "^" = 8)
+nmBinPrec <- c(
+  "|" = 1, "&" = 2,
+  "==" = 4, "!=" = 4, "<" = 4, ">" = 4, "<=" = 4, ">=" = 4,
+  "+" = 5, "-" = 5, "*" = 6, "/" = 6, "^" = 8
+)
 
 #' Parser state: a token list plus a cursor
 #' @noRd
 nmParser <- function(toks, lineno, modFile) {
   env <- new.env(parent = emptyenv())
   env$toks <- toks
-  env$pos  <- 1L
+  env$pos <- 1L
   env$lineno <- lineno
   env$modFile <- modFile
   env
@@ -289,14 +327,20 @@ nmParser <- function(toks, lineno, modFile) {
 nmPeek <- function(p) if (p$pos <= length(p$toks)) p$toks[[p$pos]] else NULL
 
 #' @noRd
-nmNext <- function(p) { t <- nmPeek(p); p$pos <- p$pos + 1L; t }
+nmNext <- function(p) {
+  t <- nmPeek(p)
+  p$pos <- p$pos + 1L
+  t
+}
 
 #' @noRd
 nmFail <- function(p, msg) {
   stop("Unsupported NONMEM construct in $PK at ", basename(p$modFile), ":",
-       p$lineno, " - ", msg,
-       "\ncreateParamFunction() handles assignments, IF statements and ",
-       "closed-form arithmetic only.", call. = FALSE)
+    p$lineno, " - ", msg,
+    "\ncreateParamFunction() handles assignments, IF statements and ",
+    "closed-form arithmetic only.",
+    call. = FALSE
+  )
 }
 
 #' Parse an expression with precedence climbing
@@ -323,7 +367,9 @@ nmParseUnary <- function(p) {
     nmNext(p)
     # Unary minus binds looser than `^`, as in both Fortran and R: -2**2 == -4.
     arg <- nmParseExpr(p, if (t$value == "!") 3 else 7)
-    if (t$value == "+") return(arg)
+    if (t$value == "+") {
+      return(arg)
+    }
     return(list(type = "unop", op = t$value, arg = arg))
   }
   nmParseAtom(p)
@@ -334,7 +380,9 @@ nmParseAtom <- function(p) {
   t <- nmNext(p)
   if (is.null(t)) nmFail(p, "unexpected end of expression")
 
-  if (t$type == "num") return(list(type = "num", value = t$value))
+  if (t$type == "num") {
+    return(list(type = "num", value = t$value))
+  }
 
   if (t$type == "lparen") {
     e <- nmParseExpr(p)
@@ -354,7 +402,10 @@ nmParseAtom <- function(p) {
         repeat {
           args[[length(args) + 1L]] <- nmParseExpr(p)
           nx <- nmPeek(p)
-          if (!is.null(nx) && nx$type == "comma") { nmNext(p); next }
+          if (!is.null(nx) && nx$type == "comma") {
+            nmNext(p)
+            next
+          }
           break
         }
       }
@@ -391,13 +442,21 @@ nmParseAtom <- function(p) {
         # being built from nodes the deparser already knows, it gets its
         # parentheses from the ordinary precedence rules. $PK expressions are
         # pure, so evaluating `a` and `b` twice is safe.
-        return(list(type = "binop", op = "-", lhs = args[[1]],
-                    rhs = list(type = "binop", op = "*", lhs = args[[2]],
-                               rhs = list(type = "call", fn = "trunc",
-                                          args = list(list(type = "binop",
-                                                           op   = "/",
-                                                           lhs  = args[[1]],
-                                                           rhs  = args[[2]]))))))
+        return(list(
+          type = "binop", op = "-", lhs = args[[1]],
+          rhs = list(
+            type = "binop", op = "*", lhs = args[[2]],
+            rhs = list(
+              type = "call", fn = "trunc",
+              args = list(list(
+                type = "binop",
+                op = "/",
+                lhs = args[[1]],
+                rhs = args[[2]]
+              ))
+            )
+          )
+        ))
       }
       if (nm %in% names(nmFunctions)) {
         return(list(type = "call", fn = nmFunctions[[nm]], args = args))
@@ -423,12 +482,14 @@ nmParseAtom <- function(p) {
 #' @noRd
 nmParseStatements <- function(rec, modFile) {
   keep <- nzchar(trimws(rec$code))
-  rec  <- rec[keep, , drop = FALSE]
+  rec <- rec[keep, , drop = FALSE]
 
   verbatim <- grep('^\\s*"', rec$code)
   if (length(verbatim) > 0) {
     stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-         rec$lineno[verbatim[1]], " - verbatim FORTRAN code.", call. = FALSE)
+      rec$lineno[verbatim[1]], " - verbatim FORTRAN code.",
+      call. = FALSE
+    )
   }
 
   state <- new.env(parent = emptyenv())
@@ -436,8 +497,9 @@ nmParseStatements <- function(rec, modFile) {
   res <- nmParseBlock(rec, state, modFile, terminators = character(0))
   if (state$i <= nrow(rec)) {
     stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-         rec$lineno[state$i], " - unexpected '", trimws(rec$code[state$i]), "'.",
-         call. = FALSE)
+      rec$lineno[state$i], " - unexpected '", trimws(rec$code[state$i]), "'.",
+      call. = FALSE
+    )
   }
   res
 }
@@ -446,9 +508,9 @@ nmParseStatements <- function(rec, modFile) {
 nmParseBlock <- function(rec, state, modFile, terminators) {
   stmts <- list()
   while (state$i <= nrow(rec)) {
-    line   <- rec$code[state$i]
+    line <- rec$code[state$i]
     lineno <- rec$lineno[state$i]
-    up     <- toupper(trimws(line))
+    up <- toupper(trimws(line))
 
     if (any(vapply(terminators, function(tm) grepl(tm, up), logical(1)))) break
 
@@ -464,15 +526,19 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
       repeat {
         if (state$i > nrow(rec)) {
           stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-               lineno, " - IF block is never closed by END IF.", call. = FALSE)
+            lineno, " - IF block is never closed by END IF.",
+            call. = FALSE
+          )
         }
-        cur   <- rec$code[state$i]
+        cur <- rec$code[state$i]
         curUp <- toupper(trimws(cur))
         if (grepl("^ELSE\\s+IF\\b", curUp)) {
           state$i <- state$i + 1L
           elifs[[length(elifs) + 1L]] <- list(
-            cond  = nmParseCondition(sub("(?i)^\\s*ELSE\\s+", "", cur, perl = TRUE),
-                                     rec$lineno[state$i - 1L], modFile),
+            cond = nmParseCondition(
+              sub("(?i)^\\s*ELSE\\s+", "", cur, perl = TRUE),
+              rec$lineno[state$i - 1L], modFile
+            ),
             stmts = nmParseBlock(rec, state, modFile, terms)
           )
           next
@@ -482,10 +548,14 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
           elseStmts <- nmParseBlock(rec, state, modFile, terms)
           next
         }
-        if (grepl("^END\\s*IF$", curUp)) { state$i <- state$i + 1L; break }
+        if (grepl("^END\\s*IF$", curUp)) {
+          state$i <- state$i + 1L
+          break
+        }
         stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-             rec$lineno[state$i], " - '", trimws(cur), "' inside an IF block.",
-             call. = FALSE)
+          rec$lineno[state$i], " - '", trimws(cur), "' inside an IF block.",
+          call. = FALSE
+        )
       }
 
       stmts[[length(stmts) + 1L]] <- list(
@@ -498,11 +568,13 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
     # One-line IF: "IF (cond) VAR = expr"
     if (grepl("^IF\\s*\\(", up)) {
       close <- nmMatchParen(line, modFile, lineno)
-      cond  <- nmParseCondition(substr(line, 1, close), lineno, modFile)
-      body  <- trimws(substr(line, close + 1L, nchar(line)))
+      cond <- nmParseCondition(substr(line, 1, close), lineno, modFile)
+      body <- trimws(substr(line, close + 1L, nchar(line)))
       if (!nzchar(body)) {
         stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-             lineno, " - IF without THEN and without a statement.", call. = FALSE)
+          lineno, " - IF without THEN and without a statement.",
+          call. = FALSE
+        )
       }
       inner <- nmParseAssign(body, lineno, rec$comment[state$i], modFile)
       stmts[[length(stmts) + 1L]] <- list(
@@ -515,7 +587,9 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
 
     if (grepl("^(DO|WHILE|CALL|EXIT|GOTO|GO\\s+TO|RETURN)\\b", up)) {
       stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-           lineno, " - '", trimws(line), "'.", call. = FALSE)
+        lineno, " - '", trimws(line), "'.",
+        call. = FALSE
+      )
     }
 
     stmts[[length(stmts) + 1L]] <-
@@ -534,11 +608,15 @@ nmMatchParen <- function(line, modFile, lineno) {
     if (chars[k] == "(") depth <- depth + 1L
     if (chars[k] == ")") {
       depth <- depth - 1L
-      if (depth == 0L) return(k)
+      if (depth == 0L) {
+        return(k)
+      }
     }
   }
   stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":", lineno,
-       " - unbalanced parentheses in '", trimws(line), "'.", call. = FALSE)
+    " - unbalanced parentheses in '", trimws(line), "'.",
+    call. = FALSE
+  )
 }
 
 #' @noRd
@@ -554,23 +632,29 @@ nmParseCondition <- function(line, lineno, modFile) {
 #' @noRd
 nmParseAssign <- function(line, lineno, comment, modFile) {
   toks <- nmLex(line, lineno, modFile)
-  eq   <- which(vapply(toks, function(t) t$type == "assign", logical(1)))
+  eq <- which(vapply(toks, function(t) t$type == "assign", logical(1)))
   if (length(eq) == 0) {
     stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-         lineno, " - '", trimws(line), "' is not an assignment.", call. = FALSE)
+      lineno, " - '", trimws(line), "' is not an assignment.",
+      call. = FALSE
+    )
   }
   eq <- eq[1]
   if (eq != 2L || toks[[1]]$type != "sym") {
     stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-         lineno, " - only assignment to a plain variable is supported, got '",
-         trimws(line), "'.", call. = FALSE)
+      lineno, " - only assignment to a plain variable is supported, got '",
+      trimws(line), "'.",
+      call. = FALSE
+    )
   }
   p <- nmParser(toks[(eq + 1L):length(toks)], lineno, modFile)
   rhs <- nmParseExpr(p)
   if (p$pos <= length(p$toks)) nmFail(p, "trailing tokens after the assignment")
 
-  list(type = "assign", lhs = toks[[1]]$value, rhs = rhs,
-       lineno = lineno, comment = comment)
+  list(
+    type = "assign", lhs = toks[[1]]$value, rhs = rhs,
+    lineno = lineno, comment = comment
+  )
 }
 
 ## ---------------------------------------------------------------------------
@@ -579,9 +663,11 @@ nmParseAssign <- function(line, lineno, comment, modFile) {
 
 ## Precedence of the emitted R operators, used to decide where parentheses are
 ## needed. Matches R's own table.
-nmRPrec <- c("|" = 1, "&" = 2, "!" = 3,
-             "==" = 4, "!=" = 4, "<" = 4, ">" = 4, "<=" = 4, ">=" = 4,
-             "+" = 5, "-" = 5, "*" = 6, "/" = 6, "u-" = 7, "^" = 8)
+nmRPrec <- c(
+  "|" = 1, "&" = 2, "!" = 3,
+  "==" = 4, "!=" = 4, "<" = 4, ">" = 4, "<=" = 4, ">=" = 4,
+  "+" = 5, "-" = 5, "*" = 6, "/" = 6, "u-" = 7, "^" = 8
+)
 
 #' @noRd
 nmPrecOf <- function(node) {
@@ -622,8 +708,8 @@ nmPrecOf <- function(node) {
 nmDeparse <- function(node, thetaVar = "thetas", etaValue = "0") {
   wrap <- function(child, parentPrec, side = c("left", "right")) {
     side <- match.arg(side)
-    txt  <- nmDeparse(child, thetaVar, etaValue)
-    cp   <- nmPrecOf(child)
+    txt <- nmDeparse(child, thetaVar, etaValue)
+    cp <- nmPrecOf(child)
     need <- cp < parentPrec
     # Left-associative operators need parentheses on the right at equal
     # precedence (a - (b - c)); `^` is right-associative, so the reverse.
@@ -634,19 +720,25 @@ nmDeparse <- function(node, thetaVar = "thetas", etaValue = "0") {
   }
 
   switch(node$type,
-    num   = nmFormatNum(node$value),
-    sym   = node$name,
+    num = nmFormatNum(node$value),
+    sym = node$name,
     theta = paste0(thetaVar, "[", node$index, "]"),
-    eta   = etaValue,
-    call  = paste0(node$fn, "(",
-                   paste(vapply(node$args, nmDeparse, character(1),
-                                thetaVar, etaValue), collapse = ", "), ")"),
-    unop  = paste0(node$op, wrap(node$arg, nmPrecOf(node), "right")),
+    eta = etaValue,
+    call = paste0(
+      node$fn, "(",
+      paste(vapply(
+        node$args, nmDeparse, character(1),
+        thetaVar, etaValue
+      ), collapse = ", "), ")"
+    ),
+    unop = paste0(node$op, wrap(node$arg, nmPrecOf(node), "right")),
     binop = {
       prec <- nmRPrec[[node$op]]
-      sep  <- if (node$op == "^") "" else " "
-      paste0(wrap(node$lhs, prec, "left"), sep, node$op, sep,
-             wrap(node$rhs, prec, "right"))
+      sep <- if (node$op == "^") "" else " "
+      paste0(
+        wrap(node$lhs, prec, "left"), sep, node$op, sep,
+        wrap(node$rhs, prec, "right")
+      )
     },
     stop("Internal error: cannot deparse node type '", node$type, "'.")
   )
@@ -665,7 +757,9 @@ nmSimplify <- function(node) {
 
   # Typical values: substitute ETA() in the tree rather than at deparse time, so
   # the folding below can see the resulting constants.
-  if (node$type == "eta") return(list(type = "num", value = 0))
+  if (node$type == "eta") {
+    return(list(type = "num", value = 0))
+  }
 
   if (node$type == "call") {
     node$args <- lapply(node$args, nmSimplify)
@@ -692,16 +786,30 @@ nmSimplify <- function(node) {
     op <- node$op
 
     if (op == "*") {
-      if (isNum(node$lhs, 1)) return(node$rhs)
-      if (isNum(node$rhs, 1)) return(node$lhs)
+      if (isNum(node$lhs, 1)) {
+        return(node$rhs)
+      }
+      if (isNum(node$rhs, 1)) {
+        return(node$lhs)
+      }
     }
     if (op == "+") {
-      if (isNum(node$lhs, 0)) return(node$rhs)
-      if (isNum(node$rhs, 0)) return(node$lhs)
+      if (isNum(node$lhs, 0)) {
+        return(node$rhs)
+      }
+      if (isNum(node$rhs, 0)) {
+        return(node$lhs)
+      }
     }
-    if (op == "-" && isNum(node$rhs, 0)) return(node$lhs)
-    if (op == "/" && isNum(node$rhs, 1)) return(node$lhs)
-    if (op == "^" && isNum(node$rhs, 1)) return(node$lhs)
+    if (op == "-" && isNum(node$rhs, 0)) {
+      return(node$lhs)
+    }
+    if (op == "/" && isNum(node$rhs, 1)) {
+      return(node$lhs)
+    }
+    if (op == "^" && isNum(node$rhs, 1)) {
+      return(node$lhs)
+    }
     return(node)
   }
 
@@ -716,12 +824,12 @@ nmSimplifyStmts <- function(stmts) {
       # Recorded before folding, so the emitted source can still note where an
       # ETA() was dropped even though `exp(0)` has been simplified away.
       s$hadEta <- nmHasEta(s$rhs)
-      s$rhs    <- nmSimplify(s$rhs)
+      s$rhs <- nmSimplify(s$rhs)
     } else {
-      s$cond  <- nmSimplify(s$cond)
-      s$then  <- nmSimplifyStmts(s$then)
+      s$cond <- nmSimplify(s$cond)
+      s$then <- nmSimplifyStmts(s$then)
       s$elifs <- lapply(s$elifs, function(e) {
-        e$cond  <- nmSimplify(e$cond)
+        e$cond <- nmSimplify(e$cond)
         e$stmts <- nmSimplifyStmts(e$stmts)
         e
       })
@@ -750,10 +858,14 @@ nmSimplifyStmts <- function(stmts) {
 #' nmFormatNum(75)
 #' nmFormatNum(1e-12)
 nmFormatNum <- function(x) {
-  if (is.na(x)) return("NA")
+  if (is.na(x)) {
+    return("NA")
+  }
   for (d in 1:17) {
     s <- format(x, digits = d)
-    if (identical(as.numeric(s), x)) return(s)
+    if (identical(as.numeric(s), x)) {
+      return(s)
+    }
   }
   format(x, digits = 17)
 }
@@ -769,14 +881,17 @@ nmFormatNum <- function(x) {
 #' @noRd
 nmSymbols <- function(stmts) {
   assigned <- character(0)
-  used     <- character(0)
+  used <- character(0)
 
   walkExpr <- function(node) {
     switch(node$type,
-      sym   = used <<- c(used, node$name),
-      call  = lapply(node$args, walkExpr),
-      unop  = walkExpr(node$arg),
-      binop = { walkExpr(node$lhs); walkExpr(node$rhs) },
+      sym = used <<- c(used, node$name),
+      call = lapply(node$args, walkExpr),
+      unop = walkExpr(node$arg),
+      binop = {
+        walkExpr(node$lhs)
+        walkExpr(node$rhs)
+      },
       NULL
     )
     invisible(NULL)
@@ -789,7 +904,10 @@ nmSymbols <- function(stmts) {
       } else {
         walkExpr(s$cond)
         walkStmts(s$then)
-        for (e in s$elifs) { walkExpr(e$cond); walkStmts(e$stmts) }
+        for (e in s$elifs) {
+          walkExpr(e$cond)
+          walkStmts(e$stmts)
+        }
         if (!is.null(s$else_)) walkStmts(s$else_)
       }
     }
@@ -802,13 +920,16 @@ nmSymbols <- function(stmts) {
 #' Symbols read by one `$PK` expression
 #' @noRd
 nmExprSyms <- function(node) {
-  out  <- character(0)
+  out <- character(0)
   walk <- function(n) {
     switch(n$type,
-      sym   = out <<- c(out, n$name),
-      call  = lapply(n$args, walk),
-      unop  = walk(n$arg),
-      binop = { walk(n$lhs); walk(n$rhs) },
+      sym = out <<- c(out, n$name),
+      call = lapply(n$args, walk),
+      unop = walk(n$arg),
+      binop = {
+        walk(n$lhs)
+        walk(n$rhs)
+      },
       NULL
     )
     invisible(NULL)
@@ -846,11 +967,15 @@ nmFirstUnboundUse <- function(stmts, bound, everAssigned) {
   hit <- NULL
 
   checkExpr <- function(node, lineno, bnd) {
-    if (!is.null(hit) || is.null(node)) return(invisible(NULL))
+    if (!is.null(hit) || is.null(node)) {
+      return(invisible(NULL))
+    }
     for (nm in nmExprSyms(node)) {
       if (!nm %in% bnd) {
-        hit <<- list(name = nm, lineno = lineno,
-                     everAssigned = nm %in% everAssigned)
+        hit <<- list(
+          name = nm, lineno = lineno,
+          everAssigned = nm %in% everAssigned
+        )
         return(invisible(NULL))
       }
     }
@@ -860,7 +985,9 @@ nmFirstUnboundUse <- function(stmts, bound, everAssigned) {
   ## Returns the set of names bound after running `ss`.
   run <- function(ss, bnd) {
     for (s in ss) {
-      if (!is.null(hit)) return(bnd)
+      if (!is.null(hit)) {
+        return(bnd)
+      }
       if (s$type == "assign") {
         checkExpr(s$rhs, s$lineno, bnd)
         bnd <- union(bnd, s$lhs)
@@ -899,10 +1026,12 @@ nmEtaMap <- function(stmts) {
 
   etaInExp <- function(node) {
     # <expr> * EXP(ETA(n)) or EXP(ETA(n)) * <expr>
-    if (node$type != "binop" || node$op != "*") return(NA_integer_)
+    if (node$type != "binop" || node$op != "*") {
+      return(NA_integer_)
+    }
     for (side in list(node$lhs, node$rhs)) {
       if (side$type == "call" && side$fn == "exp" && length(side$args) == 1L &&
-          side$args[[1]]$type == "eta") {
+        side$args[[1]]$type == "eta") {
         return(side$args[[1]]$index)
       }
     }
@@ -924,19 +1053,27 @@ nmMaxTheta <- function(stmts) {
   walkExpr <- function(node) {
     switch(node$type,
       theta = mx <<- max(mx, node$index),
-      call  = lapply(node$args, walkExpr),
-      unop  = walkExpr(node$arg),
-      binop = { walkExpr(node$lhs); walkExpr(node$rhs) },
+      call = lapply(node$args, walkExpr),
+      unop = walkExpr(node$arg),
+      binop = {
+        walkExpr(node$lhs)
+        walkExpr(node$rhs)
+      },
       NULL
     )
     invisible(NULL)
   }
   walkStmts <- function(ss) {
     for (s in ss) {
-      if (s$type == "assign") walkExpr(s$rhs)
-      else {
-        walkExpr(s$cond); walkStmts(s$then)
-        for (e in s$elifs) { walkExpr(e$cond); walkStmts(e$stmts) }
+      if (s$type == "assign") {
+        walkExpr(s$rhs)
+      } else {
+        walkExpr(s$cond)
+        walkStmts(s$then)
+        for (e in s$elifs) {
+          walkExpr(e$cond)
+          walkStmts(e$stmts)
+        }
         if (!is.null(s$else_)) walkStmts(s$else_)
       }
     }

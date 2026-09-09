@@ -44,12 +44,16 @@ test_that("setupForestPlotData validation errors", {
   df_mock <- data.frame(PARAMETER = "CL", GROUPNAME = "Sex", stringsAsFactors = FALSE)
 
   # Trigger Parameter Label Error (Line 131)
-  expect_error(setupForestPlotData(df_mock, parameters = "CL", parameterLabels = c("L1", "L2")),
-               "number of parameter labels must either be the same")
+  expect_error(
+    setupForestPlotData(df_mock, parameters = "CL", parameterLabels = c("L1", "L2")),
+    "number of parameter labels must either be the same"
+  )
 
   # Trigger Group Name Label Error (Line 138)
-  expect_error(setupForestPlotData(df_mock, groupNameLabels = c("G1", "G2")),
-               "number of group name labels must either be the same")
+  expect_error(
+    setupForestPlotData(df_mock, groupNameLabels = c("G1", "G2")),
+    "number of group name labels must either be the same"
+  )
 })
 
 test_that("setupForestPlotData hits remaining logical branches", {
@@ -57,15 +61,15 @@ test_that("setupForestPlotData hits remaining logical branches", {
   df_mock <- data.frame(
     PARAMETER = c("CL", "V"),
     GROUPNAME = c("Sex", "Weight"),
-    COVNAME   = c("Male", "70kg"),
-    COVNUM    = 1:2,
-    COVEFF    = c(TRUE, FALSE),
-    REFROW    = "NO",
-    REFFUNC   = 10,
+    COVNAME = c("Male", "70kg"),
+    COVNUM = 1:2,
+    COVEFF = c(TRUE, FALSE),
+    REFROW = "NO",
+    REFFUNC = 10,
     POINT_REL_REFFUNC = 1.2,
-    Q1_REL_REFFUNC    = 1.1,
-    Q2_REL_REFFUNC    = 1.3,
-    stringsAsFactors  = FALSE
+    Q1_REL_REFFUNC = 1.1,
+    Q2_REL_REFFUNC = 1.3,
+    stringsAsFactors = FALSE
   )
 
   # 1. Trigger Custom Parameter and Statistics Labels (Lines 77-78, 87)
@@ -98,12 +102,12 @@ test_that("setupForestPlotData hits remaining logical branches", {
 test_that("setupForestPlotData accepts groupNameLabels as a per-row vector", {
   df_mock <- data.frame(
     PARAMETER = c("CL", "CL", "CL"),
-    GROUPNAME = c("Sex", "Sex", "Weight"),   # 2 unique groups, 3 rows
-    COVNAME   = c("Male", "Female", "70kg"),
-    COVNUM    = 1:3,
-    COVEFF    = TRUE,
-    REFROW    = "NO",
-    REFFUNC   = 10,
+    GROUPNAME = c("Sex", "Sex", "Weight"), # 2 unique groups, 3 rows
+    COVNAME = c("Male", "Female", "70kg"),
+    COVNUM = 1:3,
+    COVEFF = TRUE,
+    REFROW = "NO",
+    REFFUNC = 10,
     POINT_REL_REFFUNC = 1.2, Q1_REL_REFFUNC = 1.1, Q2_REL_REFFUNC = 1.3,
     stringsAsFactors = FALSE
   )
@@ -129,8 +133,10 @@ test_that("setupForestPlotData chooses decimals on the relative scale, sigdigits
   expect_equal(trimws(rel$STATISTIC[1]), "1.23 [1.15-1.36]")
 
   # absolute, default -> 2 significant digits (unchanged behaviour)
-  abs <- setupForestPlotData(df_mock, plotRelative = FALSE, noVar = TRUE,
-                             reference = "func")
+  abs <- setupForestPlotData(df_mock,
+    plotRelative = FALSE, noVar = TRUE,
+    reference = "func"
+  )
   expect_equal(trimws(abs$STATISTIC[1]), "16 [16-17]")
 })
 
@@ -146,14 +152,18 @@ test_that("setupForestPlotData honours explicit sigdigits / decimals on either s
 
   # explicit sigdigits on the relative scale
   expect_equal(
-    trimws(setupForestPlotData(df_mock, plotRelative = TRUE, noVar = TRUE,
-                               sigdigits = 3)$STATISTIC[1]),
+    trimws(setupForestPlotData(df_mock,
+      plotRelative = TRUE, noVar = TRUE,
+      sigdigits = 3
+    )$STATISTIC[1]),
     "1.23 [1.15-1.36]"
   )
   # explicit decimals on the absolute scale
   expect_equal(
-    trimws(setupForestPlotData(df_mock, plotRelative = FALSE, noVar = TRUE,
-                               reference = "func", decimals = 1)$STATISTIC[1]),
+    trimws(setupForestPlotData(df_mock,
+      plotRelative = FALSE, noVar = TRUE,
+      reference = "func", decimals = 1
+    )$STATISTIC[1]),
     "16.4 [15.6-17.3]"
   )
   # both is an error
@@ -166,11 +176,13 @@ test_that("setupForestPlotData honours explicit sigdigits / decimals on either s
 test_that("signifPad rounds to significant digits half-up and pads trailing zeros", {
   sp <- PMXForest:::signifPad
 
-  expect_equal(sp(c(0.976, 1.234, 2.244, 12.3, 0.08), digits = 3),
-               c("0.976", "1.23", "2.24", "12.3", "0.0800"))
+  expect_equal(
+    sp(c(0.976, 1.234, 2.244, 12.3, 0.08), digits = 3),
+    c("0.976", "1.23", "2.24", "12.3", "0.0800")
+  )
   expect_equal(sp(c(1.2, 1.234, 1.15), digits = 2), c("1.2", "1.2", "1.2"))
   expect_equal(sp(c(16.4, 15.62, 17.284), digits = 2), c("16", "16", "17"))
   expect_equal(sp(-0.5, digits = 2), "-0.50")
-  expect_equal(sp(100, digits = 2), "100")          # no bare trailing "."
+  expect_equal(sp(100, digits = 2), "100") # no bare trailing "."
   expect_true(is.na(sp(NA_real_, digits = 2)))
 })

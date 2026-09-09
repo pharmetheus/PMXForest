@@ -14,7 +14,7 @@
 #' @examples
 #' \dontrun{
 #' dfParameters <- read.csv(file = input, header = TRUE)
-#' dfExt        <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
+#' dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 #' dfParameters <- addMissingColumns(dfParameters, dfExt)
 #' }
 #'
@@ -32,7 +32,7 @@ addMissingColumns <- function(dfParams, dfExt, zerosindex) {
     }
   }
 
-  if (!is.null(zerosindex) && length(zerosindex)>0) {
+  if (!is.null(zerosindex) && length(zerosindex) > 0) {
     # Get the parameters which are zero
     dft <- dfExt[rep(1, nrow(dfParams)), zerosindex] # Repeat to the same size as dfParams
     names(dfParams) <- names(dfExt)[-c(1, zerosindex, ncol(dfExt))]
@@ -43,7 +43,7 @@ addMissingColumns <- function(dfParams, dfExt, zerosindex) {
     # Sort dfParams correctly
     dfParams <- dfParams[, names(dfExt)[-c(1, ncol(dfExt))]]
   } else {
-    names(dfParams)<-names(dfExt)[-c(1,ncol(dfExt))]
+    names(dfParams) <- names(dfExt)[-c(1, ncol(dfExt))]
   }
   return(dfParams)
 }

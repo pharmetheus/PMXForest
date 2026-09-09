@@ -118,24 +118,31 @@
 #' )
 #'
 #' # Continuous -> quantile-tail rows; SEX -> both levels; GENO -> one row per level
-#' out <- setupCovExpressionsList(dfData, covariates = c("WT", "SEX", "GENO"),
-#'                                idVar = "ID")
+#' out <- setupCovExpressionsList(dfData,
+#'   covariates = c("WT", "SEX", "GENO"),
+#'   idVar = "ID"
+#' )
 #' out$covExpressionsList
 #' out$cdfCovsNames
 #'
 #' # Median split instead of quantile tails
-#' setupCovExpressionsList(dfData, covariates = "WT", contSplit = "median",
-#'                         idVar = "ID")$covExpressionsList
+#' setupCovExpressionsList(dfData,
+#'   covariates = "WT", contSplit = "median",
+#'   idVar = "ID"
+#' )$covExpressionsList
 #'
 #' # Drop the reference genotype (level 2) from the GENO rows
-#' setupCovExpressionsList(dfData, covariates = "GENO", includeReference = FALSE,
-#'                         catRef = list(GENO = 2),
-#'                         idVar = "ID")$covExpressionsList
+#' setupCovExpressionsList(dfData,
+#'   covariates = "GENO", includeReference = FALSE,
+#'   catRef = list(GENO = 2),
+#'   idVar = "ID"
+#' )$covExpressionsList
 #'
 #' # FOOD as a categorical additional covariate and CRCL as a continuous one:
 #' # every WT/SEX row is also conditioned on FOOD == 1 and CRCL above its lower quartile
 #' setupCovExpressionsList(
-#'   dfData, covariates = c("WT", "SEX"), contSplit = "median",
+#'   dfData,
+#'   covariates = c("WT", "SEX"), contSplit = "median",
 #'   additionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
 #'   idVar = "ID"
 #' )$covExpressionsList
@@ -174,7 +181,6 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
                                     idVar = "ID", missVal = -99, nsig = 3,
                                     catRef = NULL, model = NULL,
                                     refLevels = NULL) {
-
   catRef <- refLevelsToCatRef(refLevels, catRef, "setupCovExpressionsList")
 
   contSplit <- match.arg(contSplit)
@@ -184,14 +190,18 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
   addNames <- names(additionalCovs)
   if (!is.null(additionalCovs)) {
     if (!is.list(additionalCovs) || is.null(addNames) ||
-        any(addNames == "") || anyDuplicated(addNames)) {
-      stop("`additionalCovs` must be a named list with one entry per covariate, ",
-           "e.g. list(FOOD = 1).")
+      any(addNames == "") || anyDuplicated(addNames)) {
+      stop(
+        "`additionalCovs` must be a named list with one entry per covariate, ",
+        "e.g. list(FOOD = 1)."
+      )
     }
     clash <- intersect(addNames, covariates)
     if (length(clash)) {
-      stop("A covariate cannot be both primary and additional: ",
-           paste(clash, collapse = ", "), ".")
+      stop(
+        "A covariate cannot be both primary and additional: ",
+        paste(clash, collapse = ", "), "."
+      )
     }
   }
 
@@ -217,22 +227,27 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
   # covariate type from the unique-value count: continuous | binary | multi | single
   covType <- function(cov) {
     nLev <- length(unique(getVals(cov)))
-    if (nLev > minLevels) "continuous"
-    else if (nLev == 2)   "binary"
-    else if (nLev > 2)    "multi"
-    else                  "single"
+    if (nLev > minLevels) {
+      "continuous"
+    } else if (nLev == 2) {
+      "binary"
+    } else if (nLev > 2) {
+      "multi"
+    } else {
+      "single"
+    }
   }
 
   # ---- one block of rows for a covariate --------------------------------
   # Returns list(exprs = <list of language>, labels = <character>).
   makeBlock <- function(cov) {
-    v    <- getVals(cov)
+    v <- getVals(cov)
     type <- covType(cov)
 
     if (type == "continuous") {
       if (contSplit == "quantile") {
         raw <- stats::quantile(v, probs = probs, names = FALSE)
-        qs  <- signif(raw, nsig)
+        qs <- signif(raw, nsig)
         ## Rounding two distinct quantiles onto the same value turns the
         ## documented tails-vs-middle contrast into a full partition: every
         ## subject lands in one row or the other and none in neither. Both rows
@@ -240,26 +255,30 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
         ## the two cut points equal on purpose, hence only the quantile branch.)
         if (qs[1] == qs[2] && !isTRUE(all.equal(raw[1], raw[2]))) {
           warning("The ", probs[1] * 100, "th and ", probs[2] * 100,
-                  "th percentile of ", cov, " both round to ", qs[1],
-                  " at nsig = ", nsig, ", so the two rows cover every subject ",
-                  "instead of leaving those between them in neither. Raise ",
-                  "nsig or widen probs.", call. = FALSE)
+            "th percentile of ", cov, " both round to ", qs[1],
+            " at nsig = ", nsig, ", so the two rows cover every subject ",
+            "instead of leaving those between them in neither. Raise ",
+            "nsig or widen probs.",
+            call. = FALSE
+          )
         }
       } else {
-        m  <- signif(stats::median(v), nsig)
+        m <- signif(stats::median(v), nsig)
         qs <- c(m, m)
       }
-      exprs  <- list(bquote(.(as.name(cov)) <  .(qs[1])),
-                     bquote(.(as.name(cov)) >= .(qs[2])))
+      exprs <- list(
+        bquote(.(as.name(cov)) < .(qs[1])),
+        bquote(.(as.name(cov)) >= .(qs[2]))
+      )
       labels <- c(paste0(cov, " <", qs[1]), paste0(cov, " >=", qs[2]))
-
     } else if (type == "single") {
       lev <- sort(unique(v))[1]
-      warning("Covariate ", cov, " has only one non-missing level; emitting a ",
-              "single row with no contrast.")
-      exprs  <- list(bquote(.(as.name(cov)) == .(lev)))
+      warning(
+        "Covariate ", cov, " has only one non-missing level; emitting a ",
+        "single row with no contrast."
+      )
+      exprs <- list(bquote(.(as.name(cov)) == .(lev)))
       labels <- paste0(cov, " ", lev)
-
     } else { # binary or multi
       levs <- sort(unique(v))
       if (is.numeric(levs)) levs <- as.numeric(levs) # drop integer literal suffix
@@ -267,12 +286,14 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
         refLev <- refEncodingLevel(catRef, cov, levs, model, missVal)
         if (is.null(refLev)) refLev <- refMode(v)
         if (!refLev %in% levs) {
-          stop("Reference level ", refLev, " for covariate '", cov,
-               "' is not present in the data.")
+          stop(
+            "Reference level ", refLev, " for covariate '", cov,
+            "' is not present in the data."
+          )
         }
         levs <- setdiff(levs, refLev)
       }
-      exprs  <- lapply(levs, function(L) bquote(.(as.name(cov)) == .(L)))
+      exprs <- lapply(levs, function(L) bquote(.(as.name(cov)) == .(L)))
       labels <- paste0(cov, " ", levs)
     }
     list(exprs = exprs, labels = labels)
@@ -284,14 +305,16 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
     spec <- additionalCovs[[a]]
     if (covType(a) == "continuous") {
       if (!is.list(spec)) {
-        stop("`additionalCovs$", a, "` is a continuous covariate; supply ",
-             "list(prob = <p>, dir = \"lt\"/\"gt\") or ",
-             "list(value = <v>, dir = \"lt\"/\"gt\").")
+        stop(
+          "`additionalCovs$", a, "` is a continuous covariate; supply ",
+          "list(prob = <p>, dir = \"lt\"/\"gt\") or ",
+          "list(value = <v>, dir = \"lt\"/\"gt\")."
+        )
       }
       if (is.null(spec$dir) || !spec$dir %in% c("lt", "gt")) {
         stop("`additionalCovs$", a, "$dir` must be \"lt\" or \"gt\".")
       }
-      hasProb  <- !is.null(spec$prob)
+      hasProb <- !is.null(spec$prob)
       hasValue <- !is.null(spec$value)
       if (hasProb == hasValue) {
         stop("`additionalCovs$", a, "` needs exactly one of `prob` or `value`.")
@@ -304,16 +327,23 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
       } else {
         p <- spec$value
       }
-      fragList[[a]] <- if (spec$dir == "lt") bquote(.(as.name(a)) <  .(p)) else
-                                             bquote(.(as.name(a)) >  .(p))
+      fragList[[a]] <- if (spec$dir == "lt") {
+        bquote(.(as.name(a)) < .(p))
+      } else {
+        bquote(.(as.name(a)) > .(p))
+      }
     } else {
       if (is.list(spec) || length(spec) != 1) {
-        stop("`additionalCovs$", a, "` is a categorical covariate; supply a ",
-             "single level value.")
+        stop(
+          "`additionalCovs$", a, "` is a categorical covariate; supply a ",
+          "single level value."
+        )
       }
       if (!spec %in% getVals(a)) {
-        stop("Level ", spec, " for `additionalCovs$", a,
-             "` is not present in the data.")
+        stop(
+          "Level ", spec, " for `additionalCovs$", a,
+          "` is not present in the data."
+        )
       }
       fragList[[a]] <- bquote(.(as.name(a)) == .(spec))
     }
@@ -326,31 +356,38 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
 
   # ---- assemble every block -------------------------------------------
   blocks <- c(
-    lapply(covariates, function(cov)
-      list(cov = cov, blk = makeBlock(cov), frags = fragList)),
-    lapply(addNames, function(a)
-      list(cov = a, blk = makeBlock(a), frags = fragList[setdiff(addNames, a)]))
+    lapply(covariates, function(cov) {
+      list(cov = cov, blk = makeBlock(cov), frags = fragList)
+    }),
+    lapply(addNames, function(a) {
+      list(cov = a, blk = makeBlock(a), frags = fragList[setdiff(addNames, a)])
+    })
   )
 
   parts <- lapply(blocks, function(b) {
     exprs <- lapply(b$blk$exprs, function(e) as.expression(andFrags(e, b$frags)))
-    list(exprs = exprs, labels = b$blk$labels,
-         groups = rep(b$cov, length(exprs)))
+    list(
+      exprs = exprs, labels = b$blk$labels,
+      groups = rep(b$cov, length(exprs))
+    )
   })
 
   covExpressionsList <- unlist(lapply(parts, `[[`, "exprs"), recursive = FALSE)
-  cdfCovsNames       <- unlist(lapply(parts, `[[`, "labels"), use.names = FALSE)
+  cdfCovsNames <- unlist(lapply(parts, `[[`, "labels"), use.names = FALSE)
   names(covExpressionsList) <- unlist(lapply(parts, `[[`, "groups"),
-                                      use.names = FALSE)
+    use.names = FALSE
+  )
 
   # ---- subject-count safeguard ---------------------------------------
   for (i in seq_along(covExpressionsList)) {
     n <- nrow(subset(dedup, eval(covExpressionsList[[i]][[1]])))
     if (n < minSubjects) {
-      stop("Expression `", as.character(covExpressionsList[[i]]), "` selects ", n,
-           " subject(s) in `data`, fewer than `minSubjects` (", minSubjects,
-           "). Relax `minSubjects`, widen `probs`, or adjust the split / ",
-           "`additionalCovs` conditions.")
+      stop(
+        "Expression `", as.character(covExpressionsList[[i]]), "` selects ", n,
+        " subject(s) in `data`, fewer than `minSubjects` (", minSubjects,
+        "). Relax `minSubjects`, widen `probs`, or adjust the split / ",
+        "`additionalCovs` conditions."
+      )
     }
   }
 

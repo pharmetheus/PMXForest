@@ -125,7 +125,7 @@ Three entries, showing each form:
 out <- suppressWarnings(createParamFunction(
   modFile,
   parameters = c("CL", "V"),
-  secondary  = list(
+  secondary = list(
     AUC   = list(source = "dose * FREL / CL", dose = 100),
     KEL   = "CL / V",
     THALF = "log(2) / KEL"
@@ -133,7 +133,7 @@ out <- suppressWarnings(createParamFunction(
   quiet = TRUE
 ))
 
-out$functionListName   # CL, V, then the three secondaries
+out$functionListName # CL, V, then the three secondaries
 out$primaryNames
 out$secondaryNames
 ```
@@ -172,7 +172,8 @@ dfCovs <- setupDfCovs(dfData, covariates = c("WT", "FOOD"), idVar = "ID")
 
 dfSamples <- getSamples(
   system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
-  extFile, n = 50
+  extFile,
+  n = 50
 )
 
 dfres <- getForestDFSCM(
@@ -190,8 +191,8 @@ unique(dfres$PARAMETER)
 forestPlot(
   dfres[dfres$PARAMETER == "AUC", ],
   plotRelative = TRUE,
-  keepYlabs    = TRUE,
-  rightStrip   = FALSE
+  keepYlabs = TRUE,
+  rightStrip = FALSE
 ) +
   ggtitle("Steady-state AUC vs. reference")
 ```
@@ -261,7 +262,7 @@ cmaxFile <- system.file("secondary-cmax-mrgsolve.R", package = "PMXForest")
 out <- suppressWarnings(createParamFunction(
   modFile,
   parameters = c("CL", "V", "MAT"),
-  secondary  = list(
+  secondary = list(
     CMAX = list(source = cmaxFile, dose = 80, tau = 24, n = 7)
   ),
   quiet = TRUE
@@ -337,17 +338,19 @@ dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
 dfCovs <- setupDfCovs(
-  dfData, covariates = c("WT", "FOOD", "FORM"), idVar = "ID"
+  dfData,
+  covariates = c("WT", "FOOD", "FORM"), idVar = "ID"
 )
 dfSamples <- getSamples(
   system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
-  extFile, n = 200
+  extFile,
+  n = 200
 )
 
 dfres <- getForestDFSCM(
   dfCovs           = dfCovs,
   functionList     = list(paramFunction),
-  functionListName = out$functionListName,   # CL, V, MAT, CMAX
+  functionListName = out$functionListName, # CL, V, MAT, CMAX
   noBaseThetas     = out$noBaseThetas,
   dfParameters     = dfSamples,
   cstrPackages     = "mrgsolve",
@@ -365,8 +368,8 @@ unique(dfres$PARAMETER)
 forestPlot(
   dfres[dfres$PARAMETER == "CMAX", ],
   plotRelative = TRUE,
-  keepYlabs    = TRUE,
-  rightStrip   = FALSE
+  keepYlabs = TRUE,
+  rightStrip = FALSE
 ) +
   ggtitle("Steady-state Cmax vs. reference")
 ```

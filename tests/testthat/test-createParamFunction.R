@@ -19,9 +19,11 @@ test_that("the return value has the documented shape", {
   out <- suppressWarnings(
     createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE)
   )
-  expect_named(out, c("code", "functionListName", "primaryNames",
-                      "secondaryNames", "noBaseThetas", "covRef",
-                      "etaMap", "modFile", "missVal"))
+  expect_named(out, c(
+    "code", "functionListName", "primaryNames",
+    "secondaryNames", "noBaseThetas", "covRef",
+    "etaMap", "modFile", "missVal"
+  ))
   expect_s3_class(out$code, "pmxParamFunction")
   expect_type(out$code, "character")
   expect_equal(out$functionListName, c("CL", "V"))
@@ -39,8 +41,10 @@ test_that("the generated source parses and is a conforming parameter function", 
 
 test_that("covariates are those in $INPUT that $PK reads before assigning", {
   out <- suppressWarnings(createParamFunction(modFile, quiet = TRUE))
-  expect_setequal(names(out$covRef),
-                  c("SEX", "GENO4", "FORM", "FOOD", "WT", "GENO1", "GENO3"))
+  expect_setequal(
+    names(out$covRef),
+    c("SEX", "GENO4", "FORM", "FOOD", "WT", "GENO1", "GENO3")
+  )
   # GENO2 is assigned a constant before it is read, so it is a local
   expect_false("GENO2" %in% names(out$covRef))
   # TVCL is assigned before it is read and is never a covariate
@@ -69,68 +73,96 @@ test_that("a covariate re-imputed by IF(X.EQ.missVal) is still a covariate", {
   expect_true(any(grepl('df[["WT"]]', out$code, fixed = TRUE)))
 
   fun <- eval(parse(text = paste(out$code, collapse = "\n")))
-  expect_equal(fun(thetas = c(5, 50), df = data.frame(WT = -99))$CL,
-               fun(thetas = c(5, 50), df = data.frame(WT = 75))$CL)
-  expect_gt(fun(thetas = c(5, 50), df = data.frame(WT = 90))$CL,
-            fun(thetas = c(5, 50), df = data.frame(WT = 75))$CL)
+  expect_equal(
+    fun(thetas = c(5, 50), df = data.frame(WT = -99))$CL,
+    fun(thetas = c(5, 50), df = data.frame(WT = 75))$CL
+  )
+  expect_gt(
+    fun(thetas = c(5, 50), df = data.frame(WT = 90))$CL,
+    fun(thetas = c(5, 50), df = data.frame(WT = 75))$CL
+  )
 })
 
 test_that("a symbol read before it is bound is refused at generation time", {
-  base <- c("$PROBLEM unbound", "$INPUT ID TIME DV AMT WT",
-            "$DATA data.csv IGNORE=@", "$PK")
+  base <- c(
+    "$PROBLEM unbound", "$INPUT ID TIME DV AMT WT",
+    "$DATA data.csv IGNORE=@", "$PK"
+  )
   tail <- c("V = THETA(2)", "$THETA (0,7) (0,3)")
 
   # not in $INPUT and never assigned: a NONMEM reserved variable
   expect_error(
-    createParamFunction(tempMod(c(base,
-      "IF(NEWIND.NE.2) CNT = 0", "TVCL = THETA(1)",
-      "CL = TVCL*(WT/75)*CNT", tail)),
-      parameters = c("CL", "V"), quiet = TRUE),
+    createParamFunction(
+      tempMod(c(
+        base,
+        "IF(NEWIND.NE.2) CNT = 0", "TVCL = THETA(1)",
+        "CL = TVCL*(WT/75)*CNT", tail
+      )),
+      parameters = c("CL", "V"), quiet = TRUE
+    ),
     "reads NEWIND.*never assigns it"
   )
   # read above its own assignment: NONMEM would carry a value over from the
   # previous data record, which a one-row parameter function cannot do
   expect_error(
-    createParamFunction(tempMod(c(base,
-      "CL = TVCL*(WT/75)", "TVCL = THETA(1)", tail)),
-      parameters = c("CL", "V"), quiet = TRUE),
+    createParamFunction(
+      tempMod(c(
+        base,
+        "CL = TVCL*(WT/75)", "TVCL = THETA(1)", tail
+      )),
+      parameters = c("CL", "V"), quiet = TRUE
+    ),
     "reads TVCL.*before assigning it"
   )
   # but an exhaustive scm-style branch chain, as run7.mod writes, is accepted:
   # FRELWT is assigned only inside IFs with no ELSE, which no static analysis
   # can tell apart from a genuinely non-exhaustive branch
-  scm <- createParamFunction(tempMod(c(base,
-    "TVCL = THETA(1)",
-    "IF(WT.GT.100) FRELWT = 1",
-    "IF(WT.LE.100) FRELWT = 2",
-    "CL = TVCL*FRELWT*(WT/75)", tail)),
-    parameters = c("CL", "V"), quiet = TRUE)
+  scm <- createParamFunction(
+    tempMod(c(
+      base,
+      "TVCL = THETA(1)",
+      "IF(WT.GT.100) FRELWT = 1",
+      "IF(WT.LE.100) FRELWT = 2",
+      "CL = TVCL*FRELWT*(WT/75)", tail
+    )),
+    parameters = c("CL", "V"), quiet = TRUE
+  )
   expect_equal(names(scm$covRef), "WT")
   expect_false("FRELWT" %in% names(scm$covRef))
 })
 
 test_that("covRef is validated rather than spliced in unchecked", {
   expect_error(
-    suppressWarnings(createParamFunction(modFile, parameters = "CL",
-                                         covRef = list(WGT = 70), quiet = TRUE)),
+    suppressWarnings(createParamFunction(modFile,
+      parameters = "CL",
+      covRef = list(WGT = 70), quiet = TRUE
+    )),
     "does not use: WGT"
   )
-  for (bad in list(list(WT = "seventy"), list(WT = c(70, 80)),
-                   list(WT = NA), list(WT = Inf))) {
+  for (bad in list(
+    list(WT = "seventy"), list(WT = c(70, 80)),
+    list(WT = NA), list(WT = Inf)
+  )) {
     expect_error(
-      suppressWarnings(createParamFunction(modFile, parameters = "CL",
-                                           covRef = bad, quiet = TRUE)),
+      suppressWarnings(createParamFunction(modFile,
+        parameters = "CL",
+        covRef = bad, quiet = TRUE
+      )),
       "single finite number"
     )
   }
   expect_error(
-    suppressWarnings(createParamFunction(modFile, parameters = "CL",
-                                         covRef = list(70), quiet = TRUE)),
+    suppressWarnings(createParamFunction(modFile,
+      parameters = "CL",
+      covRef = list(70), quiet = TRUE
+    )),
     "must be named"
   )
   # a valid override still works and is recorded as supplied
-  ok <- suppressWarnings(createParamFunction(modFile, parameters = "CL",
-                                             covRef = list(WT = 70), quiet = TRUE))
+  ok <- suppressWarnings(createParamFunction(modFile,
+    parameters = "CL",
+    covRef = list(WT = 70), quiet = TRUE
+  ))
   expect_equal(ok$covRef$WT$value, 70)
   expect_match(ok$covRef$WT$source, "supplied through covRef")
 })
@@ -155,8 +187,10 @@ test_that("covariate references are taken from the control stream", {
 })
 
 test_that("an inferred reference warns", {
-  expect_warning(createParamFunction(modFile, quiet = TRUE),
-                 "inferred rather than read")
+  expect_warning(
+    createParamFunction(modFile, quiet = TRUE),
+    "inferred rather than read"
+  )
 })
 
 test_that("covRef overrides a derived reference and is recorded as supplied", {
@@ -199,8 +233,10 @@ test_that("the covariate preamble reads df[[cov]], so it cannot partial-match", 
 
 test_that("a covariate with no derivable reference is refused, not guessed", {
   # EXPO enters tte_weibull.mod as THETA(4)*EXPO: no branch, no normalisation.
-  expect_error(createParamFunction(tteFile, quiet = TRUE),
-               "No reference value could be derived")
+  expect_error(
+    createParamFunction(tteFile, quiet = TRUE),
+    "No reference value could be derived"
+  )
   expect_error(createParamFunction(tteFile, quiet = TRUE), "EXPO")
   # ... and supplying it is enough to proceed
   out <- createParamFunction(tteFile, covRef = list(EXPO = 0), quiet = TRUE)
@@ -244,7 +280,7 @@ test_that("generated values match the hand-written function from the Walkthrough
   dfData <- read.csv(
     system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
   )
-  covs   <- c("WT", "SEX", "FOOD", "FORM", "GENO1", "GENO3", "GENO4")
+  covs <- c("WT", "SEX", "FOOD", "FORM", "GENO1", "GENO3", "GENO4")
   dfCovs <- setupDfCovs(dfData, covariates = covs, idVar = "ID")
   dfCovs <- dfCovs[, setdiff(names(dfCovs), "COVARIATEGROUPS"), drop = FALSE]
 
@@ -279,7 +315,8 @@ test_that("the generated function drives getForestDFSCM()", {
   )
 
   res <- getForestDFSCM(
-    dfCovs, functionList = list(fun),
+    dfCovs,
+    functionList = list(fun),
     functionListName = out$functionListName,
     noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
   )
@@ -297,7 +334,8 @@ test_that("parameters is validated against what $PK assigns", {
 
 test_that("the THETA count comes from the .ext file when one is given", {
   out <- suppressWarnings(createParamFunction(
-    modFile, parameters = "CL", quiet = TRUE,
+    modFile,
+    parameters = "CL", quiet = TRUE,
     extFile = system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
   ))
   expect_equal(out$noBaseThetas, 14)
@@ -305,8 +343,10 @@ test_that("the THETA count comes from the .ext file when one is given", {
 
 test_that("a THETA index beyond the declared count is refused", {
   f <- tempMod(c("$INPUT ID DV", "$PK", "CL = THETA(9)", "$THETA 1 2"))
-  expect_error(createParamFunction(f, quiet = TRUE),
-               "declares 2 THETA\\(s\\) but \\$PK references THETA\\(9\\)")
+  expect_error(
+    createParamFunction(f, quiet = TRUE),
+    "declares 2 THETA\\(s\\) but \\$PK references THETA\\(9\\)"
+  )
 })
 
 test_that("a model without $PK is refused", {
@@ -324,8 +364,10 @@ test_that("$ERROR is never read, so a model needing an ODE still converts", {
 })
 
 test_that("unsupported syntax inside $PK is refused with a file and line", {
-  f <- tempMod(c("$INPUT ID DV", "$PK", "CL = THETA(1)", "CALL MYSUB(CL)",
-                 "$THETA 1"))
+  f <- tempMod(c(
+    "$INPUT ID DV", "$PK", "CL = THETA(1)", "CALL MYSUB(CL)",
+    "$THETA 1"
+  ))
   expect_error(createParamFunction(f, quiet = TRUE), ":4")
 })
 
@@ -333,12 +375,14 @@ test_that("the emitted source carries provenance and an extension point", {
   out <- suppressWarnings(createParamFunction(modFile, quiet = TRUE))
   code <- paste(out$code, collapse = "\n")
   expect_match(code, "Generated by PMXForest::createParamFunction")
-  expect_match(code, "run7\\.mod:18")                    # SEX provenance
+  expect_match(code, "run7\\.mod:18") # SEX provenance
   expect_match(code, "Secondary parameters: add yours below")
   expect_match(code, "ETA\\(\\) -> 0")
   # one-line IFs stay on one line, so the source diffs against $PK
-  expect_true(any(grepl("^\\s*if \\(SEX == 2\\) FRELSEX <- 1 \\+ thetas\\[14\\]$",
-                        out$code)))
+  expect_true(any(grepl(
+    "^\\s*if \\(SEX == 2\\) FRELSEX <- 1 \\+ thetas\\[14\\]$",
+    out$code
+  )))
 })
 
 test_that("file = writes the source and print() renders it", {
@@ -353,8 +397,10 @@ test_that("file = writes the source and print() renders it", {
 
 test_that("functionName controls the name of the generated function", {
   out <- suppressWarnings(
-    createParamFunction(modFile, parameters = "CL", functionName = "myPF",
-                        quiet = TRUE)
+    createParamFunction(modFile,
+      parameters = "CL", functionName = "myPF",
+      quiet = TRUE
+    )
   )
   expect_true(any(grepl("^myPF <- function", out$code)))
 })
@@ -371,7 +417,7 @@ test_that("the exponential-IIV map covers the returned parameters only", {
     createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE)
   )
   expect_equal(out$etaMap[["CL"]], 3L)
-  expect_equal(out$etaMap[["V"]],  4L)
+  expect_equal(out$etaMap[["V"]], 4L)
   expect_false("FREL" %in% names(out$etaMap))
 })
 
@@ -397,8 +443,10 @@ test_that("missVal is honoured throughout", {
   fun <- eval(parse(text = out$code))
   thetas <- run7Thetas()
   # -999 marks the covariate inactive, so the reference weight is used
-  expect_equal(fun(thetas, data.frame(WT = -999, FOOD = -999)),
-               fun(thetas, data.frame(WT = 75,   FOOD = 1)))
+  expect_equal(
+    fun(thetas, data.frame(WT = -999, FOOD = -999)),
+    fun(thetas, data.frame(WT = 75, FOOD = 1))
+  )
 })
 
 # ---------------------------------------------------------------------------
@@ -407,17 +455,18 @@ test_that("missVal is honoured throughout", {
 
 test_that("a secondary snippet is spliced in and returned", {
   out <- suppressWarnings(createParamFunction(
-    modFile, parameters = c("CL", "V"), quiet = TRUE,
+    modFile,
+    parameters = c("CL", "V"), quiet = TRUE,
     secondary = list(AUC = "df$DOSE / CL", KEL = "CL / V")
   ))
   expect_equal(out$functionListName, c("CL", "V", "AUC", "KEL"))
-  expect_equal(out$primaryNames,   c("CL", "V"))
+  expect_equal(out$primaryNames, c("CL", "V"))
   expect_equal(out$secondaryNames, c("AUC", "KEL"))
 
   code <- paste(out$code, collapse = "\n")
   expect_match(code, "AUC <- local\\(\\{ df\\$DOSE / CL \\}\\)")
   expect_match(code, "KEL <- local\\(\\{ CL / V \\}\\)")
-  expect_no_match(code, "add yours below")   # extension point replaced
+  expect_no_match(code, "add yours below") # extension point replaced
 
   fun <- eval(parse(text = out$code))
   expect_equal(names(formals(fun)), c("thetas", "df", "..."))
@@ -430,7 +479,8 @@ test_that("a secondary snippet is spliced in and returned", {
 
 test_that("secondaries are evaluated in order and can use earlier ones", {
   out <- suppressWarnings(createParamFunction(
-    modFile, parameters = "CL", quiet = TRUE,
+    modFile,
+    parameters = "CL", quiet = TRUE,
     secondary = list(KEL = "CL / 100", HALFLIFE = "log(2) / KEL")
   ))
   fun <- eval(parse(text = out$code))
@@ -440,7 +490,8 @@ test_that("secondaries are evaluated in order and can use earlier ones", {
 
 test_that("a config-list secondary binds its constants ahead of the source", {
   out <- suppressWarnings(createParamFunction(
-    modFile, parameters = "CL", quiet = TRUE,
+    modFile,
+    parameters = "CL", quiet = TRUE,
     secondary = list(AUC = list(source = "dose / CL", dose = 240))
   ))
   code <- paste(out$code, collapse = "\n")
@@ -457,7 +508,8 @@ test_that("a config-list constant can be referenced by a file source", {
   rf <- withr::local_tempfile(fileext = ".R")
   writeLines(c("# uses the injected `tau`", "auc <- dose / CL", "auc / tau"), rf)
   out <- suppressWarnings(createParamFunction(
-    modFile, parameters = "CL", quiet = TRUE,
+    modFile,
+    parameters = "CL", quiet = TRUE,
     secondary = list(CAVG = list(source = rf, dose = 100, tau = 24))
   ))
   file.remove(rf)
@@ -468,11 +520,15 @@ test_that("a config-list constant can be referenced by a file source", {
 
 test_that("a bare-string secondary still works unchanged (back-compat)", {
   b <- suppressWarnings(createParamFunction(
-    modFile, parameters = "CL", quiet = TRUE,
-    secondary = list(AUC = "80 / CL")))
+    modFile,
+    parameters = "CL", quiet = TRUE,
+    secondary = list(AUC = "80 / CL")
+  ))
   l <- suppressWarnings(createParamFunction(
-    modFile, parameters = "CL", quiet = TRUE,
-    secondary = list(AUC = list(source = "80 / CL"))))   # source only, no consts
+    modFile,
+    parameters = "CL", quiet = TRUE,
+    secondary = list(AUC = list(source = "80 / CL"))
+  )) # source only, no consts
   expect_identical(
     grep("AUC <- local", b$code, value = TRUE),
     grep("AUC <- local", l$code, value = TRUE)
@@ -481,17 +537,20 @@ test_that("a bare-string secondary still works unchanged (back-compat)", {
 
 test_that("a secondary read from a file is inlined verbatim", {
   rf <- withr::local_tempfile(fileext = ".R")
-  writeLines(c("# a small derived quantity",
-               "scale <- 1000",
-               "scale * V / CL"), rf)
+  writeLines(c(
+    "# a small derived quantity",
+    "scale <- 1000",
+    "scale * V / CL"
+  ), rf)
   out <- suppressWarnings(createParamFunction(
-    modFile, parameters = c("CL", "V"), quiet = TRUE,
+    modFile,
+    parameters = c("CL", "V"), quiet = TRUE,
     secondary = list(MRT = rf)
   ))
   code <- paste(out$code, collapse = "\n")
   expect_match(code, "MRT <- local\\(\\{")
   expect_match(code, "inlined from ")
-  expect_match(code, "a small derived quantity")   # the file's own comment
+  expect_match(code, "a small derived quantity") # the file's own comment
   # the artifact does not depend on the file still being on disk
   file.remove(rf)
   fun <- eval(parse(text = out$code))
@@ -501,20 +560,23 @@ test_that("a secondary read from a file is inlined verbatim", {
 
 test_that("the generated function with secondaries drives getForestDFSCM()", {
   out <- suppressWarnings(createParamFunction(
-    modFile, parameters = c("CL", "V"), quiet = TRUE,
+    modFile,
+    parameters = c("CL", "V"), quiet = TRUE,
     secondary = list(AUC = "80 / CL")
   ))
   fun <- eval(parse(text = out$code))
   dfData <- read.csv(
     system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
   )
-  dfCovs    <- setupDfCovs(dfData, covariates = c("WT", "FOOD"), idVar = "ID")
+  dfCovs <- setupDfCovs(dfData, covariates = c("WT", "FOOD"), idVar = "ID")
   dfSamples <- getSamples(
     system.file("extdata", "SimVal/run7.cov", package = "PMXForest"),
-    system.file("extdata", "SimVal/run7.ext", package = "PMXForest"), n = 10
+    system.file("extdata", "SimVal/run7.ext", package = "PMXForest"),
+    n = 10
   )
   res <- getForestDFSCM(
-    dfCovs, functionList = list(fun), functionListName = out$functionListName,
+    dfCovs,
+    functionList = list(fun), functionListName = out$functionListName,
     noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
   )
   expect_setequal(as.character(unique(res$PARAMETER)), c("CL", "V", "AUC"))
@@ -524,7 +586,8 @@ test_that("the generated function with secondaries drives getForestDFSCM()", {
 test_that("quiet = FALSE announces each secondary", {
   expect_message(
     suppressWarnings(createParamFunction(
-      modFile, parameters = "CL",
+      modFile,
+      parameters = "CL",
       secondary = list(AUC = "80 / CL")
     )),
     "secondary AUC: inline snippet"

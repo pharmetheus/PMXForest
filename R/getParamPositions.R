@@ -10,7 +10,6 @@
 #' @keywords internal
 #'
 getParamPositions <- function(fileName) {
-
   con <- file(fileName, "r")
   thetaid <- NULL
   omegaid <- NULL
