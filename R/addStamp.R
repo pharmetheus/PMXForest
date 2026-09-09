@@ -32,7 +32,8 @@
 #'
 #' @examples
 #' library(ggplot2)
-#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#' p <- ggplot(mtcars, aes(wt, mpg)) +
+#'   geom_point()
 #' addStamp(p)
 #'
 #' @export
@@ -61,12 +62,12 @@ stampText <- function(source = NULL) {
     ## the input file and chunk label are simply unknown. Drop the empty
     ## segments rather than emitting "dir//" as PhRame::add_stamp() does.
     inputFile <- NULL
-    chunk     <- NULL
+    chunk <- NULL
     if (requireNamespace("knitr", quietly = TRUE)) {
       inputFile <- tryCatch(knitr::current_input(), error = function(e) NULL)
-      chunk     <- tryCatch(knitr::opts_current$get("label"), error = function(e) NULL)
+      chunk <- tryCatch(knitr::opts_current$get("label"), error = function(e) NULL)
     }
-    parts  <- c(basename(getwd()), inputFile, chunk)
+    parts <- c(basename(getwd()), inputFile, chunk)
     source <- paste(parts[nzchar(parts) & !is.na(parts)], collapse = "/")
   }
   paste0(source, "\nCreated:", Sys.time())

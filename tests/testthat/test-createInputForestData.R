@@ -4,7 +4,6 @@ library(testthat)
 
 # 1. Test with a simple, non-nested list ("univariate" cases)
 test_that("createInputForestData works with a simple list", {
-
   simple_list <- list(
     SEX = c(1, 2),
     WT = c(70, 80)
@@ -28,7 +27,6 @@ test_that("createInputForestData works with a simple list", {
 
 # 2. Test with a nested list ("grouped" or "multivariate" case)
 test_that("createInputForestData works with a grouped (nested) list", {
-
   grouped_list <- list(
     GENO = list(
       GENO_2 = c(0, 1, 0),
@@ -53,7 +51,6 @@ test_that("createInputForestData works with a grouped (nested) list", {
 
 # 3. Test with a mixed list of simple and grouped covariates
 test_that("createInputForestData works with a mixed list", {
-
   mixed_list <- list(
     FORM = c(0, 1),
     GENO = list(
@@ -86,7 +83,6 @@ test_that("createInputForestData works with a mixed list", {
 
 # 4. Test that the iMiss argument is correctly handled
 test_that("createInputForestData respects the iMiss argument", {
-
   list_data <- list(
     SEX = c(1, 2),
     WT = c(70, 80)

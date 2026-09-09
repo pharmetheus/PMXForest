@@ -78,10 +78,12 @@ dfCovs <- createInputForestData(
 )
 dfCovs
 
-covnames <- c("Age 35 y", "Age 50 y", "Age 65 y",
-              "Placebo",
-              "Drug conc 100 ng/mL", "Drug conc 200 ng/mL", "Drug conc 300 ng/mL",
-              "Drug conc 400 ng/mL", "Drug conc 500 ng/mL")
+covnames <- c(
+  "Age 35 y", "Age 50 y", "Age 65 y",
+  "Placebo",
+  "Drug conc 100 ng/mL", "Drug conc 200 ng/mL", "Drug conc 300 ng/mL",
+  "Drug conc 400 ng/mL", "Drug conc 500 ng/mL"
+)
 stopifnot(length(covnames) == nrow(dfCovs))
 ```
 
@@ -104,7 +106,6 @@ in the [Walkthrough](Part2-walkthrough.html).
 ```{r}
 ## Hazard ratio relative to the reference subject
 paramFunctionHR <- function(thetas, df, ...) {
-
   RF <- 0
   if (any(names(df) == "AGE") && df$AGE != -99) {
     RF <- RF + (df$AGE - 50) * thetas[3]
@@ -120,7 +121,6 @@ paramFunctionHR <- function(thetas, df, ...) {
 
 ## Probability of an event up to time TIME
 paramFunctionCDF <- function(thetas, df, functHR, TIME, ...) {
-
   ## Exponentiated covariate and exposure effects
   COV <- functHR(thetas, df, ...)
 
@@ -133,7 +133,7 @@ paramFunctionCDF <- function(thetas, df, functHR, TIME, ...) {
   pweibull(TIME, TH2, LAM)
 }
 
-functionListNameHR  <- c("Hazard Ratio")
+functionListNameHR <- c("Hazard Ratio")
 functionListNameCDF <- c("Probability of an event within 1 year")
 ```
 
@@ -147,7 +147,7 @@ probability.
 # 3. Parameter uncertainty
 
 ```{r}
-runno   <- "tte_weibull"
+runno <- "tte_weibull"
 extFile <- system.file("extdata", "tte", paste0(runno, ".ext"), package = "PMXForest")
 ```
 
@@ -157,7 +157,7 @@ The model has no random effects, so the `OMEGA` and `SIGMA` samples are set to
 zero.
 
 ```{r}
-covFile      <- system.file("extdata", "tte", paste0(runno, ".cov"), package = "PMXForest")
+covFile <- system.file("extdata", "tte", paste0(runno, ".cov"), package = "PMXForest")
 dfSamplesCOV <- getSamples(covFile, extFile = extFile, n = 200)
 ```
 
@@ -226,10 +226,10 @@ plotList <- forestPlot(
 plotList[[1]] <- plotList[[1]] + scale_x_continuous(trans = "log10")
 
 ggpubr::ggarrange(
-  plotlist      = plotList,
-  ncol          = 2, nrow = 1,
-  widths        = c(2, 0.7),
-  align         = "h",
+  plotlist = plotList,
+  ncol = 2, nrow = 1,
+  widths = c(2, 0.7),
+  align = "h",
   common.legend = TRUE
 )
 ```
@@ -252,10 +252,10 @@ plotList <- forestPlot(
 plotList[[1]] <- plotList[[1]] + scale_x_continuous(labels = scales::percent)
 
 ggpubr::ggarrange(
-  plotlist      = plotList,
-  ncol          = 2, nrow = 1,
-  widths        = c(2, 0.7),
-  align         = "h",
+  plotlist = plotList,
+  ncol = 2, nrow = 1,
+  widths = c(2, 0.7),
+  align = "h",
   common.legend = TRUE
 )
 ```

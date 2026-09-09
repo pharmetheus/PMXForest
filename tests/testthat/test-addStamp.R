@@ -1,5 +1,6 @@
 test_that("addStamp adds a caption and returns a ggplot", {
-  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+    ggplot2::geom_point()
   s <- addStamp(p)
 
   expect_s3_class(s, "ggplot")
@@ -9,7 +10,8 @@ test_that("addStamp adds a caption and returns a ggplot", {
 })
 
 test_that("addStamp records the working directory and the time", {
-  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+    ggplot2::geom_point()
   cap <- addStamp(p)$labels$caption
 
   expect_match(cap, basename(getwd()), fixed = TRUE)
@@ -19,7 +21,8 @@ test_that("addStamp records the working directory and the time", {
 })
 
 test_that("addStamp honours an explicit source and size", {
-  p   <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+    ggplot2::geom_point()
   cap <- addStamp(p, source = "somewhere/else.Rmd/fig-1")$labels$caption
 
   expect_match(cap, "^somewhere/else\\.Rmd/fig-1\nCreated:")

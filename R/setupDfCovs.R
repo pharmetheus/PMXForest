@@ -69,23 +69,28 @@
 #'
 #' # CRCL as an additionalCov: it sits at its median on the WT/SEX rows
 #' # instead of at missVal.
-#' setupDfCovs(dfData, covariates = c("WT", "SEX"), additionalCovs = "CRCL",
-#'             idVar = "ID")
+#' setupDfCovs(dfData,
+#'   covariates = c("WT", "SEX"), additionalCovs = "CRCL",
+#'   idVar = "ID"
+#' )
 #'
 #' # useMissVal = FALSE: inactive primary covariates also hold their reference
-#' setupDfCovs(dfData, covariates = c("WT", "SEX"), useMissVal = FALSE,
-#'             idVar = "ID")
+#' setupDfCovs(dfData,
+#'   covariates = c("WT", "SEX"), useMissVal = FALSE,
+#'   idVar = "ID"
+#' )
 #'
 #' # Align the GENO one-hot columns with a model whose reference genotype is 2
-#' setupDfCovs(dfData, covariates = c("WT", "GENO"), catRef = list(GENO = 2),
-#'             idVar = "ID")
+#' setupDfCovs(dfData,
+#'   covariates = c("WT", "GENO"), catRef = list(GENO = 2),
+#'   idVar = "ID"
+#' )
 setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TRUE,
                         contRef = "median", catRef = NULL, model = NULL,
                         refLevels = NULL, minLevels = 10,
                         probs = c(0.05, 0.95), idVar = "ID",
                         missVal = -99, nsig = 3, sep = "_") {
-
-  catRef   <- refLevelsToCatRef(refLevels, catRef, "setupDfCovs")
+  catRef <- refLevelsToCatRef(refLevels, catRef, "setupDfCovs")
   all_covs <- unique(c(covariates, additionalCovs))
 
   # 1. Calculate statistical summaries
@@ -119,20 +124,21 @@ setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TR
 
   # 4. Post-process to replace background missVal with computed references
   if (length(target_covs) > 0) {
-
-    refs <- refResolve(data, target_covs, contRef = contRef, catRef = catRef,
-                       model = model, minLevels = minLevels, idVar = idVar,
-                       missVal = missVal, nsig = nsig, catFallback = "mode")
+    refs <- refResolve(data, target_covs,
+      contRef = contRef, catRef = catRef,
+      model = model, minLevels = minLevels, idVar = idVar,
+      missVal = missVal, nsig = nsig, catFallback = "mode"
+    )
 
     dedup_data <- data %>% dplyr::distinct(!!rlang::sym(idVar), .keep_all = TRUE)
 
     for (acov in target_covs) {
-      v     <- refValues(dedup_data, acov, missVal)
-      type  <- refCovType(v, minLevels)
+      v <- refValues(dedup_data, acov, missVal)
+      type <- refCovType(v, minLevels)
       value <- refs[[acov]]$value
 
       if (type == "multi") {
-        levs   <- sort(unique(v))
+        levs <- sort(unique(v))
         encLev <- refEncodingLevel(catRef, acov, levs, model, missVal)
         if (is.null(encLev)) encLev <- refMode(v)
         for (lev in setdiff(levs, encLev)) {

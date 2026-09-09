@@ -100,7 +100,7 @@ test_that("a pre-existing FREM-style imputed column is accepted", {
 
 test_that("an inconsistent pre-existing column is an error", {
   d <- make_data()
-  d$GENO_2 <- c(1, 1, 1, 1, 1, 1)   # wrong
+  d$GENO_2 <- c(1, 1, 1, 1, 1, 1) # wrong
   expect_error(oneHotEncode(d, spec = "GENO"), "inconsistent")
 })
 
@@ -149,7 +149,8 @@ test_that("a spec element that is a multi-value vector is an error", {
 test_that("includeReference adds the reference to an explicit levels sub-spec", {
   d <- make_data()
   out <- oneHotEncode(
-    d, spec = list(GENO = list(ref = 1, levels = c(3, 4))),
+    d,
+    spec = list(GENO = list(ref = 1, levels = c(3, 4))),
     includeReference = TRUE
   )
   # ref (1) prepended to c(3, 4)

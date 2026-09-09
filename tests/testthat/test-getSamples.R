@@ -26,7 +26,7 @@ test_that("getSamples works correctly for .cov input", {
 test_that("getSamples handles CSV with and without 'n' (Bootstrap/SIR)", {
   suppressWarnings(RNGversion("3.5.0"))
   bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
-  extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+  extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 
   # Standard Bootstrap (n=NULL)
   tmp0 <- getSamples(bootFile, extFile = extFile)
@@ -43,8 +43,8 @@ test_that("getSamples handles CSV with and without 'n' (Bootstrap/SIR)", {
 })
 
 test_that("getSamples handles SIR and Missing Columns", {
-  sirFile  <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
-  extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+  sirFile <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
+  extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 
   raw <- read.csv(sirFile)
   n_resampled <- sum(raw$resamples == 1, na.rm = TRUE)
@@ -88,7 +88,7 @@ test_that("getSamples comprehensive coverage", {
   suppressWarnings(RNGversion("3.5.0"))
   set.seed(123)
 
-  extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+  extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
   bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
 
   # 1. Trigger Validation Gaps (Lines 74, 80-82)
@@ -117,7 +117,7 @@ test_that("getSamples comprehensive coverage", {
   # 4. Trigger Missing OMEGA logic (Lines 194-195)
   # Using the TTE model which lacks OMEGAs in raw results
   tteBoot <- system.file("extdata", "tte", "bootstrap_tte_weibull_n500", "raw_results_tte_weibull.csv", package = "PMXForest")
-  tteExt  <- system.file("extdata", "tte", "tte_weibull.ext", package = "PMXForest")
+  tteExt <- system.file("extdata", "tte", "tte_weibull.ext", package = "PMXForest")
   res_tte <- getSamples(tteBoot, tteExt)
   expect_true("OMEGA.1.1." %in% names(res_tte))
 
@@ -132,7 +132,7 @@ test_that("getSamples comprehensive coverage", {
 test_that("getSamples input validation and data frame checks", {
   # Setup paths and data
   bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv", package = "PMXForest")
-  extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+  extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 
   # 1. Trigger Initial Validation Errors (Lines 74, 77, 80-82)
   # Missing extension
@@ -224,8 +224,10 @@ THETA2    0.01        0.1"
 # --- coverage: data.frame guards and explicit indexvec paths ---
 
 test_that("getSamples rejects a non-numeric data.frame", {
-  df_bad <- data.frame(THETA1 = c(1, 1.1), LABEL = c("a", "b"),
-                       stringsAsFactors = FALSE)
+  df_bad <- data.frame(
+    THETA1 = c(1, 1.1), LABEL = c("a", "b"),
+    stringsAsFactors = FALSE
+  )
   expect_error(
     getSamples(df_bad),
     "all columns must be numeric"
@@ -243,20 +245,23 @@ test_that("getSamples requires n when the input is a .cov file", {
 
 test_that("getSamples applies indexvec to a data.frame input", {
   df_in <- data.frame(A = c(1, 2, 3), B = c(4, 5, 6), C = c(7, 8, 9))
-  res <- getSamples(df_in, indexvec = c(1, 3))   # keep A and C
+  res <- getSamples(df_in, indexvec = c(1, 3)) # keep A and C
   expect_equal(names(res), c("A", "C"))
   expect_equal(nrow(res), 3)
 })
 
 test_that("getSamples accepts an explicit indexvec for a csv input", {
   bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv",
-                          package = "PMXForest")
-  extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+    package = "PMXForest"
+  )
+  extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 
   # Parameter columns in this raw_results file: THETA 21-34, SIGMA 40, OMEGA 35-39
   auto <- getSamples(bootFile, extFile = extFile)
-  idx  <- getSamples(bootFile, extFile = extFile,
-                     indexvec = c(21:34, 40, 35:39))
+  idx <- getSamples(bootFile,
+    extFile = extFile,
+    indexvec = c(21:34, 40, 35:39)
+  )
   expect_equal(idx, auto)
 })
 
@@ -266,10 +271,10 @@ test_that("getSamples returns the SIR importance-resampled vectors with the esti
   sirFile <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv", package = "PMXForest")
   extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 
-  raw         <- read.csv(sirFile)
+  raw <- read.csv(sirFile)
   n_resampled <- sum(raw$resamples == 1, na.rm = TRUE)
-  ext_fin     <- subset(getExt(extFile), ITERATION == "-1000000000")
-  n_theta     <- length(grep("^THETA", names(ext_fin)))
+  ext_fin <- subset(getExt(extFile), ITERATION == "-1000000000")
+  n_theta <- length(grep("^THETA", names(ext_fin)))
 
   expect_message(
     getSamples(sirFile, extFile = extFile),
@@ -280,11 +285,13 @@ test_that("getSamples returns the SIR importance-resampled vectors with the esti
 
   # 1 estimates row + the resamples == 1 vectors (not the full proposal set)
   expect_equal(nrow(res), n_resampled + 1)
-  expect_lt(nrow(res), sum(!is.na(raw$resamples)) + 1)   # fewer than all proposals
+  expect_lt(nrow(res), sum(!is.na(raw$resamples)) + 1) # fewer than all proposals
 
   # Row 1 is the .ext final estimates
-  expect_equal(as.numeric(res[1, seq_len(n_theta)]),
-               as.numeric(ext_fin[1, 1 + seq_len(n_theta)]))
+  expect_equal(
+    as.numeric(res[1, seq_len(n_theta)]),
+    as.numeric(ext_fin[1, 1 + seq_len(n_theta)])
+  )
 
   # quiet = TRUE silences the message but returns the same data
   expect_no_message(getSamples(sirFile, extFile = extFile, quiet = TRUE))
@@ -292,6 +299,8 @@ test_that("getSamples returns the SIR importance-resampled vectors with the esti
 
   # n is ignored for a SIR file (and says so)
   expect_message(getSamples(sirFile, extFile = extFile, n = 25), "ignored for SIR")
-  expect_equal(nrow(getSamples(sirFile, extFile = extFile, n = 25, quiet = TRUE)),
-               n_resampled + 1)
+  expect_equal(
+    nrow(getSamples(sirFile, extFile = extFile, n = 25, quiet = TRUE)),
+    n_resampled + 1
+  )
 })

@@ -65,9 +65,9 @@ for (i in seq_len(nrow(dfT))) {
     dfData <- rbind(
       dfData,
       data.frame(
-        Class    = as.character(dfT$Class[i]),
-        Sex      = as.character(dfT$Sex[i]),
-        Age      = as.character(dfT$Age[i]),
+        Class = as.character(dfT$Class[i]),
+        Sex = as.character(dfT$Sex[i]),
+        Age = as.character(dfT$Age[i]),
         Survived = as.character(dfT$Survived[i]),
         stringsAsFactors = TRUE
       )[rep(1, dfT$Freq[i]), ]
@@ -132,12 +132,14 @@ dfCovs <- createInputForestData(
   iMiss = -99
 )
 dfCovs$Class[dfCovs$Class == -99] <- "3rd"
-dfCovs$Sex[dfCovs$Sex == -99]     <- "Male"
-dfCovs$Age[dfCovs$Age == -99]     <- "Child"
+dfCovs$Sex[dfCovs$Sex == -99] <- "Male"
+dfCovs$Age[dfCovs$Age == -99] <- "Child"
 dfCovs
 
-covnames <- c("First class", "2nd class", "3rd class", "Crew",
-              "Male", "Female", "Child", "Adult")
+covnames <- c(
+  "First class", "2nd class", "3rd class", "Crew",
+  "Male", "Female", "Child", "Adult"
+)
 ```
 
 The reference subject is row 3 — a boy travelling in 3rd class.
@@ -150,7 +152,8 @@ for every row of `dfCovs` on each. The confidence interval is the 2.5th and
 
 ```{r}
 bootPreds <- boot(
-  dfData, R = 500, statistic = glmfitpredfunc,
+  dfData,
+  R = 500, statistic = glmfitpredfunc,
   strDV = "Survived", strCovs = c("Age", "Sex", "Class"),
   strInteraction = "", preddata = dfCovs
 )
@@ -168,8 +171,8 @@ plot is not tied to any particular fitting engine.
 ```{r}
 dfres <- dfCovs
 dfres$COVNAME <- covnames
-dfres$GROUP   <- c(1, 1, 1, 1, 5, 5, 7, 7)
-dfres$COVNUM  <- seq_len(nrow(dfres))
+dfres$GROUP <- c(1, 1, 1, 1, 5, 5, 7, 7)
+dfres$COVNUM <- seq_len(nrow(dfres))
 
 ## Reference from the bootstrap (row 3: boy, 3rd class) and from the observed data
 dfres$REFFUNC <- 100 * median(bootPreds$t[, 3])
@@ -177,14 +180,14 @@ dfres$REFTRUE <- 100 * median(orgPred)
 
 for (i in seq_len(nrow(dfres))) {
   q <- quantile(bootPreds$t[, i], probs = c(0.025, 0.5, 0.975), names = FALSE)
-  dfres$Q1[i]    <- 100 * q[1]
+  dfres$Q1[i] <- 100 * q[1]
   dfres$POINT[i] <- 100 * q[2]
-  dfres$Q2[i]    <- 100 * q[3]
+  dfres$Q2[i] <- 100 * q[3]
 }
 
 dfres$GROUPNAME <- dfres$COVARIATEGROUPS
 dfres$PARAMETER <- "Chance of surviving Titanic %"
-dfres$COVEFF    <- FALSE
+dfres$COVEFF <- FALSE
 ```
 
 | Column | Meaning |
@@ -204,9 +207,9 @@ The reference line is the observed median survival.
 ```{r ForestSurvival, fig.width=10, fig.asp=0.5, out.width="100%"}
 forestPlot(
   dfres,
-  plotRelative  = FALSE,
+  plotRelative = FALSE,
   referenceInfo = NULL,
-  xlb           = "Reference subject is a boy in 3rd class",
+  xlb = "Reference subject is a boy in 3rd class",
   errbartabwidth = c(1, 1)
 )
 ```

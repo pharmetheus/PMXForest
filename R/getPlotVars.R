@@ -21,35 +21,27 @@
 #' # "POINT_NOVAR_REL_REFFUNC" "Q1_NOVAR_REL_REFFUNC" "Q2_NOVAR_REL_REFFUNC" "REFFUNC"
 #' PMXForest:::getPlotVars(noVar = TRUE)
 #'
-getPlotVars <- function(plotRelative=TRUE,noVar=FALSE,reference="func") {
+getPlotVars <- function(plotRelative = TRUE, noVar = FALSE, reference = "func") {
+  if (!(reference %in% c("func", "final"))) {
+    stop("reference needs to be either func or final.")
+  }
 
-  if(!(reference %in% c("func","final"))) {stop("reference needs to be either func or final.")}
-
-  if(!plotRelative & noVar & reference == "func") {
-    vars <- c(REF="REFFUNC",point="POINT",q1="Q1",q2="Q2")
-
-  } else if(!plotRelative & noVar & reference == "final") {
-    vars <- c(REF="REFFINAL",point="POINT",q1="Q1",q2="Q2")
-
-  } else if(!plotRelative & !noVar & reference == "func") {
+  if (!plotRelative & noVar & reference == "func") {
+    vars <- c(REF = "REFFUNC", point = "POINT", q1 = "Q1", q2 = "Q2")
+  } else if (!plotRelative & noVar & reference == "final") {
+    vars <- c(REF = "REFFINAL", point = "POINT", q1 = "Q1", q2 = "Q2")
+  } else if (!plotRelative & !noVar & reference == "func") {
     stop("The combination of plotRelative=FALSE and noVar=FALSE is not possible\n.")
-
-  } else if(!plotRelative & !noVar & reference == "final") {
+  } else if (!plotRelative & !noVar & reference == "final") {
     stop("The combination of plotRelative=FALSE and noVar=FALSE is not possible\n.")
-
-  } else if(plotRelative & noVar & reference == "func") {
-    vars <- c(REF="REFFUNC",point="POINT_NOVAR_REL_REFFUNC",q1="Q1_NOVAR_REL_REFFUNC",q2="Q2_NOVAR_REL_REFFUNC")
-
-  } else if(plotRelative & noVar & reference == "final") {
+  } else if (plotRelative & noVar & reference == "func") {
+    vars <- c(REF = "REFFUNC", point = "POINT_NOVAR_REL_REFFUNC", q1 = "Q1_NOVAR_REL_REFFUNC", q2 = "Q2_NOVAR_REL_REFFUNC")
+  } else if (plotRelative & noVar & reference == "final") {
     stop("The combination of plotRelative=TRUE, noVar=TRUE and reference=final is not possible\n.")
-
-  } else if(plotRelative & !noVar & reference == "func") {
-    vars <- c(REF="REFFUNC",point="POINT_REL_REFFUNC",q1="Q1_REL_REFFUNC",q2="Q2_REL_REFFUNC")
-
-  } else if(plotRelative & !noVar & reference == "final") {
-    vars <- c(REF="REFFINAL",point="POINT_REL_REFFINAL",q1="Q1_REL_REFFINAL",q2="Q2_REL_REFFINAL")
-
+  } else if (plotRelative & !noVar & reference == "func") {
+    vars <- c(REF = "REFFUNC", point = "POINT_REL_REFFUNC", q1 = "Q1_REL_REFFUNC", q2 = "Q2_REL_REFFUNC")
+  } else if (plotRelative & !noVar & reference == "final") {
+    vars <- c(REF = "REFFINAL", point = "POINT_REL_REFFINAL", q1 = "Q1_REL_REFFINAL", q2 = "Q2_REL_REFFINAL")
   }
   return(vars)
 }
-

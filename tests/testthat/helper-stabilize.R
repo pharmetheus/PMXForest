@@ -18,7 +18,6 @@
 #'
 #' @return The stabilized character vector.
 stabilize_text_snapshot <- function(text_vector, sig_figs = 8) {
-
   # A robust regex to find numbers (including integers, decimals, and sci-notation)
   num_regex <- "[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?"
 
@@ -52,7 +51,6 @@ stabilize_text_snapshot <- function(text_vector, sig_figs = 8) {
     result[seq(2, by = 2, length.out = length(processed_numbers))] <- processed_numbers
 
     paste(result, collapse = "")
-
   }, USE.NAMES = FALSE)
 }
 

@@ -50,7 +50,7 @@
 #'
 #' @examples
 #' modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
-#' dfData  <- read.csv(
+#' dfData <- read.csv(
 #'   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 #' )
 #'
@@ -66,24 +66,29 @@
 #' head(names(filterByModel(dfData, modFile, useInputNames = TRUE, quiet = TRUE)), 10)
 filterByModel <- function(data, modFile, useInputNames = FALSE, quiet = FALSE,
                           idVar = "ID") {
-
   data <- as.data.frame(data)
-  mod  <- nmReadModel(modFile)
-  pos  <- nmInputPositions(mod)
+  mod <- nmReadModel(modFile)
+  pos <- nmInputPositions(mod)
   nInp <- length(pos$names)
 
   if (nInp == 0) {
     stop("No $INPUT record found in ", basename(modFile),
-         ", so the data columns cannot be matched to the model.", call. = FALSE)
+      ", so the data columns cannot be matched to the model.",
+      call. = FALSE
+    )
   }
   if (ncol(data) < nInp) {
     stop("$INPUT declares ", nInp, " columns but `data` has only ", ncol(data),
-         ". Columns are matched by position, so the data frame must hold at ",
-         "least the columns the model reads.", call. = FALSE)
+      ". Columns are matched by position, so the data frame must hold at ",
+      "least the columns the model reads.",
+      call. = FALSE
+    )
   }
   if (ncol(data) > nInp && !quiet) {
-    message("$INPUT declares ", nInp, " columns; the ", ncol(data) - nInp,
-            " beyond that are not read by the model.")
+    message(
+      "$INPUT declares ", nInp, " columns; the ", ncol(data) - nInp,
+      " beyond that are not read by the model."
+    )
   }
 
   ## The model's view of the data: first nInp columns, under the $INPUT names.
@@ -97,9 +102,13 @@ filterByModel <- function(data, modFile, useInputNames = FALSE, quiet = FALSE,
     nrRec <- nrow(data) - sum(keep)
     nrSub <- if (idVar %in% names(data)) {
       length(unique(data[[idVar]])) - length(unique(data[[idVar]][keep]))
-    } else NA_integer_
-    message("Removed ", nrRec, " of ", nrow(data), " record(s)",
-            if (!is.na(nrSub)) paste0(" and ", nrSub, " subject(s)") else "", ".")
+    } else {
+      NA_integer_
+    }
+    message(
+      "Removed ", nrRec, " of ", nrow(data), " record(s)",
+      if (!is.na(nrSub)) paste0(" and ", nrSub, " subject(s)") else "", "."
+    )
   }
 
   if (useInputNames) work[keep, , drop = FALSE] else data[keep, , drop = FALSE]
@@ -113,7 +122,9 @@ filterByModel <- function(data, modFile, useInputNames = FALSE, quiet = FALSE,
 #' @noRd
 nmDataFilter <- function(mod, work, modFile, quiet) {
   rec <- nmRecord(mod, "\\$DAT(A)?\\b")
-  if (nrow(rec) == 0) return(rep(TRUE, nrow(work)))
+  if (nrow(rec) == 0) {
+    return(rep(TRUE, nrow(work)))
+  }
 
   txt <- gsub("\\s+", " ", paste(rec$code, collapse = " "))
 
@@ -121,34 +132,46 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
   ## it cannot be applied here. "@" and "#" are the conventional header markers
   ## and read.csv() has already dealt with them, so only warn about the rest.
   m <- regmatches(txt, regexpr("IGNORE\\s*=\\s*['\"]?([^\\s(=])['\"]?", txt,
-                               perl = TRUE, ignore.case = TRUE))
+    perl = TRUE, ignore.case = TRUE
+  ))
   if (length(m) == 1) {
     ch <- sub("(?i)^IGNORE\\s*=\\s*['\"]?", "", m, perl = TRUE)
     ch <- substr(ch, 1, 1)
     if (!ch %in% c("@", "#")) {
       warning("The $DATA record of ", basename(modFile), " has IGNORE=", ch,
-              ", which applies to the first character of each raw record and ",
-              "cannot be applied to a data frame. It has been skipped; filter ",
-              "those records yourself if they matter.", call. = FALSE)
+        ", which applies to the first character of each raw record and ",
+        "cannot be applied to a data frame. It has been skipped; filter ",
+        "those records yourself if they matter.",
+        call. = FALSE
+      )
     }
   }
 
   grab <- function(kw) {
     m <- gregexpr(paste0(kw, "\\s*=?\\s*\\(([^)]*)\\)"), txt, ignore.case = TRUE)
     hits <- regmatches(txt, m)[[1]]
-    vapply(hits, function(h) sub(paste0("(?i)^", kw, "\\s*=?\\s*\\((.*)\\)$"),
-                                 "\\1", h, perl = TRUE), character(1),
-           USE.NAMES = FALSE)
+    vapply(hits, function(h) {
+      sub(paste0("(?i)^", kw, "\\s*=?\\s*\\((.*)\\)$"),
+        "\\1", h,
+        perl = TRUE
+      )
+    }, character(1),
+    USE.NAMES = FALSE
+    )
   }
   acceptLists <- grab("ACCEPT")
   ignoreLists <- grab("IGNORE")
 
   if (length(acceptLists) > 0 && length(ignoreLists) > 0) {
     stop("An ACCEPT=(list) and an IGNORE=(list) cannot both appear in the ",
-         "$DATA record of ", basename(modFile), ".", call. = FALSE)
+      "$DATA record of ", basename(modFile), ".",
+      call. = FALSE
+    )
   }
   lists <- if (length(acceptLists) > 0) acceptLists else ignoreLists
-  if (length(lists) == 0) return(rep(TRUE, nrow(work)))
+  if (length(lists) == 0) {
+    return(rep(TRUE, nrow(work)))
+  }
 
   ## Commas separate alternatives within a list, and several statements are
   ## alternatives too, so everything is combined with OR.
@@ -156,28 +179,36 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
   conds <- trimws(conds)
   conds <- conds[nzchar(conds)]
 
-  rExprs <- vapply(conds, nmConditionToR, character(1), modFile = modFile,
-                   USE.NAMES = FALSE)
+  rExprs <- vapply(conds, nmConditionToR, character(1),
+    modFile = modFile,
+    USE.NAMES = FALSE
+  )
 
   ## Every referenced column must exist and be comparable.
   used <- unique(unlist(lapply(conds, nmConditionSymbols, modFile = modFile)))
   missing <- setdiff(used, names(work))
   if (length(missing) > 0) {
     stop("The $DATA filter in ", basename(modFile), " refers to ",
-         paste(missing, collapse = ", "),
-         ", which $INPUT does not declare.", call. = FALSE)
+      paste(missing, collapse = ", "),
+      ", which $INPUT does not declare.",
+      call. = FALSE
+    )
   }
   chr <- used[vapply(used, function(u) is.character(work[[u]]), logical(1))]
   if (length(chr) > 0) {
     stop("Column(s) ", paste(chr, collapse = ", "), " used by the $DATA filter ",
-         "read as text rather than numbers. Check the data file for non-numeric ",
-         "placeholders before filtering.", call. = FALSE)
+      "read as text rather than numbers. Check the data file for non-numeric ",
+      "placeholders before filtering.",
+      call. = FALSE
+    )
   }
 
   full <- paste0("(", rExprs, ")", collapse = " | ")
   if (!quiet) {
-    message(if (length(acceptLists) > 0) "Applying ACCEPT: " else "Applying IGNORE: ",
-            full)
+    message(
+      if (length(acceptLists) > 0) "Applying ACCEPT: " else "Applying IGNORE: ",
+      full
+    )
   }
 
   hit <- eval(parse(text = full), envir = work)
@@ -201,10 +232,13 @@ nmConditionSymbols <- function(cond, modFile) {
   syms <- character(0)
   walk <- function(node) {
     switch(node$type,
-      sym   = syms <<- c(syms, node$name),
-      call  = lapply(node$args, walk),
-      unop  = walk(node$arg),
-      binop = { walk(node$lhs); walk(node$rhs) },
+      sym = syms <<- c(syms, node$name),
+      call = lapply(node$args, walk),
+      unop = walk(node$arg),
+      binop = {
+        walk(node$lhs)
+        walk(node$rhs)
+      },
       NULL
     )
     invisible(NULL)
@@ -225,7 +259,9 @@ nmParseCondExpr <- function(cond, modFile) {
   e <- nmParseExpr(p)
   if (p$pos <= length(p$toks)) {
     stop("Could not parse the $DATA condition '", cond, "' in ",
-         basename(modFile), ".", call. = FALSE)
+      basename(modFile), ".",
+      call. = FALSE
+    )
   }
   e
 }

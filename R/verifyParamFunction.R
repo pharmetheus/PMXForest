@@ -77,7 +77,6 @@
 verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
                                 parameters = NULL, tol = 1e-4, idVar = "ID",
                                 quiet = FALSE) {
-
   if (!is.list(x) || is.null(x$code)) {
     stop("`x` must be the list returned by createParamFunction().", call. = FALSE)
   }
@@ -88,8 +87,10 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
     parameters <- if (!is.null(x$primaryNames)) {
       x$primaryNames
     } else {
-      setdiff(x$functionListName,
-              if (is.null(x$secondaryNames)) character(0) else x$secondaryNames)
+      setdiff(
+        x$functionListName,
+        if (is.null(x$secondaryNames)) character(0) else x$secondaryNames
+      )
     }
   }
 
@@ -98,33 +99,43 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
   ## Every covariate the function reads must be in the table. The generated code
   ## silently falls back to the reference value for an absent column, which would
   ## make the comparison meaningless rather than failing, so check explicitly.
-  covs        <- names(x$covRef)
+  covs <- names(x$covRef)
   missingCovs <- setdiff(covs, names(tab))
   if (length(missingCovs) > 0) {
     warning("These covariates are not columns of ", basename(tabFile), ": ",
-            paste(missingCovs, collapse = ", "),
-            ". The generated function will use its reference value for them, so ",
-            "the comparison below is NOT a valid check. Add them to $TABLE.",
-            call. = FALSE)
+      paste(missingCovs, collapse = ", "),
+      ". The generated function will use its reference value for them, so ",
+      "the comparison below is NOT a valid check. Add them to $TABLE.",
+      call. = FALSE
+    )
   }
 
   ## One row per distinct covariate combination is enough, and much faster.
   keyCols <- intersect(covs, names(tab))
-  rows    <- if (length(keyCols) > 0) tab[!duplicated(tab[, keyCols, drop = FALSE]), ,
-                                          drop = FALSE] else tab
+  rows <- if (length(keyCols) > 0) {
+    tab[!duplicated(tab[, keyCols, drop = FALSE]), ,
+      drop = FALSE
+    ]
+  } else {
+    tab
+  }
   nSubj <- if (idVar %in% names(tab)) length(unique(tab[[idVar]])) else NA_integer_
 
   ## Evaluate once; the function returns every parameter per call.
-  vals <- lapply(seq_len(nrow(rows)), function(i) fun(thetas = thetas,
-                                                      df = rows[i, , drop = FALSE]))
+  vals <- lapply(seq_len(nrow(rows)), function(i) {
+    fun(
+      thetas = thetas,
+      df = rows[i, , drop = FALSE]
+    )
+  })
 
-  res    <- vector("list", length(parameters))
+  res <- vector("list", length(parameters))
   detail <- list()
 
   returnedNames <- if (length(vals) > 0) names(vals[[1]]) else NULL
 
   for (k in seq_along(parameters)) {
-    p   <- parameters[k]
+    p <- parameters[k]
 
     ## The generated function has to actually return this parameter. Naming one
     ## it does not (a typo, wrong capitalisation, or a `secondary` that was
@@ -132,11 +143,15 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
     ## a subscript error - rather than being reported unverified.
     if (!is.null(returnedNames) && !(p %in% returnedNames)) {
       warning("Parameter '", p, "' is not returned by the generated function. ",
-              "Check the spelling, or add it through `secondary`.", call. = FALSE)
-      res[[k]] <- data.frame(PARAMETER = p, TABLECOLUMN = NA_character_,
-                             N = 0L, MAXABSDIFF = NA_real_,
-                             MAXRELDIFF = NA_real_, PASS = NA,
-                             stringsAsFactors = FALSE)
+        "Check the spelling, or add it through `secondary`.",
+        call. = FALSE
+      )
+      res[[k]] <- data.frame(
+        PARAMETER = p, TABLECOLUMN = NA_character_,
+        N = 0L, MAXABSDIFF = NA_real_,
+        MAXRELDIFF = NA_real_, PASS = NA,
+        stringsAsFactors = FALSE
+      )
       next
     }
 
@@ -144,72 +159,100 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
 
     tvCol <- paste0("TV", p)
     if (tvCol %in% names(rows)) {
-      ref    <- rows[[tvCol]]
+      ref <- rows[[tvCol]]
       colUse <- tvCol
     } else if (p %in% names(rows)) {
       etaIdx <- if (p %in% names(x$etaMap)) x$etaMap[[p]] else NULL
       etaCol <- if (!is.null(etaIdx)) paste0("ETA", etaIdx) else NULL
       if (!is.null(etaCol) && etaCol %in% names(rows)) {
         # Tabled value is individual; divide out the exponential IIV.
-        ref    <- rows[[p]] / exp(rows[[etaCol]])
+        ref <- rows[[p]] / exp(rows[[etaCol]])
         colUse <- paste0(p, " / exp(", etaCol, ")")
       } else {
         warning("Cannot recover typical values of '", p, "' from ",
-                basename(tabFile), ": neither a '", tvCol, "' column nor the ",
-                if (is.null(etaIdx)) "exponential-IIV pattern in $PK"
-                else paste0("'", etaCol, "' column"),
-                " is available. Add ", if (is.null(etaIdx)) tvCol else etaCol,
-                " to $TABLE.", call. = FALSE)
-        res[[k]] <- data.frame(PARAMETER = p, TABLECOLUMN = NA_character_,
-                               N = 0L, MAXABSDIFF = NA_real_,
-                               MAXRELDIFF = NA_real_, PASS = NA,
-                               stringsAsFactors = FALSE)
+          basename(tabFile), ": neither a '", tvCol, "' column nor the ",
+          if (is.null(etaIdx)) {
+            "exponential-IIV pattern in $PK"
+          } else {
+            paste0("'", etaCol, "' column")
+          },
+          " is available. Add ", if (is.null(etaIdx)) tvCol else etaCol,
+          " to $TABLE.",
+          call. = FALSE
+        )
+        res[[k]] <- data.frame(
+          PARAMETER = p, TABLECOLUMN = NA_character_,
+          N = 0L, MAXABSDIFF = NA_real_,
+          MAXRELDIFF = NA_real_, PASS = NA,
+          stringsAsFactors = FALSE
+        )
         next
       }
     } else {
       warning("Parameter '", p, "' is not a column of ", basename(tabFile),
-              ". Add it to $TABLE to verify it.", call. = FALSE)
-      res[[k]] <- data.frame(PARAMETER = p, TABLECOLUMN = NA_character_,
-                             N = 0L, MAXABSDIFF = NA_real_,
-                             MAXRELDIFF = NA_real_, PASS = NA,
-                             stringsAsFactors = FALSE)
+        ". Add it to $TABLE to verify it.",
+        call. = FALSE
+      )
+      res[[k]] <- data.frame(
+        PARAMETER = p, TABLECOLUMN = NA_character_,
+        N = 0L, MAXABSDIFF = NA_real_,
+        MAXRELDIFF = NA_real_, PASS = NA,
+        stringsAsFactors = FALSE
+      )
       next
     }
 
     absd <- abs(got - ref)
     reld <- absd / pmax(abs(ref), .Machine$double.eps)
-    ok   <- if (length(missingCovs) > 0) NA else max(reld) <= tol
+    ok <- if (length(missingCovs) > 0) NA else max(reld) <= tol
 
-    res[[k]] <- data.frame(PARAMETER = p, TABLECOLUMN = colUse,
-                           N = length(ref), MAXABSDIFF = max(absd),
-                           MAXRELDIFF = max(reld), PASS = ok,
-                           stringsAsFactors = FALSE)
-    detail[[p]] <- data.frame(generated = got, table = ref, absdiff = absd,
-                              reldiff = reld)
+    res[[k]] <- data.frame(
+      PARAMETER = p, TABLECOLUMN = colUse,
+      N = length(ref), MAXABSDIFF = max(absd),
+      MAXRELDIFF = max(reld), PASS = ok,
+      stringsAsFactors = FALSE
+    )
+    detail[[p]] <- data.frame(
+      generated = got, table = ref, absdiff = absd,
+      reldiff = reld
+    )
   }
 
   out <- do.call(rbind, res)
   attr(out, "detail") <- detail
 
   if (!quiet) {
-    message("Checked ", nrow(rows), " distinct covariate combination(s)",
-            if (!is.na(nSubj)) paste0(" from ", nSubj, " subject(s)") else "",
-            " in ", basename(tabFile), ".")
+    message(
+      "Checked ", nrow(rows), " distinct covariate combination(s)",
+      if (!is.na(nSubj)) paste0(" from ", nSubj, " subject(s)") else "",
+      " in ", basename(tabFile), "."
+    )
     for (i in seq_len(nrow(out))) {
-      message("  ", out$PARAMETER[i], ": ",
-              if (is.na(out$PASS[i])) "not verified"
-              else if (out$PASS[i]) paste0("pass (max rel diff ",
-                                           signif(out$MAXRELDIFF[i], 3), ")")
-              else paste0("FAIL (max rel diff ", signif(out$MAXRELDIFF[i], 3),
-                          ", tolerance ", tol, ")"))
+      message(
+        "  ", out$PARAMETER[i], ": ",
+        if (is.na(out$PASS[i])) {
+          "not verified"
+        } else if (out$PASS[i]) {
+          paste0(
+            "pass (max rel diff ",
+            signif(out$MAXRELDIFF[i], 3), ")"
+          )
+        } else {
+          paste0(
+            "FAIL (max rel diff ", signif(out$MAXRELDIFF[i], 3),
+            ", tolerance ", tol, ")"
+          )
+        }
+      )
     }
   }
 
   ## A single TRUE/FALSE for use in `if`; the per-parameter table rides along.
   ## An unverifiable parameter (PASS = NA) counts as a failure of the whole.
   invisible(structure(isTRUE(all(out$PASS)),
-                      class  = "pmxParamVerify",
-                      checks = out))
+    class  = "pmxParamVerify",
+    checks = out
+  ))
 }
 
 #' Print a parameter-function verification result
@@ -220,13 +263,15 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
 #' @return `x`, invisibly.
 #' @export
 print.pmxParamVerify <- function(x, ...) {
-  d   <- attr(x, "checks")
+  d <- attr(x, "checks")
   nNA <- sum(is.na(d$PASS))
   cat(if (isTRUE(unclass(x)[1])) "PASS" else "FAIL",
-      " - verifyParamFunction: ", sum(d$PASS, na.rm = TRUE), "/", nrow(d),
-      " parameter(s)",
-      if (nNA) paste0(" (", nNA, " not verified)") else "",
-      "\n", sep = "")
+    " - verifyParamFunction: ", sum(d$PASS, na.rm = TRUE), "/", nrow(d),
+    " parameter(s)",
+    if (nNA) paste0(" (", nNA, " not verified)") else "",
+    "\n",
+    sep = ""
+  )
   print(d, row.names = FALSE)
   invisible(x)
 }

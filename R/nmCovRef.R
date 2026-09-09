@@ -20,7 +20,7 @@
 #' @noRd
 nmCovRef <- function(stmts, covariates, missVal) {
   flat <- nmFlatten(stmts)
-  out  <- list()
+  out <- list()
 
   for (cov in covariates) {
     r <- nmRefExplicit(flat, cov, missVal)
@@ -41,8 +41,12 @@ nmCovRef <- function(stmts, covariates, missVal) {
 #'
 #' @noRd
 nmAsNumber <- function(node) {
-  if (is.null(node)) return(NA_real_)
-  if (node$type == "num") return(node$value)
+  if (is.null(node)) {
+    return(NA_real_)
+  }
+  if (node$type == "num") {
+    return(node$value)
+  }
   if (node$type == "unop" && node$arg$type == "num") {
     return(if (node$op == "-") -node$arg$value else node$arg$value)
   }
@@ -82,8 +86,10 @@ nmRefExplicit <- function(flat, cov, missVal) {
     if (is.null(eq) || !isTRUE(all.equal(eq, missVal))) next
     val <- nmAsNumber(f$stmt$rhs)
     if (is.na(val)) next
-    return(list(value = val, line = f$lineno, confident = TRUE,
-                source = paste0("explicit missing-value handling in the control stream")))
+    return(list(
+      value = val, line = f$lineno, confident = TRUE,
+      source = paste0("explicit missing-value handling in the control stream")
+    ))
   }
   NULL
 }
@@ -96,8 +102,10 @@ nmRefMarkedBranch <- function(flat, cov) {
     if (!grepl("most\\s*common", f$comment, ignore.case = TRUE)) next
     eq <- nmEqualityTest(f$cond, cov)
     if (is.null(eq)) next
-    return(list(value = eq, line = f$lineno, confident = TRUE,
-                source = "reference level of the \";  Most common\" branch"))
+    return(list(
+      value = eq, line = f$lineno, confident = TRUE,
+      source = "reference level of the \";  Most common\" branch"
+    ))
   }
   NULL
 }
@@ -115,9 +123,13 @@ nmRefIdentityBranch <- function(flat, cov) {
     if (is.na(val) || !(val %in% c(0, 1))) next
     eq <- nmEqualityTest(f$cond, cov)
     if (is.null(eq)) next
-    return(list(value = eq, line = f$lineno, confident = TRUE,
-                source = paste0("branch assigning the identity value ",
-                                nmFormatNum(val))))
+    return(list(
+      value = eq, line = f$lineno, confident = TRUE,
+      source = paste0(
+        "branch assigning the identity value ",
+        nmFormatNum(val)
+      )
+    ))
   }
   NULL
 }
@@ -127,19 +139,24 @@ nmRefIdentityBranch <- function(flat, cov) {
 nmRefNormalisation <- function(flat, cov) {
   hit <- NULL
   scan <- function(node, lineno) {
-    if (!is.null(hit)) return(invisible(NULL))
+    if (!is.null(hit)) {
+      return(invisible(NULL))
+    }
     if (node$type == "binop") {
       const <- nmAsNumber(node$rhs)
       if (node$op %in% c("/", "-") &&
-          node$lhs$type == "sym" && node$lhs$name == cov && !is.na(const)) {
+        node$lhs$type == "sym" && node$lhs$name == cov && !is.na(const)) {
         hit <<- list(
           value = const, line = lineno, confident = TRUE,
-          source = paste0("normalisation constant in (", cov, " ", node$op, " ",
-                          nmFormatNum(const), ")")
+          source = paste0(
+            "normalisation constant in (", cov, " ", node$op, " ",
+            nmFormatNum(const), ")"
+          )
         )
         return(invisible(NULL))
       }
-      scan(node$lhs, lineno); scan(node$rhs, lineno)
+      scan(node$lhs, lineno)
+      scan(node$rhs, lineno)
     } else if (node$type == "unop") {
       scan(node$arg, lineno)
     } else if (node$type == "call") {
@@ -149,7 +166,9 @@ nmRefNormalisation <- function(flat, cov) {
   }
   for (f in flat) {
     scan(f$stmt$rhs, f$lineno)
-    if (!is.null(hit)) return(hit)
+    if (!is.null(hit)) {
+      return(hit)
+    }
   }
   NULL
 }
@@ -171,14 +190,18 @@ nmRefUntestedLevel <- function(flat, cov) {
     tested <- c(tested, eq)
     if (is.na(lineno)) lineno <- f$lineno
   }
-  if (length(tested) == 0) return(NULL)
+  if (length(tested) == 0) {
+    return(NULL)
+  }
 
   for (candidate in c(0, 1)) {
     if (!any(vapply(tested, function(t) isTRUE(all.equal(t, candidate)), logical(1)))) {
       return(list(
         value = candidate, line = lineno, confident = FALSE,
-        source = paste0("level not tested by any IF() on ", cov,
-                        " (proposed, please confirm)")
+        source = paste0(
+          "level not tested by any IF() on ", cov,
+          " (proposed, please confirm)"
+        )
       ))
     }
   }
@@ -192,22 +215,30 @@ nmRefUntestedLevel <- function(flat, cov) {
 #'
 #' @noRd
 nmEqualityTest <- function(cond, cov) {
-  if (is.null(cond)) return(NULL)
+  if (is.null(cond)) {
+    return(NULL)
+  }
   if (cond$type == "binop") {
     if (cond$op == "==") {
       if (cond$lhs$type == "sym" && cond$lhs$name == cov) {
         v <- nmAsNumber(cond$rhs)
-        if (!is.na(v)) return(v)
+        if (!is.na(v)) {
+          return(v)
+        }
       }
       if (cond$rhs$type == "sym" && cond$rhs$name == cov) {
         v <- nmAsNumber(cond$lhs)
-        if (!is.na(v)) return(v)
+        if (!is.na(v)) {
+          return(v)
+        }
       }
       return(NULL)
     }
     if (cond$op == "&") {
       l <- nmEqualityTest(cond$lhs, cov)
-      if (!is.null(l)) return(l)
+      if (!is.null(l)) {
+        return(l)
+      }
       return(nmEqualityTest(cond$rhs, cov))
     }
   }
@@ -265,95 +296,123 @@ nmEqualityTest <- function(cond, cov) {
 #'
 #' @export
 nmResolveSecondary <- function(secondary, quiet = FALSE) {
-  if (is.null(secondary) || length(secondary) == 0) return(list())
+  if (is.null(secondary) || length(secondary) == 0) {
+    return(list())
+  }
   if (!is.list(secondary) || is.null(names(secondary)) ||
-      any(!nzchar(names(secondary)))) {
+    any(!nzchar(names(secondary)))) {
     stop("`secondary` must be a named list, e.g. ",
-         "secondary = list(AUC = \"df$DOSE / CL\").", call. = FALSE)
+      "secondary = list(AUC = \"df$DOSE / CL\").",
+      call. = FALSE
+    )
   }
   nms <- names(secondary)
   if (anyDuplicated(nms)) {
     stop("`secondary` has duplicate name(s): ",
-         paste(unique(nms[duplicated(nms)]), collapse = ", "), ".", call. = FALSE)
+      paste(unique(nms[duplicated(nms)]), collapse = ", "), ".",
+      call. = FALSE
+    )
   }
   bad <- nms[make.names(nms) != nms]
   if (length(bad) > 0) {
     stop("`secondary` name(s) are not valid R names: ",
-         paste(bad, collapse = ", "), ".", call. = FALSE)
+      paste(bad, collapse = ", "), ".",
+      call. = FALSE
+    )
   }
 
   out <- vector("list", length(secondary))
   for (i in seq_along(secondary)) {
     nm <- nms[i]
-    v  <- secondary[[i]]
+    v <- secondary[[i]]
 
     ## A list entry: `source` is the code/file, everything else is a constant
     ## to bind ahead of the body. A bare string is `source` with no constants.
     consts <- character(0)
     if (is.list(v)) {
       if (is.null(v$source) || !is.character(v$source) ||
-          length(v$source) != 1L || is.na(v$source)) {
+        length(v$source) != 1L || is.na(v$source)) {
         stop("secondary '", nm, "': a list entry needs a single-string ",
-             "`source` (R code, or a path to an .R file).", call. = FALSE)
+          "`source` (R code, or a path to an .R file).",
+          call. = FALSE
+        )
       }
       ## Boolean indexing, not v[setdiff(names(v), "source")]: indexing a list
       ## by "" never matches in R (always yields NA), so that form silently
       ## dropped an unnamed constant instead of catching it below.
       extra <- v[names(v) != "source"]
       if (length(extra) > 0L &&
-          (is.null(names(extra)) || any(!nzchar(names(extra))))) {
+        (is.null(names(extra)) || any(!nzchar(names(extra))))) {
         stop("secondary '", nm, "': every constant beside `source` must be ",
-             "named, e.g. list(source = \"cmax.R\", dose = 100, tau = 12).",
-             call. = FALSE)
+          "named, e.g. list(source = \"cmax.R\", dose = 100, tau = 12).",
+          call. = FALSE
+        )
       }
       badc <- names(extra)[make.names(names(extra)) != names(extra)]
       if (length(badc) > 0L) {
         stop("secondary '", nm, "': constant name(s) are not valid R names: ",
-             paste(badc, collapse = ", "), ".", call. = FALSE)
+          paste(badc, collapse = ", "), ".",
+          call. = FALSE
+        )
       }
       for (cn in names(extra)) {
         cv <- extra[[cn]]
         if (!is.null(cv) && !is.atomic(cv)) {
           stop("secondary '", nm, "': constant `", cn, "` must be an atomic ",
-               "value (number, string, logical, or a simple vector of those).",
-               call. = FALSE)
+            "value (number, string, logical, or a simple vector of those).",
+            call. = FALSE
+          )
         }
-        consts <- c(consts,
-                    paste0(cn, " <- ", paste(deparse(cv), collapse = " ")))
+        consts <- c(
+          consts,
+          paste0(cn, " <- ", paste(deparse(cv), collapse = " "))
+        )
       }
       v <- v$source
     } else if (!is.character(v) || length(v) != 1L || is.na(v)) {
       stop("secondary '", nm, "' must be a single string (R code or a path to ",
-           "an .R file), or a list with a `source` string.", call. = FALSE)
+        "an .R file), or a list with a `source` string.",
+        call. = FALSE
+      )
     }
-    vt     <- trimws(v)
+    vt <- trimws(v)
     isFile <- nzchar(vt) && file.exists(vt) && !dir.exists(vt)
     if (!isFile && grepl("\\.[Rr]$", vt) && !grepl("[\r\n]", v)) {
       stop("secondary '", nm, "': '", vt, "' looks like a file path but does ",
-           "not exist.", call. = FALSE)
+        "not exist.",
+        call. = FALSE
+      )
     }
     if (isFile) {
       lines <- readLines(vt, warn = FALSE)
-      src   <- vt
+      src <- vt
     } else {
       lines <- strsplit(v, "\n", fixed = TRUE)[[1]]
-      src   <- NA_character_
+      src <- NA_character_
     }
     parsed <- tryCatch(parse(text = paste(lines, collapse = "\n")),
-                       error = function(e) e)
+      error = function(e) e
+    )
     if (inherits(parsed, "error")) {
       stop("secondary '", nm, "' does not parse as R code",
-           if (!is.na(src)) paste0(" (", src, ")") else "", ": ",
-           conditionMessage(parsed), call. = FALSE)
+        if (!is.na(src)) paste0(" (", src, ")") else "", ": ",
+        conditionMessage(parsed),
+        call. = FALSE
+      )
     }
     if (length(parsed) == 0L) {
       stop("secondary '", nm, "' is empty.", call. = FALSE)
     }
     if (!quiet) {
-      message("  secondary ", nm, ": ",
-              if (is.na(src)) "inline snippet" else paste0("inlined from ", src),
-              if (length(consts) > 0L)
-                paste0(" (+", length(consts), " constant(s))") else "")
+      message(
+        "  secondary ", nm, ": ",
+        if (is.na(src)) "inline snippet" else paste0("inlined from ", src),
+        if (length(consts) > 0L) {
+          paste0(" (+", length(consts), " constant(s))")
+        } else {
+          ""
+        }
+      )
     }
     out[[i]] <- list(name = nm, src = src, lines = lines, consts = consts)
   }
@@ -371,55 +430,70 @@ nmResolveSecondary <- function(secondary, quiet = FALSE) {
 nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
                    modFile, missVal, noBaseThetas, secondary = list()) {
   base <- basename(modFile)
-  ind  <- "  "
-  L    <- character(0)
-  add  <- function(...) L <<- c(L, ...)
+  ind <- "  "
+  L <- character(0)
+  add <- function(...) L <<- c(L, ...)
 
-  add(paste0("## Generated by PMXForest::createParamFunction() from ", base, "."),
-      "## Typical values: every ETA() in $PK has been set to 0.",
-      "## Review this against the control stream before use.",
-      "",
-      paste0(functionName, " <- function(thetas, df, ...) {"))
+  add(
+    paste0("## Generated by PMXForest::createParamFunction() from ", base, "."),
+    "## Typical values: every ETA() in $PK has been set to 0.",
+    "## Review this against the control stream before use.",
+    "",
+    paste0(functionName, " <- function(thetas, df, ...) {")
+  )
 
   ## -- covariate reference preamble ------------------------------------------
   if (length(covariates) > 0) {
-    add("",
-        paste0(ind, "## ---- Covariate references, taken from ", base,
-               " ", strrep("-", max(0, 46 - nchar(base)))))
+    add(
+      "",
+      paste0(
+        ind, "## ---- Covariate references, taken from ", base,
+        " ", strrep("-", max(0, 46 - nchar(base)))
+      )
+    )
     width <- max(nchar(covariates))
     for (cov in covariates) {
-      r   <- covRef[[cov]]
+      r <- covRef[[cov]]
       loc <- if (is.na(r$line)) "" else paste0("  [", base, ":", r$line, "]")
-      add(paste0(ind, "## ", formatC(cov, width = width, flag = "-"), "  ",
-                 r$source, loc))
+      add(paste0(
+        ind, "## ", formatC(cov, width = width, flag = "-"), "  ",
+        r$source, loc
+      ))
       pad <- formatC(cov, width = width, flag = "-")
       ## df[["WT"]], never df$WT: `$` partial-matches on a data frame, so a
       ## data set carrying WTKG but no WT would silently use WTKG as the
       ## covariate instead of falling back to the reference value. Name
       ## families like that are common - run7's own $INPUT has NCI/NCIL.
       acc <- paste0("df[[\"", cov, "\"]]")
-      add(paste0(ind, pad, " <- if (!is.null(", acc, ") && ", acc,
-                 " != ", nmFormatNum(missVal), ") ", acc, " else ",
-                 nmFormatNum(r$value)))
+      add(paste0(
+        ind, pad, " <- if (!is.null(", acc, ") && ", acc,
+        " != ", nmFormatNum(missVal), ") ", acc, " else ",
+        nmFormatNum(r$value)
+      ))
     }
   }
 
   ## -- transliterated $PK ----------------------------------------------------
-  add("",
-      paste0(ind, "## ---- $PK, transliterated ", strrep("-", 51)))
+  add(
+    "",
+    paste0(ind, "## ---- $PK, transliterated ", strrep("-", 51))
+  )
   add(nmEmitStmts(stmts, ind, base))
 
   ## -- secondary parameters ------------------------------------------------
   if (length(secondary) > 0) {
     add("", paste0(ind, "## ---- Secondary parameters ", strrep("-", 49)))
     for (s in secondary) {
-      loc <- if (is.na(s$src)) "inline snippet"
-             else paste0("inlined from ", basename(s$src))
+      loc <- if (is.na(s$src)) {
+        "inline snippet"
+      } else {
+        paste0("inlined from ", basename(s$src))
+      }
       add(paste0(ind, "## ", s$name, "  (", loc, ")"))
       # A "#" would comment out the closing "})" of the one-line form, so a
       # snippet carrying one takes the block form instead.
       if (length(s$lines) == 1L && nzchar(trimws(s$lines)) &&
-          length(s$consts) == 0L && !grepl("#", s$lines, fixed = TRUE)) {
+        length(s$consts) == 0L && !grepl("#", s$lines, fixed = TRUE)) {
         add(paste0(ind, s$name, " <- local({ ", trimws(s$lines), " })"))
       } else {
         # Constants first, then the body inlined verbatim - re-indenting it
@@ -432,26 +506,36 @@ nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
     }
   } else {
     ## -- extension point ---------------------------------------------------
-    add("",
-        paste0(ind, "## ---- Secondary parameters: add yours below ", strrep("-", 33)),
-        paste0(ind, "## Quantities such as AUC, Cmax or event probabilities are not"),
-        paste0(ind, "## derivable from $PK and are left to you, for example:"),
-        paste0(ind, "##   AUC <- 80 / (CL / FREL)"))
+    add(
+      "",
+      paste0(ind, "## ---- Secondary parameters: add yours below ", strrep("-", 33)),
+      paste0(ind, "## Quantities such as AUC, Cmax or event probabilities are not"),
+      paste0(ind, "## derivable from $PK and are left to you, for example:"),
+      paste0(ind, "##   AUC <- 80 / (CL / FREL)")
+    )
   }
 
   ## -- return ----------------------------------------------------------------
   retNames <- c(parameters, unname(vapply(secondary, `[[`, "", "name")))
-  add("",
-      paste0(ind, "list("),
-      paste0(ind, ind,
-             paste(paste0(retNames, " = ", retNames), collapse = ",\n    ")),
-      paste0(ind, ")"),
-      "}")
+  add(
+    "",
+    paste0(ind, "list("),
+    paste0(
+      ind, ind,
+      paste(paste0(retNames, " = ", retNames), collapse = ",\n    ")
+    ),
+    paste0(ind, ")"),
+    "}"
+  )
 
-  add("",
-      paste0("## functionListName <- c(",
-             paste(paste0('"', retNames, '"'), collapse = ", "), ")"),
-      paste0("## noBaseThetas     <- ", noBaseThetas))
+  add(
+    "",
+    paste0(
+      "## functionListName <- c(",
+      paste(paste0('"', retNames, '"'), collapse = ", "), ")"
+    ),
+    paste0("## noBaseThetas     <- ", noBaseThetas)
+  )
 
   L
 }
@@ -466,10 +550,12 @@ nmEmitStmts <- function(stmts, ind, base) {
       out <- c(out, paste0(ind, s$lhs, " <- ", nmDeparse(s$rhs), etaNote))
     } else if (isTRUE(s$oneline)) {
       # Keep a one-line IF on one line, so the source reads like the $PK block.
-      inner   <- s$then[[1]]
+      inner <- s$then[[1]]
       etaNote <- if (isTRUE(inner$hadEta)) "  # ETA() -> 0 (typical value)" else ""
-      out <- c(out, paste0(ind, "if (", nmDeparse(s$cond), ") ",
-                           inner$lhs, " <- ", nmDeparse(inner$rhs), etaNote))
+      out <- c(out, paste0(
+        ind, "if (", nmDeparse(s$cond), ") ",
+        inner$lhs, " <- ", nmDeparse(inner$rhs), etaNote
+      ))
     } else {
       out <- c(out, paste0(ind, "if (", nmDeparse(s$cond), ") {"))
       out <- c(out, nmEmitStmts(s$then, paste0(ind, "  "), base))

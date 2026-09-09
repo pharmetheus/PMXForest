@@ -62,7 +62,8 @@ test_that("setupDfCovs correctly handles continuous additionalCovs with deduplic
 
   wt_rows <- df_median[df_median$COVARIATEGROUPS == "WT", ]
   expect_true(all(wt_rows$AGE == 60),
-              info = "AGE did not correctly backfill with deduplicated median.")
+    info = "AGE did not correctly backfill with deduplicated median."
+  )
 
   # Test contRef = "mean"
   df_mean <- setupDfCovs(
@@ -76,7 +77,8 @@ test_that("setupDfCovs correctly handles continuous additionalCovs with deduplic
 
   wt_rows_mean <- df_mean[df_mean$COVARIATEGROUPS == "WT", ]
   expect_true(all(wt_rows_mean$AGE == 60),
-              info = "AGE did not correctly backfill with deduplicated mean.")
+    info = "AGE did not correctly backfill with deduplicated mean."
+  )
 })
 
 test_that("setupDfCovs accurately backfills binary categorical additionalCovs (mode)", {
@@ -95,7 +97,8 @@ test_that("setupDfCovs accurately backfills binary categorical additionalCovs (m
 
   wt_rows <- df_binary[df_binary$COVARIATEGROUPS == "WT", ]
   expect_true(all(wt_rows$FOOD == 1),
-              info = "Binary additional covariate did not inherit the baseline mode.")
+    info = "Binary additional covariate did not inherit the baseline mode."
+  )
 })
 
 test_that("setupDfCovs accurately handles one-hot mapping for multi-level additionalCovs", {
@@ -118,9 +121,11 @@ test_that("setupDfCovs accurately handles one-hot mapping for multi-level additi
 
   # Because Mode is 2, the reference state should have RACE_2 = 1 and RACE_3 = 0.
   expect_true(all(wt_rows$RACE_2 == 1),
-              info = "RACE_2 dummy did not correctly inherit the mode reference state.")
+    info = "RACE_2 dummy did not correctly inherit the mode reference state."
+  )
   expect_true(all(wt_rows$RACE_3 == 0),
-              info = "RACE_3 dummy did not correctly inherit the mode reference state.")
+    info = "RACE_3 dummy did not correctly inherit the mode reference state."
+  )
 })
 
 test_that("setupDfCovs throws error if additionalCovs consists purely of missing values", {
@@ -141,7 +146,7 @@ test_that("setupDfCovs handles alternative explicit references (useMissVal = FAL
   mock_data <- data.frame(
     ID = 1:5,
     WT = c(60, 70, 70, 80, 90), # Median = 70
-    SEX = c(1, 1, 1, 0, 0)      # Mode = 1
+    SEX = c(1, 1, 1, 0, 0) # Mode = 1
   )
 
   # When useMissVal = FALSE, the primary covariates should have their inactive
@@ -156,12 +161,14 @@ test_that("setupDfCovs handles alternative explicit references (useMissVal = FAL
   # Check WT varying rows: background SEX should be the mode (1)
   wt_rows <- df_alt[df_alt$COVARIATEGROUPS == "WT", ]
   expect_true(all(wt_rows$SEX == 1),
-              info = "Alternative primary categorical covariate did not backfill with mode.")
+    info = "Alternative primary categorical covariate did not backfill with mode."
+  )
 
   # Check SEX varying rows: background WT should be the median (70)
   sex_rows <- df_alt[df_alt$COVARIATEGROUPS == "SEX", ]
   expect_true(all(sex_rows$WT == 70),
-              info = "Alternative primary continuous covariate did not backfill with median.")
+    info = "Alternative primary continuous covariate did not backfill with median."
+  )
 })
 
 # --- refLevels / sep passthrough ---
@@ -180,7 +187,8 @@ test_that("setupDfCovs passes refLevels through to the one-hot column names", {
 
   # refLevels: level 2 is the reference
   df_ref2 <- setupDfCovs(
-    mock_data, covariates = c("WT", "GENO"), catRef = list(GENO = 2)
+    mock_data,
+    covariates = c("WT", "GENO"), catRef = list(GENO = 2)
   )
   expect_true(all(c("GENO_1", "GENO_3", "GENO_4") %in% names(df_ref2)))
   expect_false("GENO_2" %in% names(df_ref2))
@@ -190,7 +198,7 @@ test_that("setupDfCovs sep passthrough and additionalCovs backfill honour catRef
   mock_data <- data.frame(
     ID   = 1:8,
     WT   = c(60, 70, 80, 90, 65, 75, 72, 68),
-    RACE = c(1, 2, 2, 3, 2, 2, 1, 2)   # mode is 2
+    RACE = c(1, 2, 2, 3, 2, 2, 1, 2) # mode is 2
   )
 
   df <- setupDfCovs(
@@ -214,11 +222,13 @@ test_that("without catRef the background still comes from the mode", {
   mock_data <- data.frame(
     ID   = 1:8,
     WT   = c(60, 70, 80, 90, 65, 75, 72, 68),
-    RACE = c(1, 2, 2, 3, 2, 2, 1, 2)   # lowest is 1, mode is 2
+    RACE = c(1, 2, 2, 3, 2, 2, 1, 2) # lowest is 1, mode is 2
   )
 
-  df <- setupDfCovs(mock_data, covariates = "WT", additionalCovs = "RACE",
-                    sep = ".")
+  df <- setupDfCovs(mock_data,
+    covariates = "WT", additionalCovs = "RACE",
+    sep = "."
+  )
 
   # Unchanged from earlier versions: encoding drops the lowest level, the
   # background takes the most common one.

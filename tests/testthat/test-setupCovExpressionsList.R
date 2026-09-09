@@ -1,6 +1,6 @@
 ## Mock data: 240 subjects, one row each plus a duplicated row for subject 1.
 mock_data <- local({
-  n  <- 240
+  n <- 240
   df <- data.frame(
     ID   = seq_len(n),
     WT   = seq(50, 120, length.out = n),
@@ -27,8 +27,10 @@ test_that("return structure is the two getForestDFemp arguments", {
   expect_type(out$covExpressionsList, "list")
   expect_true(all(vapply(out$covExpressionsList, is.expression, logical(1))))
   expect_equal(length(out$covExpressionsList), length(out$cdfCovsNames))
-  expect_equal(names(out$covExpressionsList),
-               c("WT", "WT", "SEX", "SEX", "GENO", "GENO", "GENO", "GENO"))
+  expect_equal(
+    names(out$covExpressionsList),
+    c("WT", "WT", "SEX", "SEX", "GENO", "GENO", "GENO", "GENO")
+  )
 })
 
 test_that("binary covariate emits both sorted levels", {
@@ -39,32 +41,40 @@ test_that("binary covariate emits both sorted levels", {
 
 test_that("multi-level categorical includes every level by default", {
   out <- setupCovExpressionsList(mock_data, "GENO")
-  expect_equal(expr_strings(out),
-               c("GENO == 1", "GENO == 2", "GENO == 3", "GENO == 4"))
+  expect_equal(
+    expr_strings(out),
+    c("GENO == 1", "GENO == 2", "GENO == 3", "GENO == 4")
+  )
 })
 
 test_that("includeReference = FALSE drops the reference level", {
   lowest <- setupCovExpressionsList(mock_data, "GENO", includeReference = FALSE)
   expect_equal(expr_strings(lowest), c("GENO == 2", "GENO == 3", "GENO == 4"))
 
-  named <- setupCovExpressionsList(mock_data, "GENO", includeReference = FALSE,
-                                   catRef = list(GENO = 2))
+  named <- setupCovExpressionsList(mock_data, "GENO",
+    includeReference = FALSE,
+    catRef = list(GENO = 2)
+  )
   expect_equal(expr_strings(named), c("GENO == 1", "GENO == 3", "GENO == 4"))
 
   expect_error(
-    setupCovExpressionsList(mock_data, "GENO", includeReference = FALSE,
-                            catRef = list(GENO = 9)),
+    setupCovExpressionsList(mock_data, "GENO",
+      includeReference = FALSE,
+      catRef = list(GENO = 9)
+    ),
     "not present in the data"
   )
 })
 
 test_that("continuous quantile split uses the probs quantiles", {
-  v  <- mock_data$WT[!duplicated(mock_data$ID)]
+  v <- mock_data$WT[!duplicated(mock_data$ID)]
   qs <- signif(stats::quantile(v, probs = c(0.1, 0.9), names = FALSE), 3)
 
   out <- setupCovExpressionsList(mock_data, "WT", probs = c(0.1, 0.9))
-  expect_equal(expr_strings(out),
-               c(paste0("WT < ", qs[1]), paste0("WT >= ", qs[2])))
+  expect_equal(
+    expr_strings(out),
+    c(paste0("WT < ", qs[1]), paste0("WT >= ", qs[2]))
+  )
   expect_equal(out$cdfCovsNames, c(paste0("WT <", qs[1]), paste0("WT >=", qs[2])))
 
   wide <- setupCovExpressionsList(mock_data, "WT", probs = c(0.25, 0.75))
@@ -78,13 +88,13 @@ test_that("continuous median split partitions the subjects", {
   out <- setupCovExpressionsList(mock_data, "WT", contSplit = "median")
   expect_equal(expr_strings(out), c(paste0("WT < ", m), paste0("WT >= ", m)))
 
-  lo <- sum(v <  m)
+  lo <- sum(v < m)
   hi <- sum(v >= m)
   expect_equal(lo + hi, length(v))
 })
 
 test_that("nsig rounds the threshold in expression and label", {
-  v  <- mock_data$CRP[!duplicated(mock_data$ID)]
+  v <- mock_data$CRP[!duplicated(mock_data$ID)]
   m2 <- signif(stats::median(v), 2)
   m3 <- signif(stats::median(v), 3)
   expect_false(identical(m2, m3)) # rounding is actually visible here
@@ -95,11 +105,15 @@ test_that("nsig rounds the threshold in expression and label", {
 })
 
 test_that("categorical additionalCov: own rows plus a condition on the others", {
-  out <- setupCovExpressionsList(mock_data, c("WT", "SEX"), contSplit = "median",
-                                 additionalCovs = list(FOOD = 1))
+  out <- setupCovExpressionsList(mock_data, c("WT", "SEX"),
+    contSplit = "median",
+    additionalCovs = list(FOOD = 1)
+  )
 
-  expect_equal(names(out$covExpressionsList),
-               c("WT", "WT", "SEX", "SEX", "FOOD", "FOOD"))
+  expect_equal(
+    names(out$covExpressionsList),
+    c("WT", "WT", "SEX", "SEX", "FOOD", "FOOD")
+  )
   es <- expr_strings(out)
   # every primary expression carries the FOOD condition
   expect_true(all(grepl("& FOOD == 1$", es[1:4])))
@@ -111,8 +125,10 @@ test_that("continuous additionalCov with prob places the condition at the quanti
   v <- mock_data$CRCL[!duplicated(mock_data$ID)]
   p <- signif(stats::quantile(v, probs = 0.5, names = FALSE), 3)
 
-  out <- setupCovExpressionsList(mock_data, "WT", contSplit = "median",
-                                 additionalCovs = list(CRCL = list(prob = 0.5, dir = "gt")))
+  out <- setupCovExpressionsList(mock_data, "WT",
+    contSplit = "median",
+    additionalCovs = list(CRCL = list(prob = 0.5, dir = "gt"))
+  )
   es <- expr_strings(out)
   expect_true(all(grepl(paste0("& CRCL > ", p, "$"), es[grepl("^WT", es)])))
   # CRCL own rows present, not self-conditioned
@@ -120,16 +136,22 @@ test_that("continuous additionalCov with prob places the condition at the quanti
 })
 
 test_that("continuous additionalCov with value and dir = lt", {
-  out <- setupCovExpressionsList(mock_data, "WT", contSplit = "median",
-                                 additionalCovs = list(CRCL = list(value = 118, dir = "lt")))
+  out <- setupCovExpressionsList(mock_data, "WT",
+    contSplit = "median",
+    additionalCovs = list(CRCL = list(value = 118, dir = "lt"))
+  )
   es <- expr_strings(out)
   expect_true(all(grepl("& CRCL < 118$", es[grepl("^WT", es)])))
 })
 
 test_that("multiple additionalCovs cross-condition each other but not themselves", {
-  out <- setupCovExpressionsList(mock_data, "WT", contSplit = "median",
-                                 additionalCovs = list(FOOD = 1,
-                                                       CRCL = list(prob = 0.25, dir = "gt")))
+  out <- setupCovExpressionsList(mock_data, "WT",
+    contSplit = "median",
+    additionalCovs = list(
+      FOOD = 1,
+      CRCL = list(prob = 0.25, dir = "gt")
+    )
+  )
   es <- setNames(expr_strings(out), names(out$covExpressionsList))
 
   wt <- es[names(es) == "WT"]
@@ -147,40 +169,53 @@ test_that("multiple additionalCovs cross-condition each other but not themselves
 })
 
 test_that("probs and minSubjects are validated", {
-  expect_error(setupCovExpressionsList(mock_data, "WT", probs = 0.5),
-               "length 2")
-  expect_error(setupCovExpressionsList(mock_data, "WT", minSubjects = 0),
-               "single number")
-  expect_error(setupCovExpressionsList(mock_data, "WT", minSubjects = c(1, 2)),
-               "single number")
+  expect_error(
+    setupCovExpressionsList(mock_data, "WT", probs = 0.5),
+    "length 2"
+  )
+  expect_error(
+    setupCovExpressionsList(mock_data, "WT", minSubjects = 0),
+    "single number"
+  )
+  expect_error(
+    setupCovExpressionsList(mock_data, "WT", minSubjects = c(1, 2)),
+    "single number"
+  )
 })
 
 test_that("additionalCovs argument is validated", {
-  expect_error(setupCovExpressionsList(mock_data, "WT", additionalCovs = list(1)),
-               "named list")
+  expect_error(
+    setupCovExpressionsList(mock_data, "WT", additionalCovs = list(1)),
+    "named list"
+  )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-                            additionalCovs = list(CRCL = 100)),
+      additionalCovs = list(CRCL = 100)
+    ),
     "continuous covariate"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-                            additionalCovs = list(CRCL = list(prob = 0.5))),
+      additionalCovs = list(CRCL = list(prob = 0.5))
+    ),
     "dir"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-                            additionalCovs = list(CRCL = list(prob = 1.5, dir = "gt"))),
+      additionalCovs = list(CRCL = list(prob = 1.5, dir = "gt"))
+    ),
     "in \\(0, 1\\)"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-                            additionalCovs = list(CRCL = list(prob = 0.5, value = 1, dir = "gt"))),
+      additionalCovs = list(CRCL = list(prob = 0.5, value = 1, dir = "gt"))
+    ),
     "exactly one of"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-                            additionalCovs = list(SEX = list(prob = 0.5, dir = "gt"))),
+      additionalCovs = list(SEX = list(prob = 0.5, dir = "gt"))
+    ),
     "categorical covariate"
   )
   expect_error(
@@ -189,7 +224,8 @@ test_that("additionalCovs argument is validated", {
   )
   expect_error(
     setupCovExpressionsList(mock_data, c("WT", "FOOD"),
-                            additionalCovs = list(FOOD = 1)),
+      additionalCovs = list(FOOD = 1)
+    ),
     "both primary and additional"
   )
 })
@@ -201,33 +237,42 @@ test_that("minSubjects stops when an expression selects too few subjects", {
   )
   # a restrictive additionalCov condition that empties a primary subset
   expect_error(
-    setupCovExpressionsList(mock_data, "WT", probs = c(0.05, 0.95),
-                            additionalCovs = list(CRCL = list(value = 157, dir = "gt"))),
+    setupCovExpressionsList(mock_data, "WT",
+      probs = c(0.05, 0.95),
+      additionalCovs = list(CRCL = list(value = 157, dir = "gt"))
+    ),
     "minSubjects"
   )
   # lowering the floor lets the same call through
-  out <- setupCovExpressionsList(mock_data, "WT", probs = c(0.02, 0.98),
-                                 minSubjects = 1)
+  out <- setupCovExpressionsList(mock_data, "WT",
+    probs = c(0.02, 0.98),
+    minSubjects = 1
+  )
   expect_type(out$covExpressionsList, "list")
 
   # a continuous additionalCov condition that empties the primary subsets
   expect_error(
     setupCovExpressionsList(mock_data, "SEX",
-                            additionalCovs = list(WT = list(value = 118, dir = "gt"))),
+      additionalCovs = list(WT = list(value = 118, dir = "gt"))
+    ),
     "minSubjects"
   )
 })
 
 test_that("labels follow the documented terse format", {
   out <- setupCovExpressionsList(mock_data, c("SEX", "GENO"))
-  expect_equal(out$cdfCovsNames, c("SEX 1", "SEX 2", "GENO 1", "GENO 2",
-                                   "GENO 3", "GENO 4"))
+  expect_equal(out$cdfCovsNames, c(
+    "SEX 1", "SEX 2", "GENO 1", "GENO 2",
+    "GENO 3", "GENO 4"
+  ))
 })
 
 test_that("duplicate subject records do not skew the quantiles or the level set", {
   no_dup <- mock_data[!duplicated(mock_data$ID), ]
-  expect_equal(setupCovExpressionsList(mock_data, c("WT", "GENO")),
-               setupCovExpressionsList(no_dup, c("WT", "GENO")))
+  expect_equal(
+    setupCovExpressionsList(mock_data, c("WT", "GENO")),
+    setupCovExpressionsList(no_dup, c("WT", "GENO"))
+  )
 })
 
 test_that("missing values are excluded, including a custom missVal", {
@@ -247,8 +292,10 @@ test_that("NA in a covariate column is dropped, not turned into a level", {
   d$GENO[d$ID %in% 1:3] <- NA
   out <- setupCovExpressionsList(d, "GENO")
   expect_false(any(grepl("NA", expr_strings(out))))
-  expect_equal(expr_strings(out),
-               c("GENO == 1", "GENO == 2", "GENO == 3", "GENO == 4"))
+  expect_equal(
+    expr_strings(out),
+    c("GENO == 1", "GENO == 2", "GENO == 3", "GENO == 4")
+  )
 
   # The categorical path sorts levels, and sort() drops NA on its own, so the
   # assertions above hold even without the explicit !is.na() filter. Only the
@@ -260,8 +307,10 @@ test_that("NA in a covariate column is dropped, not turned into a level", {
   expect_false(any(grepl("NA", expr_strings(contOut))))
 
   clean <- mock_data[!mock_data$ID %in% 1:3, ]
-  expect_equal(expr_strings(contOut),
-               expr_strings(setupCovExpressionsList(clean, "WT")))
+  expect_equal(
+    expr_strings(contOut),
+    expr_strings(setupCovExpressionsList(clean, "WT"))
+  )
 })
 
 test_that("quantiles that round onto the same cut point are warned about", {
@@ -271,10 +320,12 @@ test_that("quantiles that round onto the same cut point are warned about", {
   # and minSubjects cannot notice, because both rows are non-empty.
   set.seed(1)
   wt <- c(rep(60, 4), runif(92, 99.95, 100.05), rep(140, 4))
-  d  <- data.frame(ID = seq_along(wt), WT = wt)
+  d <- data.frame(ID = seq_along(wt), WT = wt)
 
-  expect_warning(out <- setupCovExpressionsList(d, "WT", idVar = "ID"),
-                 "both round to 100")
+  expect_warning(
+    out <- setupCovExpressionsList(d, "WT", idVar = "ID"),
+    "both round to 100"
+  )
   # the contradiction the warning is about: nobody falls in neither row.
   # Both rows are named "WT", so index by position - `$WT` finds only the first.
   rows <- out$covExpressionsList
@@ -291,8 +342,10 @@ test_that("quantiles that round onto the same cut point are warned about", {
 })
 
 test_that("covariate errors surface clearly", {
-  expect_error(setupCovExpressionsList(mock_data, "NOPE"),
-               "present in the data")
+  expect_error(
+    setupCovExpressionsList(mock_data, "NOPE"),
+    "present in the data"
+  )
 
   d <- mock_data
   d$AGE <- -99
@@ -302,8 +355,10 @@ test_that("covariate errors surface clearly", {
 test_that("a single-level covariate warns and emits one row", {
   d <- mock_data
   d$FORM <- 1
-  expect_warning(out <- setupCovExpressionsList(d, "FORM", minSubjects = 1),
-                 "only one non-missing level")
+  expect_warning(
+    out <- setupCovExpressionsList(d, "FORM", minSubjects = 1),
+    "only one non-missing level"
+  )
   expect_equal(expr_strings(out), "FORM == 1")
 })
 
@@ -325,8 +380,10 @@ test_that("output feeds straight into getForestDFemp()", {
     system.file("extdata", "SimVal/run7.ext", package = "PMXForest"),
     n = 15
   )
-  pf  <- function(thetas, df, ...) {
-    if (df$WT != -99) return(list(CL = thetas[4] * (df$WT / 75)^thetas[2]))
+  pf <- function(thetas, df, ...) {
+    if (df$WT != -99) {
+      return(list(CL = thetas[4] * (df$WT / 75)^thetas[2]))
+    }
     list(CL = thetas[4])
   }
   out <- setupCovExpressionsList(dfData, c("WT", "SEX", "GENO"), idVar = "ID")
@@ -360,9 +417,11 @@ test_that("median split keeps every empirical subset non-empty in the round trip
     system.file("extdata", "SimVal/run7.ext", package = "PMXForest"),
     n = 10
   )
-  pf  <- function(thetas, df, ...) list(CL = thetas[4])
-  out <- setupCovExpressionsList(dfData, c("WT", "AGE"), contSplit = "median",
-                                 idVar = "ID")
+  pf <- function(thetas, df, ...) list(CL = thetas[4])
+  out <- setupCovExpressionsList(dfData, c("WT", "AGE"),
+    contSplit = "median",
+    idVar = "ID"
+  )
 
   expect_error(
     getForestDFemp(
@@ -389,12 +448,14 @@ test_that("deterministic reference row from setupDfRefRow() drives getForestDFem
     system.file("extdata", "SimVal/run7.ext", package = "PMXForest"),
     n = 10
   )
-  pf     <- function(thetas, df, ...) list(CL = thetas[4])
-  covs   <- c("WT", "SEX")
+  pf <- function(thetas, df, ...) list(CL = thetas[4])
+  covs <- c("WT", "SEX")
   dfCovs <- setupDfCovs(dfData, covariates = covs, idVar = "ID")
-  dfRef  <- setupDfRefRow(dfCovs, dfData, covariates = covs, singleRef = TRUE,
-                          idVar = "ID")
-  out    <- setupCovExpressionsList(dfData, covariates = covs, idVar = "ID")
+  dfRef <- setupDfRefRow(dfCovs, dfData,
+    covariates = covs, singleRef = TRUE,
+    idVar = "ID"
+  )
+  out <- setupCovExpressionsList(dfData, covariates = covs, idVar = "ID")
 
   res <- getForestDFemp(
     dfData             = dfDataEmp,

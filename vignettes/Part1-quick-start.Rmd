@@ -75,7 +75,7 @@ are expanded to one row per level.
 
 ```{r}
 dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
-dfData   <- read.csv(dataFile)
+dfData <- read.csv(dataFile)
 
 covariates <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "RACEL2")
 
@@ -100,7 +100,6 @@ covariate column being absent entirely.
 
 ```{r}
 paramFunction <- function(thetas, df, ...) {
-
   CLFOOD <- 1
   if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) CLFOOD <- 1 + thetas[11]
 

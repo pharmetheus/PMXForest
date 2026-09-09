@@ -7,7 +7,7 @@ test_data <- tibble::tribble(
   1, 60.5, 0, 1, 22.1, 50,
   1, 61.0, 0, 1, 22.4, 50,
   2, 70.2, 1, 2, 25.3, 100,
-  3, 80.8, 0, 3, -99,  150,
+  3, 80.8, 0, 3, -99, 150,
   4, 65.1, 1, 1, 23.5, 100,
   5, 90.3, 0, 2, 28.9, 200
 )
@@ -47,13 +47,15 @@ test_that("a genuine NA is dropped, like missVal, and not treated as a level", {
   # `x != missVal` is NA where x is NA, and logical-NA row indexing keeps an
   # all-NA row instead of dropping it. The leaked NA used to be counted as a
   # third level, silently switching a binary covariate to the one-hot branch.
-  n  <- 40
-  df <- data.frame(ID = seq_len(n),
-                   SEX = rep(0:1, length.out = n),
-                   WT  = seq(50, 120, length.out = n))
+  n <- 40
+  df <- data.frame(
+    ID = seq_len(n),
+    SEX = rep(0:1, length.out = n),
+    WT = seq(50, 120, length.out = n)
+  )
   withNA <- df
   withNA$SEX[c(3, 8)] <- NA
-  withNA$WT[c(5, 9)]  <- NA
+  withNA$WT[c(5, 9)] <- NA
 
   # binary: still the documented sorted vector, not a nested one-hot list
   expect_equal(getCovStats(withNA, "SEX", idVar = "ID")$SEX, c(0L, 1L))
@@ -68,24 +70,34 @@ test_that("a genuine NA is dropped, like missVal, and not treated as a level", {
   # NA and missVal are treated the same way
   asMissVal <- df
   asMissVal$WT[c(5, 9)] <- -99
-  expect_equal(getCovStats(withNA, "WT", idVar = "ID"),
-               getCovStats(asMissVal, "WT", idVar = "ID"))
+  expect_equal(
+    getCovStats(withNA, "WT", idVar = "ID"),
+    getCovStats(asMissVal, "WT", idVar = "ID")
+  )
 })
 
 test_that("a covariate with no non-missing value is refused, not dropped", {
   # setupDfCovs() used to emit zero rows for such a covariate, so it vanished
   # from the forest plot with no error. refValues() already stopped here.
   df <- data.frame(ID = 1:5, WT = c(60, 70, 80, 90, 100), AGE = rep(-99, 5))
-  expect_error(getCovStats(df, "AGE", idVar = "ID"),
-               "contains only missing values")
-  expect_error(getCovStats(df, c("WT", "AGE"), idVar = "ID"),
-               "contains only missing values")
-  expect_error(setupDfCovs(df, covariates = c("WT", "AGE"), idVar = "ID"),
-               "contains only missing values")
+  expect_error(
+    getCovStats(df, "AGE", idVar = "ID"),
+    "contains only missing values"
+  )
+  expect_error(
+    getCovStats(df, c("WT", "AGE"), idVar = "ID"),
+    "contains only missing values"
+  )
+  expect_error(
+    setupDfCovs(df, covariates = c("WT", "AGE"), idVar = "ID"),
+    "contains only missing values"
+  )
   # all-NA is refused the same way as all-missVal
   df$AGE <- NA_real_
-  expect_error(getCovStats(df, "AGE", idVar = "ID"),
-               "contains only missing values")
+  expect_error(
+    getCovStats(df, "AGE", idVar = "ID"),
+    "contains only missing values"
+  )
 })
 
 test_that("Function correctly handles multi-level categorical covariates", {
@@ -157,7 +169,8 @@ test_that("getCovStats consistently sorts binary covariates regardless of appear
 
   # The output vector should be strictly sorted: c(0, 1)
   expect_equal(as.numeric(stats$TRT), c(0, 1),
-               info = "Binary covariates are not being properly sorted.")
+    info = "Binary covariates are not being properly sorted."
+  )
 })
 
 # --- refLevels and sep (added for the one-hot encoding refinement) ---
