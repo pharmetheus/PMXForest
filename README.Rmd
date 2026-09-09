@@ -134,7 +134,7 @@ dfres <- getForestDFSCM(
 
 With the above information is an easy task to generate the Forest plot.
 
-```{r,fig.width=11}
+```{r,fig.width=12}
 forestPlot(dfres, groupNameLabels = covariateGroupNames, size = 10)
 ```
 
