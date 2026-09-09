@@ -45,10 +45,32 @@ test_that("arithmetic keeps NONMEM's meaning", {
   expect_equal(r_of("A-(B-C)"), "A - (B - C)")
   expect_equal(r_of("A/B/C"),   "A / B / C")
   expect_equal(r_of("A/(B/C)"), "A / (B / C)")
-  # ** is right-associative in Fortran, as ^ is in R
-  expect_equal(eval(parse(text = gsub("A|B|C", "2", r_of("A**B**C")))), 2^(2^2))
+  # ** is right-associative in Fortran, as ^ is in R. The values must differ:
+  # with 2,2,2 both associativities give 16, so the assertion could not fail.
+  expect_equal(eval(parse(text = chartr("ABC", "232", r_of("A**B**C")))), 2^(3^2))
   # unary minus binds looser than a power: -2**2 is -4
   expect_equal(eval(parse(text = r_of("-2**2"))), -4)
+})
+
+test_that("MOD() keeps Fortran's meaning, not R's `%%`", {
+  # `%%` is wrong twice over, so neither half may be reintroduced.
+
+  # 1. Precedence. MOD() is a call, but `%any%` binds tighter than * and / in
+  #    R, so emitting `%%` turned MOD(A*B, C) into A * (B %% C).
+  expect_equal(eval(parse(text = chartr("ABC", "732", r_of("MOD(A*B,C)")))), 1)
+  expect_equal(eval(parse(text = chartr("ABC", "732", r_of("MOD(A/B,C)")))),
+               (7 / 3) - 2 * trunc((7 / 3) / 2))
+  # and MOD() nested inside an outer operator stays intact
+  expect_equal(eval(parse(text = chartr("ABC", "732", r_of("C*MOD(A,B)")))), 2)
+
+  # 2. Sign. Fortran MOD() truncates towards zero, `%%` floors, so they differ
+  #    for a negative first argument: MOD(-7, 3) is -1, but -7 %% 3 is 2.
+  expect_equal(eval(parse(text = r_of("MOD(-7,3)"))), -1)
+  expect_equal(eval(parse(text = r_of("MOD(7,-3)"))), 1)
+  expect_equal(eval(parse(text = r_of("MOD(-7,-3)"))), -1)
+
+  expect_false(grepl("%%", r_of("MOD(A,B)"), fixed = TRUE))
+  expect_error(r_of("MOD(A)"), "exactly two arguments")
 })
 
 test_that("intrinsic functions map to R", {
