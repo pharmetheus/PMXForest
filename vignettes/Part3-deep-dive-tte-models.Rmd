@@ -100,8 +100,10 @@ different x-axis scales. `paramFunctionCDF()` calls `paramFunctionHR()`, and the
 extra arguments it needs (`functHR`, `TIME`) are passed through from
 `getForestDFSCM()`.
 
-Both functions guard for absent covariate columns and for the `-99` indicator, as
-in the [Walkthrough](Part2-walkthrough.html).
+Both functions guard for absent covariate columns and for the `-99` indicator.
+That contract — and why the `-99` guard is needed even when the data has no
+missing values — is set out in
+[Preparing Forest plot inputs, Section 2.1](Part3-deep-dive-forest-plot-inputs.html).
 
 ```{r}
 ## Hazard ratio relative to the reference subject
