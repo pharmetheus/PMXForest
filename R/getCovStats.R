@@ -75,7 +75,15 @@ getCovStats <- function (data, covariates, minLevels = 10, probs = c(0.05, 0.95)
 
   retList <- list()
   for (myCov in covariates) {
-    dataTmp <- data[data[[myCov]] != missVal, ]
+    ## `x != missVal` is NA where x is NA, and indexing rows by a logical NA
+    ## keeps an all-NA row rather than dropping it. That leaked NA used to be
+    ## counted as a level (turning a binary covariate into a one-hot list) and
+    ## to reach quantile(), whose na.rm is FALSE. Drop it explicitly, as
+    ## refValues() and setupCovExpressionsList() already do.
+    dataTmp <- data[!is.na(data[[myCov]]) & data[[myCov]] != missVal, ]
+    if (nrow(dataTmp) == 0) {
+      stop("Covariate ", myCov, " contains only missing values.", call. = FALSE)
+    }
     if (length(unique(dataTmp[[myCov]])) <= minLevels) {
       numLevs <- length(unique(dataTmp[[myCov]]))
       if (numLevs == 2) {
