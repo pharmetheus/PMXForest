@@ -93,7 +93,10 @@ test_that("setCOVEFF works properly", {
   )
 
   ## The print names of the covariates
-  covariates <- c("NCI", "Formulation", "Food status", "2D6 genotype", "Race", "Weight", "Age", "Createnine\nclearance", "Sex")
+  covariates <- c(
+    "NCI", "Formulation", "Food status", "2D6 genotype", "Race", "Weight", "Age",
+    "Createnine\nclearance", "Sex"
+  )
 
   noBaseThetas <- 14
 

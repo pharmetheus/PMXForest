@@ -43,7 +43,8 @@ Inside a `knitr` / R Markdown chunk the caption reads
 }
 \examples{
 library(ggplot2)
-p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+p <- ggplot(mtcars, aes(wt, mpg)) +
+  geom_point()
 addStamp(p)
 
 }

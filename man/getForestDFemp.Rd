@@ -39,7 +39,8 @@ getForestDFemp(
 
 \item{dfParameters}{A data frame with parameter samples from the uncertainty distribution.
 The vector of final parameter estimates is assumed to be in the first row.
-The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.}
+The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ
+columns whichshould not be included.}
 
 \item{cdfCovsNames}{A string vector with names of the rows in dfCovs, if not used, names will be
 automatically assigned based on the covariate values and column names in dfCovs.}
@@ -52,19 +53,26 @@ but functionListName must contain the names with a length of all return for all 
 
 \item{strID}{The label of the subject identifier column in dfData. Default is ID.}
 
-\item{quiet}{If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)}
+\item{quiet}{If output should be allowed during the function call, default= TRUE. (This option
+is mainly for debugging purposes.)}
 
-\item{metricFunction}{The function to use to summarize the parameter values in each covariate category. Default is mean.}
+\item{metricFunction}{The function to use to summarize the parameter values in each covariate
+category. Default is mean.}
 
-\item{probs}{A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}
+\item{probs}{A vector of probabilities that should be computed for each of the parameters from
+functionList. These will be used as the
+as the uncertainties in the Forest plots. The probs vector position one and two will be used
+for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).}
 
-\item{pointFunction}{The function used to calculate the point for each covariate in the forest plot. default=median
+\item{pointFunction}{The function used to calculate the point for each covariate in the forest
+plot. default=median
 This function is also used for the reference covariate combination}
 
-\item{dfRefRow}{A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.}
+\item{dfRefRow}{A data frame  (one row or equal number of rows as dfCovs) with the covariate
+values that will be used as the reference, if NULL the typical subject is used as reference.}
 
-\item{cGrouping}{A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.}
+\item{cGrouping}{A vector of the same length as covExpressionList to indicate groupings of
+covariates. Default is no grouping. See example.}
 
 \item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization}
 
@@ -95,7 +103,7 @@ A data frame
 getForestDFemp
 }
 \examples{
-dfData  <- read.csv(
+dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
 )
 extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")

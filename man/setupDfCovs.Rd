@@ -103,16 +103,22 @@ setupDfCovs(dfData, covariates = c("WT", "AGE", "SEX", "GENO"), idVar = "ID")
 
 # CRCL as an additionalCov: it sits at its median on the WT/SEX rows
 # instead of at missVal.
-setupDfCovs(dfData, covariates = c("WT", "SEX"), additionalCovs = "CRCL",
-            idVar = "ID")
+setupDfCovs(dfData,
+  covariates = c("WT", "SEX"), additionalCovs = "CRCL",
+  idVar = "ID"
+)
 
 # useMissVal = FALSE: inactive primary covariates also hold their reference
-setupDfCovs(dfData, covariates = c("WT", "SEX"), useMissVal = FALSE,
-            idVar = "ID")
+setupDfCovs(dfData,
+  covariates = c("WT", "SEX"), useMissVal = FALSE,
+  idVar = "ID"
+)
 
 # Align the GENO one-hot columns with a model whose reference genotype is 2
-setupDfCovs(dfData, covariates = c("WT", "GENO"), catRef = list(GENO = 2),
-            idVar = "ID")
+setupDfCovs(dfData,
+  covariates = c("WT", "GENO"), catRef = list(GENO = 2),
+  idVar = "ID"
+)
 }
 \seealso{
 \code{\link{getCovStats}}, \code{\link{createInputForestData}}

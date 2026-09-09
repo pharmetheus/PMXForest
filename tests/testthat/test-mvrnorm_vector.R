@@ -20,7 +20,7 @@ test_that("mvrnorm_vector samples correctly", {
   mu <- as.numeric(finPar[, -(c(1, ncol(finPar)))])
 
   fixedmu <- rep(FALSE, ncol(sigma))
-  for (j in 1:ncol(sigma)) {
+  for (j in seq_len(ncol(sigma))) {
     fixedmu[j] <- all(sigma[, j] == 0)
   }
 

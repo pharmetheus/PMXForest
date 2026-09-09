@@ -11,7 +11,8 @@ getPlotVars(plotRelative = TRUE, noVar = FALSE, reference = "func")
 
 \item{noVar}{Should the uncertainty in the reference be included (FALSE) or not (TRUE)}
 
-\item{reference}{Which reference should be used, the final parameter estimates (final) or the parameter function (func)}
+\item{reference}{Which reference should be used, the final parameter estimates (final) or the
+parameter function (func)}
 }
 \value{
 A vector with the names from dfres to use for POINT, q1, q2 and ref

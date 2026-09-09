@@ -7,7 +7,8 @@
 #' @keywords internal
 #' @param plotRelative Should the plot be made on the relative scale (TRUE or FALSE)
 #' @param noVar Should the uncertainty in the reference be included (FALSE) or not (TRUE)
-#' @param reference Which reference should be used, the final parameter estimates (final) or the parameter function (func)
+#' @param reference Which reference should be used, the final parameter estimates (final) or the
+#'   parameter function (func)
 #'
 #' @return A vector with the names from dfres to use for POINT, q1, q2 and ref
 #'
@@ -35,7 +36,10 @@ getPlotVars <- function(plotRelative = TRUE, noVar = FALSE, reference = "func") 
   } else if (!plotRelative & !noVar & reference == "final") {
     stop("The combination of plotRelative=FALSE and noVar=FALSE is not possible\n.")
   } else if (plotRelative & noVar & reference == "func") {
-    vars <- c(REF = "REFFUNC", point = "POINT_NOVAR_REL_REFFUNC", q1 = "Q1_NOVAR_REL_REFFUNC", q2 = "Q2_NOVAR_REL_REFFUNC")
+    vars <- c(
+      REF = "REFFUNC", point = "POINT_NOVAR_REL_REFFUNC",
+      q1 = "Q1_NOVAR_REL_REFFUNC", q2 = "Q2_NOVAR_REL_REFFUNC"
+    )
   } else if (plotRelative & noVar & reference == "final") {
     stop("The combination of plotRelative=TRUE, noVar=TRUE and reference=final is not possible\n.")
   } else if (plotRelative & !noVar & reference == "func") {

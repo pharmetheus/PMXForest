@@ -148,17 +148,22 @@ out$noBaseThetas
 
 ## Read it in and use it like any other parameter function
 paramFunction <- eval(parse(text = out$code))
-paramFunction(thetas = rep(1, out$noBaseThetas),
-              df     = data.frame(WT = 90, FOOD = 0))
+paramFunction(
+  thetas = rep(1, out$noBaseThetas),
+  df = data.frame(WT = 90, FOOD = 0)
+)
 
 ## Append secondary parameters. An entry is a snippet, an .R file path, or
 ## a list with `source` plus constants the code needs:
 out2 <- createParamFunction(
-  modFile, parameters = c("CL", "V"), quiet = TRUE,
+  modFile,
+  parameters = c("CL", "V"), quiet = TRUE,
   secondary = list(
-    AUC24 = list(source = "dose / CL", dose = 100),   # constant `dose`
-    KEL   = "CL / V"))
-out2$functionListName        # c("CL", "V", "AUC24", "KEL")
+    AUC24 = list(source = "dose / CL", dose = 100), # constant `dose`
+    KEL   = "CL / V"
+  )
+)
+out2$functionListName # c("CL", "V", "AUC24", "KEL")
 cat(out2$code, sep = "\n")
 }
 \seealso{

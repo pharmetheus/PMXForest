@@ -6,8 +6,10 @@
 #' @import dplyr
 #'
 #' @param covExpressionsList A list of expressions that define the covariate values to visualize in the Forest plot.
-#' @param metricFunction The function to use to summarize the parameter values in each covariate category. Default is mean.
-#' @param cGrouping A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.
+#' @param metricFunction The function to use to summarize the parameter values in each covariate
+#'   category. Default is mean.
+#' @param cGrouping A vector of the same length as covExpressionList to indicate groupings of
+#'   covariates. Default is no grouping. See example.
 #' @param dfData A data.frame with the observed data to be used in the empirical Forest plot calculations.
 #' @param strID The label of the subject identifier column in dfData. Default is ID.
 #'
@@ -80,7 +82,9 @@ getForestDFemp <- function(dfData,
                            oneHotSep = "_",
                            ...) {
   ## Check input
-  if (!is.null(cdfCovsNames) & (length(cdfCovsNames) != length(covExpressionsList))) stop("cdfCovsNames should have the same length as covExpressionsList.")
+  if (!is.null(cdfCovsNames) & (length(cdfCovsNames) != length(covExpressionsList))) {
+    stop("cdfCovsNames should have the same length as covExpressionsList.")
+  }
 
   ## Remove samples with problems. Will use THETA1 == NA as an indicator for a problematic samples
   dfParameters <- dfParameters %>% filter(!is.na(THETA1))
@@ -95,11 +99,15 @@ getForestDFemp <- function(dfData,
 
   if (!is.null(dfRefRow) && ((is.data.frame(dfRefRow) && nrow(dfRefRow) != 1 && nrow(dfRefRow) != nrow(dfCovs)) ||
     (is.expression(dfRefRow[[1]]) && length(dfRefRow) != 1 && length(dfRefRow) != nrow(dfCovs)))) {
-    stop("The number of reference rows/expressions (dfRefRow) should be either NULL (missing used as reference), one (this row used as reference) or equal to covExpressionsList (change reference for each covariate expression)")
+    stop(
+      "The number of reference rows/expressions (dfRefRow) should be either NULL (missing used as ",
+      "reference), one (this row used as reference) or equal to covExpressionsList (change reference ",
+      "for each covariate expression)"
+    )
   }
 
   resList <- list()
-  dfData$TMPINDEX1 <- 1:nrow(dfData) # Add a temp index to row evaluate later on
+  dfData$TMPINDEX1 <- seq_len(nrow(dfData)) # Add a temp index to row evaluate later on
 
   ## Optionally one-hot encode raw multi-level categorical columns in the data so
   ## the same parameter function used for the parametric workflow also works here.
@@ -124,7 +132,7 @@ getForestDFemp <- function(dfData,
     }
   }
 
-  if (is.null(cGrouping)) cGrouping <- 1:length(covExpressionsList)
+  if (is.null(cGrouping)) cGrouping <- seq_along(covExpressionsList)
 
   groupnames <- names(covExpressionsList)
 
@@ -149,9 +157,9 @@ getForestDFemp <- function(dfData,
     v_NAME <- character(nRow)
     v_VALUE <- numeric(nRow)
     p <- 0L
-    for (m in 1:nrow(dfData)) {
+    for (m in seq_len(nrow(dfData))) {
       n <- 1L
-      for (j in 1:length(functionList)) {
+      for (j in seq_along(functionList)) {
         val <- functionList[[j]](thetas = thetas, df = dfData[m, ], ...)
         for (l in seq_along(val)) {
           p <- p + 1L
@@ -178,10 +186,10 @@ getForestDFemp <- function(dfData,
     dfvalbase <- data.frame() # Prepare for a different reference per expressionList index
     # The default ref=1
     valbase <- rep(1, length(functionListName))
-    for (m in 1:length(covExpressionsList)) { # Allow different ref rows per covExpressionList
+    for (m in seq_along(covExpressionsList)) { # Allow different ref rows per covExpressionList
       n <- 1
       # Calculate the ref for this sample
-      for (j in 1:length(functionList)) {
+      for (j in seq_along(functionList)) {
         if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) {
           if (m == 1 || nrow(dfRefRow) > 1) {
             valbase_tmp <- functionList[[j]](thetas = thetas, df = dfRefRow[min(m, nrow(dfRefRow)), ], ...)
@@ -198,8 +206,9 @@ getForestDFemp <- function(dfData,
     }
 
 
-    if (is.null(dfRefRow)) { # Calculate a reference based on observed data. Set the reference to the `metricFunction` of the typical individual predictions
-      for (j in 1:length(functionListName)) {
+    if (is.null(dfRefRow)) { # Calculate a reference based on observed data. Set the reference to
+      # the `metricFunction` of the typical individual predictions
+      for (j in seq_along(functionListName)) {
         valbase[j] <- metricFunction(subset(dftmp, ITER == k & NAME == functionListName[j])$VALUE)
       }
       dfvalbase <- as.data.frame(data.frame(rbind(valbase))[rep(1, length(covExpressionsList)), ])
@@ -208,7 +217,7 @@ getForestDFemp <- function(dfData,
     ## Compute statistic for each "cov value"
     rest <- vector("list", length(covExpressionsList) * nOut)
     q <- 0L
-    for (i in 1:length(covExpressionsList)) { # For all rows in the forestPlot
+    for (i in seq_along(covExpressionsList)) { # For all rows in the forestPlot
       # Get the subjects included in this Expression
       subjs <- subset(dfData, eval(covExpressionsList[[i]]))$TMPINDEX1
       if (is.null(subjs) || length(subjs) == 0) {
@@ -231,7 +240,7 @@ getForestDFemp <- function(dfData,
       }
 
 
-      for (m in 1:length(functionListName)) {
+      for (m in seq_along(functionListName)) {
         # Get the metric value
         val <- metricFunction(subset(dft, NAME == functionListName[m])$VALUE)
         # Get the metric ref value if expression ref
@@ -256,7 +265,7 @@ getForestDFemp <- function(dfData,
 
   if (ncores > 1) {
     parts <- foreach(
-      k = 1:nrow(dfParameters), .packages = cstrPackages,
+      k = seq_len(nrow(dfParameters)), .packages = cstrPackages,
       ## Bundle the whole local environment for PSOCK workers (Windows); foreach's
       ## static global detection does not reliably follow `internalCalc`'s free
       ## variables. `cstrExports` covers anything outside this frame.
@@ -267,12 +276,12 @@ getForestDFemp <- function(dfData,
     }
   } else {
     parts <- vector("list", nrow(dfParameters))
-    for (k in 1:nrow(dfParameters)) parts[[k]] <- internalCalc(k)
+    for (k in seq_len(nrow(dfParameters))) parts[[k]] <- internalCalc(k)
   }
   dfres <- bind_rows(parts)
 
   dfret <- data.frame()
-  for (i in 1:length(covExpressionsList)) {
+  for (i in seq_along(covExpressionsList)) {
     if (is.null(cdfCovsNames)) {
       covname <- as.character(covExpressionsList[[i]])
     } else {
@@ -281,12 +290,12 @@ getForestDFemp <- function(dfData,
     group <- cGrouping[i]
     groupname <- groupnames[i]
 
-    for (j in 1:length(functionListName)) {
+    for (j in seq_along(functionListName)) {
       dft <- dfres[dfres$COVS == i & dfres$NAME == functionListName[j] &
         dfres$SUBJ == -1, ]
       quant <- quantile(dft$VALUE,
         probs = probs, names = FALSE,
-        na.rm = T
+        na.rm = TRUE
       )
       # Calculate the point value of the forest plot
       FUNCVAL <- pointFunction(dft$VALUE)
@@ -294,7 +303,7 @@ getForestDFemp <- function(dfData,
       # Define the relative without parameter uncertainty
       dft$RELINTERNAL <- dft$VALUE / dft$VALUEBASE
       # Get quantile and pointvalue when uncertainty is not taken into account
-      quantrel <- quantile(dft$RELINTERNAL, probs = probs, names = FALSE, na.rm = T)
+      quantrel <- quantile(dft$RELINTERNAL, probs = probs, names = FALSE, na.rm = TRUE)
       FUNCNOVAR <- pointFunction(dft$RELINTERNAL)
 
       # Calculate reference value based one the pointFunction
@@ -306,8 +315,16 @@ getForestDFemp <- function(dfData,
       # stay ordered as lower/upper even when the reference value is negative.
       # Fall back to quant/base when the base is NA so an all-NA reference yields
       # NA columns rather than erroring in quantile().
-      quant_reffunc <- if (is.na(func_base)) quant / func_base else quantile(dft$VALUE / func_base, probs = probs, names = FALSE, na.rm = T)
-      quant_reffinal <- if (is.na(true_base)) quant / true_base else quantile(dft$VALUE / true_base, probs = probs, names = FALSE, na.rm = T)
+      quant_reffunc <- if (is.na(func_base)) {
+        quant / func_base
+      } else {
+        quantile(dft$VALUE / func_base, probs = probs, names = FALSE, na.rm = TRUE)
+      }
+      quant_reffinal <- if (is.na(true_base)) {
+        quant / true_base
+      } else {
+        quantile(dft$VALUE / true_base, probs = probs, names = FALSE, na.rm = TRUE)
+      }
       dfrow <- cbind(data.frame(COV = as.character(covExpressionsList[[i]])), data.frame(
         GROUP = group,
         GROUPNAME = groupname,
@@ -316,14 +333,14 @@ getForestDFemp <- function(dfData,
         POINT_REL_REFFUNC = FUNCVAL / func_base, POINT_REL_REFFINAL = FUNCVAL / true_base,
         COVEFF = !all(dft$RELINTERNAL == 1)
       ))
-      for (k in 1:length(probs)) {
+      for (k in seq_along(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k)]] <- quant[k]
         dfp[[paste0("Q", k, "_REL_REFFUNC")]] <- quant_reffunc[k]
         dfp[[paste0("Q", k, "_REL_REFFINAL")]] <- quant_reffinal[k]
         dfrow <- cbind(dfrow, dfp[, 2:4])
       }
-      for (k in 1:length(probs)) {
+      for (k in seq_along(probs)) {
         dfp <- data.frame(X1 = 1)
         dfp[[paste0("Q", k, "_NOVAR_REL_REFFUNC")]] <- quantrel[k]
         dfrow <- cbind(dfrow, dfp[, 2])

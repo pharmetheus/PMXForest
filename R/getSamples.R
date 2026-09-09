@@ -96,7 +96,9 @@ getSamples <- function(input,
     if (!file.exists(extFile)) stop(paste("Can not find", extFile))
   }
 
-  if (class(input) != "data.frame" && tools::file_ext(input) == "csv" && is.null(extFile)) stop("Need to provide an .ext file when input is a .csv file.")
+  if (class(input) != "data.frame" && tools::file_ext(input) == "csv" && is.null(extFile)) {
+    stop("Need to provide an .ext file when input is a .csv file.")
+  }
 
   # Load the ext data
   # This section ensures dfExt is available for all subsequent blocks
@@ -171,7 +173,7 @@ getSamples <- function(input,
 
     # Get the parameters which are fixed based on the covariance
     fixedmu <- rep(FALSE, 1, ncol(sigma))
-    for (j in 1:ncol(sigma)) {
+    for (j in seq_len(ncol(sigma))) {
       fixedmu[j] <- all(sigma[, j] == 0)
     }
     # Draw n samples from cov matrix
@@ -253,7 +255,7 @@ getSamples <- function(input,
 
       # Get the parameters which are fixed based on the covariance
       fixedmu <- rep(FALSE, 1, ncol(sigma))
-      for (j in 1:ncol(sigma)) {
+      for (j in seq_len(ncol(sigma))) {
         fixedmu[j] <- all(sigma[, j] == 0)
       }
 

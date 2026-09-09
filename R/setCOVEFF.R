@@ -1,6 +1,7 @@
 #' setCOVEFF
 #'
-#' @description Set the COEFF column in dfes to TRUE based on user input. Used to specify which covariates that are significant in an SCM.
+#' @description Set the COEFF column in dfes to TRUE based on user input. Used to specify which
+#'   covariates that are significant in an SCM.
 #' @inheritParams setupForestPlotData
 #'
 #' @param lsTrue List of two element vectors that specify parameter and covariate combination to set to TRUE.

@@ -150,24 +150,31 @@ dfData <- read.csv(
 )
 
 # Continuous -> quantile-tail rows; SEX -> both levels; GENO -> one row per level
-out <- setupCovExpressionsList(dfData, covariates = c("WT", "SEX", "GENO"),
-                               idVar = "ID")
+out <- setupCovExpressionsList(dfData,
+  covariates = c("WT", "SEX", "GENO"),
+  idVar = "ID"
+)
 out$covExpressionsList
 out$cdfCovsNames
 
 # Median split instead of quantile tails
-setupCovExpressionsList(dfData, covariates = "WT", contSplit = "median",
-                        idVar = "ID")$covExpressionsList
+setupCovExpressionsList(dfData,
+  covariates = "WT", contSplit = "median",
+  idVar = "ID"
+)$covExpressionsList
 
 # Drop the reference genotype (level 2) from the GENO rows
-setupCovExpressionsList(dfData, covariates = "GENO", includeReference = FALSE,
-                        catRef = list(GENO = 2),
-                        idVar = "ID")$covExpressionsList
+setupCovExpressionsList(dfData,
+  covariates = "GENO", includeReference = FALSE,
+  catRef = list(GENO = 2),
+  idVar = "ID"
+)$covExpressionsList
 
 # FOOD as a categorical additional covariate and CRCL as a continuous one:
 # every WT/SEX row is also conditioned on FOOD == 1 and CRCL above its lower quartile
 setupCovExpressionsList(
-  dfData, covariates = c("WT", "SEX"), contSplit = "median",
+  dfData,
+  covariates = c("WT", "SEX"), contSplit = "median",
   additionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
   idVar = "ID"
 )$covExpressionsList

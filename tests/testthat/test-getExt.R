@@ -15,9 +15,21 @@ test_that("getExt handles all logic branches", {
 
   # --- Test Fixtures ---
   file_1_table <- create_file("one_table.ext", c("TABLE NO. 1", "ITERATION TVAL", "-1000000000 1.1"))
-  file_2_tables <- create_file("two_tables.ext", c("TABLE NO. 1", "ITERATION TVAL", "-1000000000 1.1", "TABLE NO. 2", "ITERATION TVAL", "-1000000000 2.2"))
-  file_3_tables <- create_file("three_tables.ext", c("TABLE NO. 1", "ITERATION TVAL", "-1000000000 1.1", "TABLE NO. 2", "ITERATION TVAL", "-1000000000 2.2", "TABLE NO. 3", "ITERATION TVAL", "-1000000000 3.3"))
-  file_4_tables <- create_file("four_tables.ext", c("TABLE NO. 1", "A B", "1 1", "TABLE NO. 2", "C D", "2 2", "TABLE NO. 3", "E F", "3 3", "TABLE NO. 4", "ITERATION TVAL", "-1000000000 4.4"))
+  file_2_tables <- create_file("two_tables.ext", c(
+    "TABLE NO. 1", "ITERATION TVAL", "-1000000000 1.1",
+    "TABLE NO. 2", "ITERATION TVAL", "-1000000000 2.2"
+  ))
+  file_3_tables <- create_file("three_tables.ext", c(
+    "TABLE NO. 1", "ITERATION TVAL", "-1000000000 1.1",
+    "TABLE NO. 2", "ITERATION TVAL", "-1000000000 2.2",
+    "TABLE NO. 3", "ITERATION TVAL", "-1000000000 3.3"
+  ))
+  file_4_tables <- create_file("four_tables.ext", c(
+    "TABLE NO. 1", "A B", "1 1",
+    "TABLE NO. 2", "C D", "2 2",
+    "TABLE NO. 3", "E F", "3 3",
+    "TABLE NO. 4", "ITERATION TVAL", "-1000000000 4.4"
+  ))
   file_no_table <- create_file("no_table.ext", c("HEADER LINE", "ITERATION TVAL", "1 1.1"))
 
   # --- Test Cases ---

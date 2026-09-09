@@ -189,7 +189,8 @@ test_that("Forest plots for EMP works properly", {
       "AGE" = expression(AGE >= 57), "AGE" = expression(AGE < 35),
       "WT" = expression(WT > 104), "WT" = expression(WT < 70),
       "RACE" = expression(RACEL == 3), "RACE" = expression(RACEL == 2), "RACE" = expression(RACEL == 1),
-      "GENO" = expression(GENO == 4), "GENO" = expression(GENO == 3), "GENO" = expression(GENO == 2), "GENO" = expression(GENO == 1),
+      "GENO" = expression(GENO == 4), "GENO" = expression(GENO == 3),
+      "GENO" = expression(GENO == 2), "GENO" = expression(GENO == 1),
       "FOOD" = expression(FOOD == 1), "FOOD" = expression(FOOD == 0),
       "FORM" = expression(FORM == 1), "FORM" = expression(FORM == 0),
       "NCI" = expression(NCIL == 1), "NCI" = expression(NCIL == 0)

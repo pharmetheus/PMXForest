@@ -17,13 +17,13 @@ addMissingColumns(dfParams, dfExt, zerosindex)
 A data frame with a structure similar to a NONMEM ext file.
 }
 \description{
-Transforms a PsN raw reasults file to a format that is the same as a NONMEM ext file. This involves adding
-columns for fixed parameters, rearranging and renaming columns.
+Transforms a PsN raw reasults file to a format that is the same as a NONMEM ext
+  file. This involves adding columns for fixed parameters, rearranging and renaming columns.
 }
 \examples{
 \dontrun{
 dfParameters <- read.csv(file = input, header = TRUE)
-dfExt        <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
+dfExt <- subset(getExt(extFile = extFile), ITERATION == "-1000000000")
 dfParameters <- addMissingColumns(dfParameters, dfExt)
 }
 

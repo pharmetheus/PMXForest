@@ -66,12 +66,14 @@ Function that gets samples, either from a regular bootstrap (PsN
   provide a manually aligned data.frame to `extFile`.
 }
 \examples{
-covFile  <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
-extFile  <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
+extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
 bootFile <- system.file("extdata", "SimVal/bs7.dir/raw_results_run7bs.csv",
-                        package = "PMXForest")
-sirFile  <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv",
-                        package = "PMXForest")
+  package = "PMXForest"
+)
+sirFile <- system.file("extdata", "SimVal/sir7.dir/raw_results_run7.csv",
+  package = "PMXForest"
+)
 
 # Covariance matrix: n draws from the implied multivariate normal
 mySamplesCov <- getSamples(covFile, extFile, n = 50)
@@ -87,6 +89,6 @@ mySamplesSir <- getSamples(sirFile, extFile)
 
 # A plain numeric data frame of parameter vectors is also a valid input
 dfParameters <- getSamples(bootFile, extFile)
-getSamples(dfParameters)          # use the rows as-is
-getSamples(dfParameters, n = 50)  # or resample from their covariance
+getSamples(dfParameters) # use the rows as-is
+getSamples(dfParameters, n = 50) # or resample from their covariance
 }
