@@ -249,6 +249,45 @@ test_that("NA in a covariate column is dropped, not turned into a level", {
   expect_false(any(grepl("NA", expr_strings(out))))
   expect_equal(expr_strings(out),
                c("GENO == 1", "GENO == 2", "GENO == 3", "GENO == 4"))
+
+  # The categorical path sorts levels, and sort() drops NA on its own, so the
+  # assertions above hold even without the explicit !is.na() filter. Only the
+  # continuous path depends on it: quantile() has na.rm = FALSE and errors on
+  # a leaked NA.
+  dc <- mock_data
+  dc$WT[dc$ID %in% 1:3] <- NA
+  contOut <- setupCovExpressionsList(dc, "WT")
+  expect_false(any(grepl("NA", expr_strings(contOut))))
+
+  clean <- mock_data[!mock_data$ID %in% 1:3, ]
+  expect_equal(expr_strings(contOut),
+               expr_strings(setupCovExpressionsList(clean, "WT")))
+})
+
+test_that("quantiles that round onto the same cut point are warned about", {
+  # Tight cluster with a few outliers each side: the raw 5th and 95th
+  # percentiles differ, but signif(., 3) rounds both to 100. The two rows then
+  # cover every subject instead of leaving those between them in neither -
+  # and minSubjects cannot notice, because both rows are non-empty.
+  set.seed(1)
+  wt <- c(rep(60, 4), runif(92, 99.95, 100.05), rep(140, 4))
+  d  <- data.frame(ID = seq_along(wt), WT = wt)
+
+  expect_warning(out <- setupCovExpressionsList(d, "WT", idVar = "ID"),
+                 "both round to 100")
+  # the contradiction the warning is about: nobody falls in neither row.
+  # Both rows are named "WT", so index by position - `$WT` finds only the first.
+  rows <- out$covExpressionsList
+  expect_equal(length(rows), 2L)
+  expect_equal(sum(eval(rows[[1]], d)) + sum(eval(rows[[2]], d)), nrow(d))
+
+  # a well-spread covariate is silent, and so is a median split, where the two
+  # cut points are equal by design
+  spread <- data.frame(ID = 1:200, WT = seq(50, 120, length.out = 200))
+  expect_no_warning(setupCovExpressionsList(spread, "WT", idVar = "ID"))
+  expect_no_warning(
+    setupCovExpressionsList(spread, "WT", idVar = "ID", contSplit = "median")
+  )
 })
 
 test_that("covariate errors surface clearly", {

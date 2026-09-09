@@ -5,9 +5,16 @@
 #'
 #' @details
 #'   Inside a `knitr` / R Markdown chunk the caption reads
-#'   `<working directory>/<input file>/<chunk label>` followed by the creation
-#'   time. Outside one, the file and chunk are unknown and simply omitted, so
-#'   the caption is the working directory and the time.
+#'   `<working directory name>/<input file>/<chunk label>` followed by the
+#'   creation time. Outside one, the file and chunk are unknown and simply
+#'   omitted, so the caption is the working directory name and the time.
+#'
+#'   Only the name of the working directory is used, not its full path -
+#'   `PMXForest-private`, not `/home/you/github/PMXForest-private`. That
+#'   matches `PhRame::add_stamp()` and keeps local paths out of a figure that
+#'   may be pasted into a report, at the cost of being ambiguous between two
+#'   checkouts whose leaf directory has the same name. Pass `source` to say
+#'   something more specific.
 #'
 #'   This is a native reimplementation of the stamp Pharmetheus' internal
 #'   `PhRame::add_stamp()` applies, kept dependency-free (`ggplot2` only) so it

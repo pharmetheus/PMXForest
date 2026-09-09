@@ -70,6 +70,10 @@ A list of:
     \item `etaMap` - for each returned parameter written as
       `P = <expr> * EXP(ETA(n))`, the ETA index `n`. Used by
       [verifyParamFunction()] to recover typical values from a NONMEM table.
+      Only that one idiom is recognised: a MU-referenced parameter, written
+      `MU_4 = LOG(TVCL)` / `CL = EXP(MU_4 + ETA(4))` as SAEM and IMP models
+      normally are, yields an empty map, and [verifyParamFunction()] then has
+      no typical values to compare against.
     \item `modFile`, `missVal` - as supplied.
   }
 }

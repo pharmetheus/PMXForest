@@ -87,9 +87,13 @@ A list of two elements, named for the [getForestDFemp()] arguments they
 The empirical-workflow counterpart of [setupDfCovs()]. It turns a
   data frame plus a vector of covariate names into the named
   `covExpressionsList` (and a matching `cdfCovsNames` label vector) consumed by
-  [getForestDFemp()], reusing the deduplicated level and quantile logic of
-  [getCovStats()]. Each covariate becomes one or more forest-plot rows, each row
-  an `expression()` that selects the subjects it summarises.
+  [getForestDFemp()]. Each covariate becomes one or more forest-plot rows,
+  each row an `expression()` that selects the subjects it summarises.
+
+  It follows the same deduplication, level and quantile rules as
+  [getCovStats()], but implements them separately rather than calling it -
+  the two produce rows of different shapes. Keep them in step: a change to
+  the statistics of one belongs in the other too.
 }
 \details{
 Statistics are computed on **deduplicated baseline data** (one record per
