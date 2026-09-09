@@ -3,9 +3,13 @@
 #' @description The empirical-workflow counterpart of [setupDfCovs()]. It turns a
 #'   data frame plus a vector of covariate names into the named
 #'   `covExpressionsList` (and a matching `cdfCovsNames` label vector) consumed by
-#'   [getForestDFemp()], reusing the deduplicated level and quantile logic of
-#'   [getCovStats()]. Each covariate becomes one or more forest-plot rows, each row
-#'   an `expression()` that selects the subjects it summarises.
+#'   [getForestDFemp()]. Each covariate becomes one or more forest-plot rows,
+#'   each row an `expression()` that selects the subjects it summarises.
+#'
+#'   It follows the same deduplication, level and quantile rules as
+#'   [getCovStats()], but implements them separately rather than calling it -
+#'   the two produce rows of different shapes. Keep them in step: a change to
+#'   the statistics of one belongs in the other too.
 #'
 #' @details
 #'   Statistics are computed on **deduplicated baseline data** (one record per
@@ -227,7 +231,20 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
 
     if (type == "continuous") {
       if (contSplit == "quantile") {
-        qs <- signif(stats::quantile(v, probs = probs, names = FALSE), nsig)
+        raw <- stats::quantile(v, probs = probs, names = FALSE)
+        qs  <- signif(raw, nsig)
+        ## Rounding two distinct quantiles onto the same value turns the
+        ## documented tails-vs-middle contrast into a full partition: every
+        ## subject lands in one row or the other and none in neither. Both rows
+        ## are non-empty, so minSubjects cannot notice. (A median split sets
+        ## the two cut points equal on purpose, hence only the quantile branch.)
+        if (qs[1] == qs[2] && !isTRUE(all.equal(raw[1], raw[2]))) {
+          warning("The ", probs[1] * 100, "th and ", probs[2] * 100,
+                  "th percentile of ", cov, " both round to ", qs[1],
+                  " at nsig = ", nsig, ", so the two rows cover every subject ",
+                  "instead of leaving those between them in neither. Raise ",
+                  "nsig or widen probs.", call. = FALSE)
+        }
       } else {
         m  <- signif(stats::median(v), nsig)
         qs <- c(m, m)

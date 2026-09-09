@@ -224,6 +224,23 @@ test_that("\"lowest\" is rejected for a continuous covariate", {
 })
 
 test_that("a malformed per-covariate setting is rejected", {
+  # A length-1 logical cannot reach refSpec()'s length check - it is caught
+  # further on by refResolve()'s type test, whose message happens to contain
+  # the same words. Use a length-2 value so the length check is what fires.
+  expect_error(
+    refResolve(mockData, "WT", contRef = list(WT = c(70, 80)), idVar = "ID"),
+    "given for WT must be a single value"
+  )
+  expect_error(
+    refResolve(mockData, "WT", contRef = list(default = c(70, 80)), idVar = "ID"),
+    "given as `default` must be a single value"
+  )
+  # the bare-vector spelling of the same mistake is still rejected
+  expect_error(
+    refResolve(mockData, "WT", contRef = c(70, 80), idVar = "ID"),
+    "given as a vector must be a single value"
+  )
+  # and the original type-error path still works
   expect_error(
     refResolve(mockData, "WT", contRef = list(WT = TRUE), idVar = "ID"),
     "must be a single value"

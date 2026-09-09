@@ -319,6 +319,11 @@ test_that("constant folding covers every identity it claims", {
   expect_equal(fold("X**1"),       "X")
   expect_equal(fold("LOG(1)"),     "0")
   expect_equal(fold("EXP(0)"),     "1")
+  # A negated literal folds to a number. "-2" alone cannot show this: it
+  # deparses as "-2" whether or not the fold ran. These need the fold, because
+  # the identity tests match a `num` node and not a negated one.
+  expect_equal(fold("EXP(-0)"),    "1")
+  expect_equal(fold("X+-0"),       "X")
   expect_equal(fold("-2"),         "-2")
   # nothing that is not an identity is touched
   expect_equal(fold("X/2"),        "X / 2")

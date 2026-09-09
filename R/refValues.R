@@ -42,6 +42,23 @@ refCovType <- function(v, minLevels) {
     if (n > 2) "multi" else "single"
 }
 
+#' Explain why `"model"` could not resolve a covariate
+#'
+#' The usual cause is one-hot coding: `$PK` names `GENO1`, `GENO3`, `GENO4` and
+#' never `GENO`, so the model holds a reference for each dummy but none for the
+#' covariate they encode. Without this the error only says a reference could not
+#' be derived, which sends the reader looking for a missing `IF()` that is not
+#' the problem.
+#'
+#' @noRd
+refModelHint <- function(cov, known) {
+  dummies <- known[startsWith(known, cov) & known != cov]
+  if (length(dummies) == 0) return("")
+  paste0("\nThe $PK names ", paste(dummies, collapse = ", "), " rather than ",
+         cov, " itself, so a reference was found for each of those but not for ",
+         "the covariate they encode. Give the level you want as the reference.")
+}
+
 #' Pull the spec for one covariate out of a scalar-or-list argument
 #'
 #' A bare scalar is itself the default. In a list, a named entry wins, then a
@@ -49,16 +66,25 @@ refCovType <- function(v, minLevels) {
 #'
 #' @noRd
 refSpec <- function(arg, cov, fallback) {
-  if (is.null(arg)) return(fallback)
-  if (!is.list(arg)) {
-    if (length(arg) != 1) {
-      stop("A `contRef` / `catRef` given as a vector must be a single value; ",
+  ## The same length check has to guard both spellings. `contRef = c(70, 80)`
+  ## was rejected clearly, but the identical mistake written per-covariate,
+  ## `contRef = list(WT = c(70, 80))`, went through and failed much later with
+  ## "replacement has 2 rows, data has 1", which names neither argument.
+  one <- function(v, what) {
+    if (length(v) != 1) {
+      stop("A `contRef` / `catRef` ", what, " must be a single value; ",
            "use a named list for per-covariate settings.", call. = FALSE)
     }
-    return(arg)
+    v
   }
-  if (!is.null(arg[[cov]])) return(arg[[cov]])
-  if (!is.null(arg[["default"]])) return(arg[["default"]])
+  if (is.null(arg)) return(fallback)
+  if (!is.list(arg)) return(one(arg, "given as a vector"))
+  if (!is.null(arg[[cov]])) {
+    return(one(arg[[cov]], paste0("given for ", cov)))
+  }
+  if (!is.null(arg[["default"]])) {
+    return(one(arg[["default"]], "given as `default`"))
+  }
   fallback
 }
 
@@ -161,6 +187,7 @@ refResolve <- function(data, covariates, contRef = "median", catRef = NULL,
                " could be derived from the model. Give it explicitly, e.g. ",
                if (cont) paste0("contRef = list(", cov, " = <value>)")
                else paste0("catRef = list(", cov, " = <level>)"), ".",
+               refModelHint(cov, names(modelRefs)),
                call. = FALSE)
         }
         r
@@ -227,11 +254,13 @@ refEncodingLevel <- function(catRef, cov, levs, model, missVal) {
   } else if (identical(spec, "mode")) {
     NULL                       # resolved by the caller, which has the data
   } else if (identical(spec, "model")) {
-    r <- refModelValues(model, missVal)[[cov]]
+    all <- refModelValues(model, missVal)
+    r   <- all[[cov]]
     if (is.null(r)) {
       stop("No reference level for covariate ", cov,
            " could be derived from the model. Give it explicitly, e.g. ",
-           "catRef = list(", cov, " = <level>).", call. = FALSE)
+           "catRef = list(", cov, " = <level>).",
+           refModelHint(cov, names(all)), call. = FALSE)
     }
     r$value
   } else if (is.character(levs) && length(spec) == 1 &&
