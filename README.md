@@ -22,10 +22,10 @@ You can install the development version of PMXForest from
 devtools::install_github("pharmetheus/PMXForest")
 ```
 
-The latest versions of the vignettes are available in the
-`BuildVignettesHereDirectory`. Open the Rmd-files in RStudio and click
-the Knit button to compile. Note that some of the vignettes will take a
-fair bit of time to compile.
+The vignette sources are in `vignettes/`. Open the `.Rmd` files in
+RStudio and click Knit to compile, or run `browseVignettes("PMXForest")`
+to read the versions built at install time. Note that some of the
+vignettes take a fair bit of time to compile.
 
 To get the latest stable release (including vignettes), please click the
 appropriate link on the right side of the page. Download the file with a
@@ -62,18 +62,24 @@ described in the plot.
 
 ``` r
 dfCovs <- createInputForestData(
-  list("FOOD" = c(0,1),
-       "GENO"=list("GENO1" = c(1,0,0,0),
-                   "GENO3" = c(0,0,1,0),
-                   "GENO4" = c(0,0,0,1)),
-       "WT"   = c(65,115),
-       "SEX"  = c(1,2))
+  list(
+    "FOOD" = c(0, 1),
+    "GENO" = list(
+      "GENO1" = c(1, 0, 0, 0),
+      "GENO3" = c(0, 0, 1, 0),
+      "GENO4" = c(0, 0, 0, 1)
+    ),
+    "WT" = c(65, 115),
+    "SEX" = c(1, 2)
   )
+)
 
-covnames <- c("Fasted","Fed","2D6 UM","2D6 EM","2D6 IM","2D6 PM",
-                         "WT 65 kg","WT 115 kg","Male","Female")
+covnames <- c(
+  "Fasted", "Fed", "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
+  "WT 65 kg", "WT 115 kg", "Male", "Female"
+)
 
-covariateGroupNames <- c("Food status","2D6 Genotype","Weight","Sex")
+covariateGroupNames <- c("Food status", "2D6 Genotype", "Weight", "Sex")
 ```
 
 ### Describe how the parameters are related to the covariates
@@ -88,28 +94,27 @@ plot.
 
 ``` r
 paramFunction <- function(thetas, df, ...) {
-  
-  if(df$WT !=-99) {
+  if (df$WT != -99) {
     TVCL <- thetas[4] * (df$WT / 75)**thetas[2]
   } else {
     TVCL <- thetas[4]
   }
-  
+
   CLGENO <- 1
-  if (df$GENO1 !=-99 && df$GENO1 == 1) CLGENO <- (1 + thetas[8])
-  if (df$GENO3 !=-99 && df$GENO3 == 1) CLGENO <- (1 + thetas[9])
-  if (df$GENO4 !=-99 && df$GENO4 == 1) CLGENO <- (1 + thetas[10])
-  
+  if (df$GENO1 != -99 && df$GENO1 == 1) CLGENO <- (1 + thetas[8])
+  if (df$GENO3 != -99 && df$GENO3 == 1) CLGENO <- (1 + thetas[9])
+  if (df$GENO4 != -99 && df$GENO4 == 1) CLGENO <- (1 + thetas[10])
+
   CLFOOD <- 1
-  if (any(names(df)=="FOOD") && df$FOOD !=-99 && df$FOOD == 0) CLFOOD <- (1 + thetas[11])
-  
-  CL  <- CLFOOD*CLGENO*TVCL
-  AUC <- 80/CL
-  
-  return(list(CL,AUC))
+  if (any(names(df) == "FOOD") && df$FOOD != -99 && df$FOOD == 0) CLFOOD <- (1 + thetas[11])
+
+  CL <- CLFOOD * CLGENO * TVCL
+  AUC <- 80 / CL
+
+  return(list(CL, AUC))
 }
 
-functionListName <- c("CL (L/h)","AUC (mgh/L)")
+functionListName <- c("CL (L/h)", "AUC (mgh/L)")
 ```
 
 ### Generate the data for the plot
@@ -122,17 +127,21 @@ actual calculations are done by getForestDFSCM. The calculations can be
 parallelized if needed.
 
 ``` r
-covFile      <- "inst/extdata/SimVal/run7.cov"
-extFile      <- "inst/extdata/SimVal/run7.ext"
-dfSamples    <- getSamples(covFile,extFile,n=175)
+covFile <- "inst/extdata/SimVal/run7.cov"
+extFile <- "inst/extdata/SimVal/run7.ext"
+# Seeded so that rebuilding the README reproduces the figure below rather than
+# redrawing 175 new samples and shifting every confidence interval.
+set.seed(20240101)
+dfSamples <- getSamples(covFile, extFile, n = 175)
 
 
-dfres <- getForestDFSCM(dfCovs           = dfCovs,
-                        cdfCovsNames     = covnames,
-                        functionList     = list(paramFunction),
-                        functionListName = functionListName,
-                        noBaseThetas     = 14,
-                        dfParameters     = dfSamples
+dfres <- getForestDFSCM(
+  dfCovs = dfCovs,
+  cdfCovsNames = covnames,
+  functionList = list(paramFunction),
+  functionListName = functionListName,
+  noBaseThetas = 14,
+  dfParameters = dfSamples
 )
 ```
 
@@ -141,10 +150,10 @@ dfres <- getForestDFSCM(dfCovs           = dfCovs,
 With the above information is an easy task to generate the Forest plot.
 
 ``` r
-forestPlot(dfres,groupNameLabels = covariateGroupNames,size=10)
+forestPlot(dfres, groupNameLabels = covariateGroupNames, size = 10)
 ```
 
-<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-7-1.png" alt="" width="100%" />
 
 ## Further information
 
