@@ -135,6 +135,33 @@ test_that("a record the condition cannot be evaluated on is not selected", {
   expect_false(2L %in% filterByModel(d, acc, quiet = TRUE)$ID)
 })
 
+test_that("several ACCEPT statements are alternatives, as several IGNOREs are", {
+  # NM-TRAN: "Multiple IGNORE options with different lists may be used", the
+  # conditions being joined by an implied .OR., and ACCEPT is "identical to the
+  # IGNORE list option, except that it specifies conditions for acceptance".
+  # So two ACCEPT statements accept the union, not the intersection.
+  d <- data.frame(ID = 1:6, DV = 1, AGE = c(10, 20, 30, 40, 50, 60), SEX = c(1, 1, 2, 2, 1, 2))
+  two <- tempMod("$INPUT ID DV AGE SEX", "$DATA d.csv ACCEPT=(AGE.GT.25) ACCEPT=(SEX.EQ.1)")
+  one <- tempMod("$INPUT ID DV AGE SEX", "$DATA d.csv ACCEPT=(AGE.GT.25,SEX.EQ.1)")
+
+  expect_equal(filterByModel(d, two, quiet = TRUE)$ID, 1:6)
+  # a single list with both conditions must give the same answer
+  expect_equal(
+    filterByModel(d, two, quiet = TRUE), filterByModel(d, one, quiet = TRUE)
+  )
+  # and it is a union, not an intersection - the intersection is ID 5 alone
+  expect_gt(nrow(filterByModel(d, two, quiet = TRUE)), 1)
+})
+
+test_that("a text value is refused with a message that names the problem", {
+  # NONMEM allows IGNORE=(GEN='M'); the condition grammar shared with $PK has
+  # no string literal, so it must say so rather than blaming $INPUT.
+  d <- data.frame(ID = 1:2, DV = 1, GEN = c("M", "F"), stringsAsFactors = FALSE)
+  f <- tempMod("$INPUT ID DV GEN", "$DATA d.csv IGNORE=(GEN.EQ.'M')")
+  expect_error(filterByModel(d, f, quiet = TRUE), "compares against a text value")
+  expect_error(filterByModel(d, f, quiet = TRUE), "numeric comparisons only")
+})
+
 test_that("DROP columns still occupy a position", {
   f <- tempMod("$INPUT ID JUNK=DROP WT", "$DATA d.csv IGNORE=(WT.LT.70)")
   d <- data.frame(ID = 1:3, JUNK = 9, WT = c(60, 75, 80))

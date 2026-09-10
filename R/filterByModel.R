@@ -24,7 +24,23 @@
 #'   kept only if it matches some `ACCEPT` condition. NONMEM does not allow both
 #'   forms in one `$DATA` record and neither does this function.
 #'
-#'   **What is not.** The single-character form (`IGNORE=@`, `IGNORE=C`) is a rule
+#'   **Equality is compared numerically here, as text in NONMEM.** NM-TRAN
+#'   compares `=`, `==`, `/=`, `.EQ.` and `.NE.` as character strings, and only
+#'   `.EQN.`, `.NEN.` and the inequality operators numerically. This function
+#'   receives a data frame, in which the text of the file has already been parsed
+#'   into numbers, so every comparison it makes is numeric. The two agree
+#'   whenever the value in the condition is written the way the data file writes
+#'   it. They disagree when it is not: against a table file holding
+#'   `1.0000E+00`, NONMEM finds `IGNORE=(OCC.EQ.1)` false and keeps the record,
+#'   while this function finds it true and drops it. That is the reason NM-TRAN
+#'   added `.EQN.`/`.NEN.`, and why control streams written against table output
+#'   use them - `run7.mod` does. If a condition matters and its operator is one
+#'   of the five string-compared ones, check the result against the model's own
+#'   record count.
+#'
+#'   **What is not.** A value compared as text (`IGNORE=(GEN='M')`) is refused:
+#'   NONMEM permits it, but the condition grammar shared with `$PK` has no string
+#'   literal. The single-character form (`IGNORE=@`, `IGNORE=C`) is a rule
 #'   about the first non-blank character of the raw record rather than a condition
 #'   on the data, so it cannot be applied to a data frame. `IGNORE=@` is the usual
 #'   way of skipping a header line, which `read.csv()` has already done, so this
@@ -255,6 +271,18 @@ nmConditionSymbols <- function(cond, modFile) {
 #'
 #' @noRd
 nmParseCondExpr <- function(cond, modFile) {
+  ## NONMEM allows an alphabetic value, optionally quoted - IGNORE=(GEN='M').
+  ## The $PK grammar this shares has no string literal, so such a condition
+  ## would lex the value as a symbol and fail further on with "refers to M,
+  ## which $INPUT does not declare", which points at the wrong thing entirely.
+  if (grepl("['\"]", cond)) {
+    stop("The $DATA condition '", cond, "' in ", basename(modFile),
+      " compares against a text value. filterByModel() handles numeric ",
+      "comparisons only; drop the record selection to the data step, or ",
+      "recode the column before filtering.",
+      call. = FALSE
+    )
+  }
   cond <- gsub("(?<![<>!=])=(?!=)", "==", cond, perl = TRUE)
   p <- nmParser(nmLex(cond, 1L, modFile), 1L, modFile)
   e <- nmParseExpr(p)
