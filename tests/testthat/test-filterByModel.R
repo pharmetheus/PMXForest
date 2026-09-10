@@ -97,6 +97,44 @@ test_that("the full comparison operator family is understood", {
   expect_equal(filterByModel(d, ne, quiet = TRUE)$WT, c(50, 60, 80, 90))
 })
 
+test_that(".EQN. and .NEN. behave as .EQ. and .NE.", {
+  # run7's own $DATA uses .EQN., so the variant the reference model depends on
+  # must be covered, and its partner with it.
+  d <- data.frame(ID = 1:4, DV = 1, WT = c(50, 60, 60, 70))
+  eqn <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.EQN.60)")
+  nen <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.NEN.60)")
+  eq <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.EQ.60)")
+  ne <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.NE.60)")
+
+  expect_equal(filterByModel(d, eqn, quiet = TRUE)$WT, c(50, 70))
+  expect_equal(filterByModel(d, nen, quiet = TRUE)$WT, c(60, 60))
+  # the .xxN. forms must agree with their plain partners
+  expect_equal(
+    filterByModel(d, eqn, quiet = TRUE), filterByModel(d, eq, quiet = TRUE)
+  )
+  expect_equal(
+    filterByModel(d, nen, quiet = TRUE), filterByModel(d, ne, quiet = TRUE)
+  )
+})
+
+test_that("a record the condition cannot be evaluated on is not selected", {
+  # A missing value makes the comparison NA, and NA row-indexing keeps an
+  # all-NA row rather than dropping it, so the result is forced to FALSE. That
+  # reads the same way for both keywords: the condition did not fire. For
+  # IGNORE the record is therefore kept, for ACCEPT it is dropped - which is
+  # the safe direction in each case, but it is a silent decision about which
+  # subjects reach the plot, so it is pinned here.
+  d <- data.frame(ID = 1:4, DV = 1, WT = c(50, NA, 80, 90))
+
+  ign <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=(WT.GT.70)")
+  acc <- tempMod("$INPUT ID DV WT", "$DATA d.csv ACCEPT=(WT.GT.70)")
+
+  expect_equal(filterByModel(d, ign, quiet = TRUE)$ID, c(1L, 2L))
+  expect_equal(filterByModel(d, acc, quiet = TRUE)$ID, c(3L, 4L))
+  # no row is both kept by IGNORE and kept by ACCEPT except through the NA rule
+  expect_false(2L %in% filterByModel(d, acc, quiet = TRUE)$ID)
+})
+
 test_that("DROP columns still occupy a position", {
   f <- tempMod("$INPUT ID JUNK=DROP WT", "$DATA d.csv IGNORE=(WT.LT.70)")
   d <- data.frame(ID = 1:3, JUNK = 9, WT = c(60, 75, 80))

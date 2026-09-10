@@ -78,9 +78,10 @@ same object, which Section 1 does step by step. `setupCovExpressionsList()` is
 not: it duplicates the logic. If you change how one of them chooses levels or
 quantiles, the other does not follow.
 
-The data set throughout is the PK analysis data used in the
-[Walkthrough](Part2-walkthrough.html), and the model is the `run7` control stream
-bundled with the package.
+The data throughout is the PK data file used in the
+[Walkthrough](Part2-walkthrough.html), read as it comes rather than filtered
+through the model's `IGNORE` statements, and the model is the `run7` control
+stream bundled with the package.
 
 ```{r}
 dataFile <- system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
@@ -790,6 +791,6 @@ For empirical Forest plots, `getForestDFemp()` takes `covExpressionsList` in pla
 of `dfCovs`. If the parameter function is written against one-hot dummy columns
 (`GENO_2`, `GENO_3`, ...) rather than the raw `GENO`, give `getForestDFemp()` its
 own `oneHot` argument — the same spec `oneHotEncode()` takes — so those columns
-are added to the analysis data before the parameter function runs. The expressions
+are added to the data passed in before the parameter function runs. The expressions
 from `setupCovExpressionsList()` always filter on the raw column, so that choice
 is independent of how the expression list is built.

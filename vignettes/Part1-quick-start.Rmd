@@ -79,7 +79,7 @@ subject, and the formatting arguments of `forestPlot()`.
 
 # 1. Describe the covariates
 
-`setupDfCovs()` reads an analysis data set, summarises each covariate, and returns
+`setupDfCovs()` reads a data set, summarises each covariate, and returns
 a data frame in which every row is one row of the Forest plot. Continuous
 covariates are represented by their 5th and 95th percentiles; binary covariates
 are expanded to one row per level.
