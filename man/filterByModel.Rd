@@ -57,19 +57,25 @@ Reads the `IGNORE` and `ACCEPT` statements from a NONMEM control
   kept only if it matches some `ACCEPT` condition. NONMEM does not allow both
   forms in one `$DATA` record and neither does this function.
 
-  **Equality is compared numerically here, as text in NONMEM.** NM-TRAN
-  compares `=`, `==`, `/=`, `.EQ.` and `.NE.` as character strings, and only
-  `.EQN.`, `.NEN.` and the inequality operators numerically. This function
-  receives a data frame, in which the text of the file has already been parsed
-  into numbers, so every comparison it makes is numeric. The two agree
-  whenever the value in the condition is written the way the data file writes
-  it. They disagree when it is not: against a table file holding
-  `1.0000E+00`, NONMEM finds `IGNORE=(OCC.EQ.1)` false and keeps the record,
-  while this function finds it true and drops it. That is the reason NM-TRAN
-  added `.EQN.`/`.NEN.`, and why control streams written against table output
-  use them - `run7.mod` does. If a condition matters and its operator is one
-  of the five string-compared ones, check the result against the model's own
-  record count.
+  **Two comparison families, as in NM-TRAN.** `=`, `==`, `/=`, `.EQ.` and
+  `.NE.` compare the value as **text**; `.EQN.`, `.NEN.` and the inequalities
+  compare it **numerically**. This is NONMEM's own rule and it matters: a
+  control stream filtering a NONMEM table file, where an integer `1` is
+  written `1.0000E+00`, gets nothing from `IGNORE=(OCC.EQ.1)` and everything
+  it expects from `IGNORE=(OCC.EQN.1)`. That is why `.EQN.`/`.NEN.` exist,
+  and why `run7.mod` uses them.
+
+  There is a limit to how faithfully the text comparison can be reproduced
+  here. NONMEM compares against the text in the **data file**; this function
+  is handed a data frame, in which that text has already been parsed into
+  numbers, so it compares against `as.character()` of the value instead. The
+  two agree whenever the file wrote the value the way R renders it, which is
+  the ordinary case for a CSV of integers. They can disagree for a file whose
+  numbers carry a format of their own - a table file again. When a text
+  comparison selects no record but the numeric reading of the same condition
+  would have selected some, that is the signature of this disagreement and
+  the function warns, naming both texts. Prefer `.EQN.`/`.NEN.` in a
+  condition whose result matters.
 
   **What is not.** A value compared as text (`IGNORE=(GEN='M')`) is refused:
   NONMEM permits it, but the condition grammar shared with `$PK` has no string

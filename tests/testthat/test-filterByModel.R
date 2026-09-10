@@ -162,6 +162,51 @@ test_that("a text value is refused with a message that names the problem", {
   expect_error(filterByModel(d, f, quiet = TRUE), "numeric comparisons only")
 })
 
+test_that("the string family compares as text and the N family numerically", {
+  # NM-TRAN: "With =, ==, /=, .EQ. and .NE., the value in the data record and
+  # the value in the list are compared as character strings. Otherwise, they
+  # are converted to numeric" - which is the case with .NEN. and .EQN.
+  expect_equal(nmConditionToR("TYPE.EQ.2", "m.mod"), 'as.character(TYPE) == "2"')
+  expect_equal(nmConditionToR("TYPE.NE.2", "m.mod"), 'as.character(TYPE) != "2"')
+  expect_equal(nmConditionToR("OCC=1", "m.mod"), 'as.character(OCC) == "1"')
+  expect_equal(nmConditionToR("OCC/=1", "m.mod"), 'as.character(OCC) != "1"')
+  # the N variants and every inequality stay numeric
+  expect_equal(nmConditionToR("TYPE.EQN.2", "m.mod"), "TYPE == 2")
+  expect_equal(nmConditionToR("TYPE.NEN.2", "m.mod"), "TYPE != 2")
+  expect_equal(nmConditionToR("WT.GT.70", "m.mod"), "WT > 70")
+  # a bare = must not be taken out of >= or <=
+  expect_equal(nmConditionToR("WT.GE.70", "m.mod"), "WT >= 70")
+  expect_equal(nmConditionToR("WT>=70", "m.mod"), "WT >= 70")
+  expect_equal(nmConditionToR("WT<=70", "m.mod"), "WT <= 70")
+})
+
+test_that("a text comparison that finds nothing numerically would is warned about", {
+  # The table-file case the NM-TRAN help calls out: an integer 1 in the data is
+  # written 1.0000E+00 in a table file, so IGNORE=(OCC.EQ.1) matches nothing.
+  # We cannot see the file's text from a data frame, so the disagreement
+  # between the two readings is the only available signal - and it is loud.
+  d <- data.frame(ID = 1:4, DV = 1, OCC = c(1, 2, 1, 2))
+  trap <- tempMod("$INPUT ID DV OCC", "$DATA d.csv IGNORE=(OCC.EQ.1.0000E+00)")
+
+  expect_warning(
+    out <- filterByModel(d, trap, quiet = TRUE),
+    "selects no record"
+  )
+  expect_warning(filterByModel(d, trap, quiet = TRUE), "EQN")
+  # nothing was dropped, because the text did not match
+  expect_equal(nrow(out), 4L)
+
+  # the numeric operator does the job and says nothing
+  ok <- tempMod("$INPUT ID DV OCC", "$DATA d.csv IGNORE=(OCC.EQN.1.0000E+00)")
+  expect_no_warning(out2 <- filterByModel(d, ok, quiet = TRUE))
+  expect_equal(out2$ID, c(2L, 4L))
+
+  # and a text comparison that does match is silent
+  plain <- tempMod("$INPUT ID DV OCC", "$DATA d.csv IGNORE=(OCC.EQ.1)")
+  expect_no_warning(out3 <- filterByModel(d, plain, quiet = TRUE))
+  expect_equal(out3$ID, c(2L, 4L))
+})
+
 test_that("DROP columns still occupy a position", {
   f <- tempMod("$INPUT ID JUNK=DROP WT", "$DATA d.csv IGNORE=(WT.LT.70)")
   d <- data.frame(ID = 1:3, JUNK = 9, WT = c(60, 75, 80))
