@@ -8,7 +8,7 @@ setupDfRefRow(
   dfCovs,
   data,
   covariates,
-  additionalCovs = NULL,
+  conditionalCovs = NULL,
   singleRef = TRUE,
   contRef = "median",
   catRef = NULL,
@@ -29,7 +29,7 @@ the first record per subject (identified by `idVar`) is used.}
 
 \item{covariates}{A character vector of primary covariate base names.}
 
-\item{additionalCovs}{A character vector of supplementary covariate base
+\item{conditionalCovs}{A character vector of supplementary covariate base
 names. Defaults to `NULL`.}
 
 \item{singleRef}{Logical. If `TRUE` (default), returns a single-row data frame

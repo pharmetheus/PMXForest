@@ -35,7 +35,7 @@
 #' @param data The raw data frame used to calculate the reference values. Only
 #'   the first record per subject (identified by `idVar`) is used.
 #' @param covariates A character vector of primary covariate base names.
-#' @param additionalCovs A character vector of supplementary covariate base
+#' @param conditionalCovs A character vector of supplementary covariate base
 #'   names. Defaults to `NULL`.
 #' @param singleRef Logical. If `TRUE` (default), returns a single-row data frame
 #'   with every covariate at its reference value. If `FALSE`, returns a data
@@ -100,12 +100,12 @@
 #'   data = dfData, covariates = covs2, idVar = "ID",
 #'   contRef = "model", catRef = "model", model = modFile
 #' )
-setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
+setupDfRefRow <- function(dfCovs, data, covariates, conditionalCovs = NULL,
                           singleRef = TRUE, contRef = "median", catRef = NULL,
                           model = NULL, refLevels = NULL, minLevels = 10,
                           idVar = "ID", missVal = -99, nsig = 3, sep = "_") {
   catRef <- refLevelsToCatRef(refLevels, catRef, "setupDfRefRow")
-  all_covs <- unique(c(covariates, additionalCovs))
+  all_covs <- unique(c(covariates, conditionalCovs))
 
   # 1. Resolve one reference value per covariate.
   refs <- refResolve(data, all_covs,
@@ -163,7 +163,7 @@ setupDfRefRow <- function(dfCovs, data, covariates, additionalCovs = NULL,
         paste(unmapped, collapse = ", "),
         "; they are set to NA in the reference row, which makes every ",
         "parameter computed on it NA. Add them to `covariates` / ",
-        "`additionalCovs`.",
+        "`conditionalCovs`.",
         call. = FALSE
       )
     }

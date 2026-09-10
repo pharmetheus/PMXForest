@@ -34,7 +34,7 @@
 #'   `catRef[[cov]]` if named, otherwise the lowest level), mirroring the
 #'   parametric `dfCovs`.
 #'
-#'   **Additional covariates.** Each entry of `additionalCovs` gets its own rows,
+#'   **Conditional covariates.** Each entry of `conditionalCovs` gets its own rows,
 #'   exactly like a primary covariate, appended after the primary blocks. In
 #'   addition, a fixed condition on that covariate is combined with `&` into every
 #'   other covariate's expression: a level for a categorical covariate
@@ -42,8 +42,8 @@
 #'   direction for a continuous covariate
 #'   (`list(CRCL = list(prob = 0.5, dir = "gt"))` gives `CRCL > q_0.5`,
 #'   `list(AGE = list(value = 65, dir = "lt"))` gives `AGE < 65`). A primary
-#'   covariate's rows carry every additional-covariate condition; an additional
-#'   covariate's own rows carry every *other* additional-covariate condition, not
+#'   covariate's rows carry every conditional-covariate condition; an additional
+#'   covariate's own rows carry every *other* conditional-covariate condition, not
 #'   its own.
 #'
 #'   **Subject-count safeguard.** Every generated expression is evaluated against
@@ -54,7 +54,7 @@
 #'
 #'   **Labels.** `cdfCovsNames` holds terse generated labels (`"WT <63.2"`,
 #'   `"SEX 1"`, `"GENO 2"`). Publication plots normally override them with domain
-#'   labels; the additional-covariate conditions are not repeated in the labels.
+#'   labels; the conditional-covariate conditions are not repeated in the labels.
 #'
 #'   For a fixed reference row, build one with [setupDfCovs()] and
 #'   [setupDfRefRow()] (`singleRef = TRUE`) and pass it to
@@ -63,7 +63,7 @@
 #' @param data A data frame that includes the covariates to summarise. Only the
 #'   first record per subject (identified by `idVar`) is used.
 #' @param covariates A character vector of primary covariate names to evaluate.
-#' @param additionalCovs An optional named list, one entry per additional
+#' @param conditionalCovs An optional named list, one entry per additional
 #'   covariate. A scalar value is the level for a categorical covariate; a list
 #'   `list(dir = "lt"/"gt", prob = )` or `list(dir = "lt"/"gt", value = )` is the
 #'   split for a continuous covariate (supply exactly one of `prob` or `value`;
@@ -78,7 +78,7 @@
 #'   the deduplicated `data`. The function stops if any expression selects fewer.
 #'   Default is 10.
 #' @param probs A numeric vector of two probabilities used to split continuous
-#'   covariates and, when requested, to place a continuous additional-covariate
+#'   covariates and, when requested, to place a continuous conditional-covariate
 #'   condition. Defaults to `c(0.05, 0.95)`.
 #' @param minLevels The maximum number of unique values a covariate can have to be
 #'   treated as categorical. Default is 10.
@@ -139,12 +139,12 @@
 #'   idVar = "ID"
 #' )$covExpressionsList
 #'
-#' # FOOD as a categorical additional covariate and CRCL as a continuous one:
+#' # FOOD as a categorical conditional covariate and CRCL as a continuous one:
 #' # every WT/SEX row is also conditioned on FOOD == 1 and CRCL above its lower quartile
 #' setupCovExpressionsList(
 #'   dfData,
 #'   covariates = c("WT", "SEX"), contSplit = "median",
-#'   additionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
+#'   conditionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
 #'   idVar = "ID"
 #' )$covExpressionsList
 #'
@@ -175,7 +175,7 @@
 #'   ncores             = 1
 #' )
 #' dfresEmp[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "POINT_REL_REFFUNC")]
-setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
+setupCovExpressionsList <- function(data, covariates, conditionalCovs = NULL,
                                     contSplit = c("quantile", "median"),
                                     includeReference = TRUE, minSubjects = 10,
                                     probs = c(0.05, 0.95), minLevels = 10,
@@ -187,13 +187,13 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
   contSplit <- match.arg(contSplit)
   data <- as.data.frame(data)
 
-  # ---- validate additionalCovs shape -------------------------------------
-  addNames <- names(additionalCovs)
-  if (!is.null(additionalCovs)) {
-    if (!is.list(additionalCovs) || is.null(addNames) ||
+  # ---- validate conditionalCovs shape -------------------------------------
+  addNames <- names(conditionalCovs)
+  if (!is.null(conditionalCovs)) {
+    if (!is.list(conditionalCovs) || is.null(addNames) ||
       any(addNames == "") || anyDuplicated(addNames)) {
       stop(
-        "`additionalCovs` must be a named list with one entry per covariate, ",
+        "`conditionalCovs` must be a named list with one entry per covariate, ",
         "e.g. list(FOOD = 1)."
       )
     }
@@ -300,29 +300,29 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
     list(exprs = exprs, labels = labels)
   }
 
-  # ---- fixed condition fragment for each additional covariate ----------
+  # ---- fixed condition fragment for each conditional covariate ----------
   fragList <- list()
   for (a in addNames) {
-    spec <- additionalCovs[[a]]
+    spec <- conditionalCovs[[a]]
     if (covType(a) == "continuous") {
       if (!is.list(spec)) {
         stop(
-          "`additionalCovs$", a, "` is a continuous covariate; supply ",
+          "`conditionalCovs$", a, "` is a continuous covariate; supply ",
           "list(prob = <p>, dir = \"lt\"/\"gt\") or ",
           "list(value = <v>, dir = \"lt\"/\"gt\")."
         )
       }
       if (is.null(spec$dir) || !spec$dir %in% c("lt", "gt")) {
-        stop("`additionalCovs$", a, "$dir` must be \"lt\" or \"gt\".")
+        stop("`conditionalCovs$", a, "$dir` must be \"lt\" or \"gt\".")
       }
       hasProb <- !is.null(spec$prob)
       hasValue <- !is.null(spec$value)
       if (hasProb == hasValue) {
-        stop("`additionalCovs$", a, "` needs exactly one of `prob` or `value`.")
+        stop("`conditionalCovs$", a, "` needs exactly one of `prob` or `value`.")
       }
       if (hasProb) {
         if (spec$prob <= 0 || spec$prob >= 1) {
-          stop("`additionalCovs$", a, "$prob` must be in (0, 1).")
+          stop("`conditionalCovs$", a, "$prob` must be in (0, 1).")
         }
         p <- signif(stats::quantile(getVals(a), probs = spec$prob, names = FALSE), nsig)
       } else {
@@ -336,13 +336,13 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
     } else {
       if (is.list(spec) || length(spec) != 1) {
         stop(
-          "`additionalCovs$", a, "` is a categorical covariate; supply a ",
+          "`conditionalCovs$", a, "` is a categorical covariate; supply a ",
           "single level value."
         )
       }
       if (!spec %in% getVals(a)) {
         stop(
-          "Level ", spec, " for `additionalCovs$", a,
+          "Level ", spec, " for `conditionalCovs$", a,
           "` is not present in the data."
         )
       }
@@ -387,7 +387,7 @@ setupCovExpressionsList <- function(data, covariates, additionalCovs = NULL,
         "Expression `", as.character(covExpressionsList[[i]]), "` selects ", n,
         " subject(s) in `data`, fewer than `minSubjects` (", minSubjects,
         "). Relax `minSubjects`, widen `probs`, or adjust the split / ",
-        "`additionalCovs` conditions."
+        "`conditionalCovs` conditions."
       )
     }
   }

@@ -28,6 +28,14 @@ vignette: >
   margin-top: 20px;
   margin-bottom: 20px;
 }
+.callout-internal {
+  background-color: #e8f5e9;
+  border-left: 4px solid #43a047;
+  color: #1b5e20;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
 ```
 
 ```{r, include = FALSE}
@@ -64,7 +72,7 @@ does underneath — the function to reach for when you want to take over.
 | Input | What it is | One call | What that call does underneath |
 | --- | --- | --- | --- |
 | `dfCovs` | one row per Forest plot row, inactive cells at `-99` | `setupDfCovs()` | `getCovStats()` picks the values to plot, then `createInputForestData()` lays them out as rows |
-| `functionList` | the parameter function: typical values from thetas and covariates | `createParamFunction()` | `nmParsePK()` parses `$PK`, `nmCovRef()` finds a reference for each covariate, then the tree is emitted as R source |
+| `functionList` | a **list** of one or more parameter functions: typical values from thetas and covariates | `createParamFunction()` | `nmParsePK()` parses `$PK`, `nmCovRef()` finds a reference for each covariate, then the tree is emitted as R source |
 | `dfRefRow` | the reference subject the other rows are expressed relative to | `setupDfRefRow()` | `refResolve()` resolves one reference per covariate (`refValues()` from the data, the `$PK` for `"model"`), shaped into a single row matching `dfCovs` |
 | `dfParameters` | parameter uncertainty samples | `getSamples()` | this is the primitive — it reads the `.cov`, bootstrap or SIR file directly |
 | `covExpressionsList` | which subjects each empirical row summarises | `setupCovExpressionsList()` | applies the same level and quantile rules as `getCovStats()`, but **implements them separately** rather than calling it, because the two return different shapes |
@@ -217,17 +225,17 @@ dfCovs <- setupDfCovs(data = dfData, covariates = covariates, idVar = "ID")
 dfCovs
 ```
 
-Covariates listed in `additionalCovs` get their own rows, but on every *other*
-row they sit at their reference rather than at `-99`. This is for covariates that
-must hold a plausible value whenever they are not the covariate under study — for
-example one carried through from a full random-effects (FREM) model.
+Covariates listed in `conditionalCovs` get their own rows, but on every *other*
+row they sit at their reference rather than at `-99`. This is for covariates on
+which the other covariates are conditioned, eg fed state (instead of fasted) or
+patients (instead of healthy volunteers).
 
 ```{r}
 setupDfCovs(
-  data           = dfData,
-  covariates     = c("WT", "AGE", "SEX"),
-  additionalCovs = "CRCL",
-  idVar          = "ID"
+  data            = dfData,
+  covariates      = c("WT", "AGE", "SEX"),
+  conditionalCovs = "CRCL",
+  idVar           = "ID"
 )
 ```
 
@@ -358,8 +366,8 @@ The contract is:
 
 ```r
 function(thetas, df, ...) {
-  # ... rebuild the model's typical values ...
-  list(CL, FREL, AUC, V)
+  # ... rebuild the model's typical values from thetas and df ...
+  list(<quantity 1>, <quantity 2>, ...)
 }
 ```
 
@@ -370,8 +378,39 @@ function(thetas, df, ...) {
 * `...` absorbs anything else `getForestDFSCM()` passes through, such as the
   extra arguments the [time-to-event vignette](Part3-deep-dive-tte-models.html)
   uses.
-* The return value is a list of the quantities to plot, named by
-  `functionListName`.
+* The return value is a list of the quantities to plot.
+
+Nothing about those quantities is fixed. The function decides what to compute
+and in what order; `getForestDFSCM()` reads the list **by position** and takes
+the names from `functionListName`, which you supply alongside it. So
+
+```r
+functionList     = list(myFunction)
+functionListName = c("CL", "Frel", "AUC", "V")
+```
+
+names the first returned element `CL`, the second `Frel`, and so on — the names
+in the plot come from `functionListName`, not from the function. A list that is
+itself named is fine and often clearer to read, but the names are ignored, and a
+mismatch in *order* between the two silently mislabels every panel. Keep the
+return and `functionListName` next to each other for that reason.
+
+`functionList` is a list because it may hold **more than one function**. Each is
+evaluated for every row and every parameter vector, and their results are
+concatenated in order, so `functionListName` names the returns of all of them
+end to end:
+
+```r
+functionList     = list(pkFunction, exposureFunction)
+functionListName = c("CL", "V", "AUC", "Cmax")   # 2 from the first, 2 from the second
+```
+
+Splitting the work up this way is worth it when one part is cheap and another is
+not — a closed-form PK function alongside one that runs a simulation — or when
+the quantities come from genuinely different models. The
+[time-to-event vignette](Part3-deep-dive-tte-models.html) uses two functions for
+a related reason: a hazard ratio and a cumulative distribution need different
+x-axis scales, so they are computed and plotted separately.
 
 Two defensive checks apply to every covariate the function reads:
 
@@ -469,13 +508,26 @@ than guessing:
 | a symbol read before anything assigns it | see below |
 
 That last one is worth explaining, because NONMEM accepts it and R will not.
-NONMEM does not initialise `$PK` variables, and it does not clear them between
-data records — so a variable read before it is assigned holds whatever the
-*previous subject* left there. A parameter function is evaluated one row at a
-time with no such carry-over, so it cannot reproduce that behaviour, and
-`createParamFunction()` refuses rather than quietly substituting a zero. If you
-hit this, give the variable an unconditional value in `$PK` above the line that
-reads it.
+NM-TRAN's abbreviated-code rules are explicit about what happens when a
+conditional assignment does not fire, and they distinguish two cases:
+
+> `IF (WT.GT.0) TVK=THETA(1)*WT`
+> If the condition is false, the non-random variable `TVK` **retains the value
+> set with the previous data record**.
+>
+> `IF (WT.GT.0) K=THETA(1)*WT*EXP(ETA(1))`
+> If the condition is false, the value of the random variable `K` **is set to
+> zero**.
+
+So a variable without an `ETA` carries its value across records — a parameter
+function is evaluated one row at a time with no previous record to carry from,
+and cannot reproduce that. A variable *with* an `ETA` is zeroed instead, which
+a generated function cannot reproduce either, since it has no equivalent notion
+of a random variable once every `ETA()` has been set to 0.
+
+`createParamFunction()` therefore refuses rather than quietly substituting a
+zero and being right only half the time. If you hit this, give the variable an
+unconditional value in `$PK` above the line that reads it.
 
 A branch chain with no `ELSE` is *accepted*, because `scm` writes exhaustive
 ones — `run7.mod` itself sets `FRELFORM` from two one-line `IF`s covering
@@ -592,10 +644,43 @@ attached as `attr(v, "checks")`.
 
 Put **both the parameters and the covariates** in `$TABLE`. They then come from
 the same row of the same file and cannot be misaligned, and no `$DATA` filtering
-has to be reproduced to compare them. Where `$PK` shows exponential IIV, the
-tabled individual value is divided by `exp(ETA(n))` to recover the typical value;
-a `TVCL`-style column is used directly. Anything missing warns and reports `NA`
-rather than comparing silently.
+has to be reproduced to compare them. For `run7`, whose `etaMap` is
+
+```{r}
+gen$etaMap
+```
+
+a table carrying everything needed looks like this:
+
+```
+$TABLE ID TIME CL FREL V ETA2 ETA3 ETA4
+       WT SEX FOOD FORM GENO1 GENO3 GENO4
+       ONEHEADER NOPRINT FILE=xptab7
+```
+
+The parameters, the ETAs that carry their between-subject variability, and every
+covariate the parameter function reads. Three rules decide what happens for each
+parameter:
+
+| in the table | what is used | why |
+| --- | --- | --- |
+| `TVCL` | `TVCL` directly | already a typical value, no ETA needed |
+| `CL` and `ETA3` | `CL / exp(ETA3)` | the tabled `CL` is the *individual* value; divide the IIV out |
+| `CL` but no `ETA3` | nothing — warning, `PASS = NA` | the individual value cannot be reduced to a typical one |
+
+**If both `CL` and `TVCL` are present, `TVCL` wins.** It is checked first and
+used as it stands, so the `ETA` column is not consulted at all. That is the
+cheaper and more direct comparison, and it does not depend on the parameter
+being written in the exponential-IIV form the `etaMap` recognises — so tabling
+`TV`-prefixed values is the more robust choice if you are adding columns
+specifically for this check.
+
+**If `CL` is tabled with no `ETA3`, that parameter is not checked.** The
+function does not fall back to comparing the individual value against a typical
+one, which would fail for every subject with a non-zero `ETA` and tell you
+nothing. It warns, naming the column it wanted, and reports `PASS = NA` for that
+parameter — so the overall result is `NA` rather than `TRUE`, and a parameter
+that was never checked cannot be mistaken for one that passed.
 
 ::: {.callout-note}
 The residual above is not error, it is the table's precision: NONMEM's default
@@ -610,6 +695,23 @@ floor.
 By default it computes the reference state from the data — mode for categorical,
 median or mean for continuous, on one record per subject — and maps it onto the
 geometry of a `setupDfCovs()` result.
+
+It needs both `dfCovs` and `covariates`, which do different jobs. `dfCovs` gives
+the **shape** — the column names and their order, including the one-hot columns
+`setupDfCovs()` generated. `covariates` gives the **base names** to compute a
+reference for, the same vector passed to `setupDfCovs()`, in terms of the
+covariates as they exist in the data rather than after encoding:
+
+```{r}
+covariates
+```
+
+So `GENO` appears in `covariates` once, and the resulting reference is written
+across the `GENO_2`, `GENO_3`, `GENO_4` columns that `dfCovs` carries. Passing
+the encoded names instead would ask for a reference for each dummy separately,
+which is not the same question. This is also why the same `catRef` and `sep`
+have to be given to both calls: they decide what those columns are called, and
+`setupDfRefRow()` matches its result to them by name.
 
 `singleRef = TRUE` gives a one-row data frame with every covariate at its
 reference value:
@@ -647,7 +749,7 @@ setupDfRefRow(dfCovs, dfData, covariates,
 )
 ```
 
-`contRef` applies to `setupDfCovs()` too — to `additionalCovs`, and to primary
+`contRef` applies to `setupDfCovs()` too — to `conditionalCovs`, and to primary
 covariates when `useMissVal = FALSE`.
 
 ### `"model"` needs the covariate to be in `$PK`
@@ -755,8 +857,23 @@ checking a translation on your own model.
 # 5. Which records to summarise
 
 Everything above summarises whatever data frame you hand it. NONMEM, meanwhile,
-reads only the records its `$DATA` `IGNORE` and `ACCEPT` statements leave, so the
-analysis file and the model's population are not the same thing.
+reads only the records its `$DATA` `IGNORE` and `ACCEPT` statements leave, so
+what is in the data file and what the model was fitted to are not the same
+thing.
+
+::: {.callout-internal}
+**For users of `pmxdata`.** This gives you the same record selection as
+`pmxdata::analysis_data()`, by a different route. `analysis_data()` reads the
+`exclType` specification and keeps the records where it is 0;
+`filterByModel()` replays the control stream's own `IGNORE`/`ACCEPT` statements
+against a data frame you already have. In the standard workflow, where the
+model's `$DATA` record is written to match the `exclType` specification, the two
+agree — and where they do not, the disagreement is worth understanding before
+going further, since one of them is not describing the model's population.
+
+`PMXForest` is a public package and deliberately does not depend on `pmxdata`,
+which is internal; if you have `pmxdata` available, either route is fine.
+:::
 
 ```{r}
 dfUsed <- filterByModel(dfData, modFile, quiet = TRUE)
@@ -852,18 +969,18 @@ so every subject falls in one row. Binary and multi-level categorical covariates
 become one `== level` row per level; `includeReference = FALSE` drops the
 reference level, as in the parametric `dfCovs`.
 
-An `additionalCovs` entry gets its own rows *and* contributes a fixed condition
+An `conditionalCovs` entry gets its own rows *and* contributes a fixed condition
 that is combined with `&` into every other covariate's expression: a level for a
 categorical covariate, or a `prob` / `value` split with a direction for a
 continuous one. Use it to restrict the empirical contrast to a sub-population.
 
 ```{r}
 setupCovExpressionsList(
-  data           = dfUsed,
-  covariates     = c("WT", "SEX"),
-  contSplit      = "median",
-  additionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
-  idVar          = "ID"
+  data = dfUsed,
+  covariates = c("WT", "SEX"),
+  contSplit = "median",
+  conditionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
+  idVar = "ID"
 )$covExpressionsList
 ```
 
