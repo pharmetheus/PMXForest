@@ -1,3 +1,35 @@
+#' The automatic reference-line caption
+#'
+#' Split out so the wording can be tested without building a plot, as
+#' `stampText()` is for `addStamp()`.
+#'
+#' The text is wrapped because `ggpubr::text_grob()` draws a single line and
+#' lets the device clip it rather than wrapping: the longest of these sentences
+#' is 153 characters and needs about 12.3 inches at the default text size -
+#' wider than R's 7 inch default device, and wider than any figure in this
+#' package's own vignettes, so it was cut off at both ends everywhere. A
+#' `referenceInfo` supplied by the caller is deliberately left alone, since it
+#' may carry line breaks of its own.
+#'
+#' @param refrow The `REFROW` value of the first row of `dfres`, `"YES"` or `"NO"`.
+#' @param referenceParameters `"final"` or `"func"`.
+#' @param width Wrapping width in characters. 80 keeps the caption inside a 7 inch device.
+#' @return A single string, wrapped with embedded newlines.
+#' @noRd
+refInfoText <- function(refrow, referenceParameters, width = 80) {
+  covText <- if (refrow == "YES") "selected covariate values." else "the reference covariate values in the model."
+  txt <- if (referenceParameters == "final") {
+    paste("The reference line is based on the final parameter estimates and", covText)
+  } else {
+    paste(
+      "The reference line is based on the average parameter estimates over the",
+      "posterior parameter distribution and", covText
+    )
+  }
+  paste(strwrap(txt, width = width), collapse = "\n")
+}
+
+
 #' Forest plots
 #'
 #' @import dplyr ggplot2 ggpubr
@@ -523,22 +555,7 @@ forestPlot <- function(dfres,
   } else if (!is.null(referenceInfo) & referenceInfo != "auto") {
     myPlot <- ggpubr::annotate_figure(myPlot, bottom = ggpubr::text_grob(referenceInfo, size = size, ...))
   } else if (referenceInfo == "auto") {
-    if (dfres[1, "REFROW"] == "NO" && referenceParameters == "final") {
-      refText <-
-        "The reference line is based on the final parameter estimates and the reference covariate values in the model."
-    } else if (dfres[1, "REFROW"] == "NO" && referenceParameters == "func") {
-      refText <- paste0(
-        "The reference line is based on the average parameter estimates over the posterior parameter ",
-        "distribution and the reference covariate values in the model."
-      )
-    } else if (dfres[1, "REFROW"] == "YES" && referenceParameters == "final") {
-      refText <- "The reference line is based on the final parameter estimates and selected covariate values."
-    } else if (dfres[1, "REFROW"] == "YES" && referenceParameters == "func") {
-      refText <- paste0(
-        "The reference line is based on the average parameter estimates over the posterior parameter ",
-        "distribution and selected covariate values."
-      )
-    }
+    refText <- refInfoText(dfres[1, "REFROW"], referenceParameters)
 
     myPlot <- ggpubr::annotate_figure(myPlot, bottom = ggpubr::text_grob(refText, size = size, ...))
   }

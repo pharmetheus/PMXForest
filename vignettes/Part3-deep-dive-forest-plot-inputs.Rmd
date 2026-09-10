@@ -72,6 +72,20 @@ does underneath — the function to reach for when you want to take over.
 The empirical entry point `getForestDFemp()` takes a `covExpressionsList` in place
 of `dfCovs`; that is covered in Section 7.
 
+There is a third way to read the table, and it matters more than either. A
+convenience function encodes one reasonable answer to "what should this input
+look like?" — the observed percentiles, one row per level, the reference the
+control stream implies. When that answer does not fit the question you are
+asking, the fix is usually **not** to abandon the function and build the input
+by hand. It is to take what the function produced and change the part that is
+wrong, in script rather than by retyping.
+
+That keeps the provenance: what came from the data or the model is still
+derived, the deviation is a visible line of code that a reviewer can see and
+question, and re-running after the model or the data changes reproduces both
+the derivation and the deviation. Sections 1 and 2 each end with a worked
+example.
+
 Two of those rows are worth pausing on. `setupDfCovs()` is a genuine composition
 — you can call `getCovStats()` and `createInputForestData()` yourself and get the
 same object, which Section 1 does step by step. `setupCovExpressionsList()` is
@@ -230,6 +244,66 @@ setupDfCovs(
 )
 ```
 
+## Adjusting what `setupDfCovs()` produced
+
+`setupDfCovs()` gives one row per level and the 5th/95th percentiles of the
+observed data. Two things it will not do: use a value the study did not observe,
+and show a *combination* of covariates, since it varies one at a time.
+
+Both are ordinary requirements — a label may specify weight bands rather than
+percentiles, and the clinical question is often "what about a light poor
+metaboliser?", which no single-covariate row answers. Start from the generated
+structure and edit it.
+
+```{r}
+dfCovsAdj <- setupDfCovs(dfData,
+  covariates = c("WT", "GENO"),
+  catRef = list(GENO = 2), sep = "", idVar = "ID"
+)
+dfCovsAdj
+```
+
+A combination row is built from any existing row, so it is guaranteed to have
+the right columns in the right order. Blank it to `missVal`, then set only the
+cells the row is about:
+
+```{r}
+combo <- dfCovsAdj[1, ]
+combo[setdiff(names(combo), "COVARIATEGROUPS")] <- -99
+combo$WT <- 60
+combo$GENO1 <- 0
+combo$GENO3 <- 0
+combo$GENO4 <- 1
+combo$COVARIATEGROUPS <- "Combination"
+
+dfCovsAdj <- rbind(dfCovsAdj, combo)
+tail(dfCovsAdj, 2)
+```
+
+Note that all three genotype columns are set, not just `GENO4`. A one-hot
+covariate is only inactive when every one of its columns holds `missVal`;
+leaving `GENO1` and `GENO3` at `-99` while `GENO4` is `1` is a contradiction the
+parameter function would resolve by falling back to the reference for the two it
+cannot read.
+
+Row labels are supplied separately and are not regenerated, so extend them in
+the same step and keep the `stopifnot()` guard:
+
+```{r}
+covnamesAdj <- c(
+  paste0("WT ", dfCovsAdj$WT[1:2], " kg"),
+  "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
+  "60 kg, 2D6 PM"
+)
+stopifnot(length(covnamesAdj) == nrow(dfCovsAdj))
+```
+
+The same approach covers replacing a percentile with a protocol value
+(`dfCovsAdj$WT[1:2] <- c(60, 100)`) or dropping a row you do not want to show
+(`dfCovsAdj[-3, ]`). What it does not cover is a *different shape* of input —
+for that, `createInputForestData()` builds one from literal values directly, as
+above.
+
 ## `oneHotEncode()`
 
 `getCovStats()` produces one-hot vectors from a *summary* of the data.
@@ -345,6 +419,14 @@ gen <- createParamFunction(
 cat(head(gen$code, 24), sep = "\n")
 ```
 
+The final estimates are what the function will be evaluated with, here and in
+`getForestDFSCM()`:
+
+```{r}
+ext <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
+thetas <- as.numeric(ext[ext$ITERATION == -1000000000, 2:15])
+```
+
 Two things to notice.
 
 **Every `ETA(n)` is set to 0**, so the function returns typical values — what a
@@ -408,6 +490,67 @@ reach:
   functions, including passing extra arguments through `...`.
 * [R-coded models](Part3-deep-dive-r-coded-models.html) — a model that never had
   a `$PK` block to parse.
+
+## 2.4 Adjusting the generated function
+
+The generator returns **source text**, which is the reason it returns text at
+all: a function you disagree with can be corrected without abandoning the
+translation that was right.
+
+Section 2.3 noted one case where the generated function is faithful to the
+control stream and still not enough. `run7`'s `$PK` sets the sex effect with two
+one-line branches and no `ELSE`:
+
+```{r}
+cat(grep("FRELSEX", gen$code, value = TRUE), sep = "\n")
+```
+
+That is exhaustive for the data the model was fitted to, where `SEX` is 1 or 2.
+It is not exhaustive in general, and NONMEM's implicit carry-over between records
+hides the difference. In R there is nothing to carry over:
+
+```{r, error = TRUE}
+paramFunction <- eval(parse(text = paste(gen$code, collapse = "\n")))
+paramFunction(thetas, df = data.frame(SEX = 3))
+```
+
+The repair is one line, inserted where the branches begin — and inserted by
+matching on the text rather than by counting lines, so it still lands in the
+right place after the model is re-run and the source regenerated:
+
+```{r}
+code <- gen$code
+at <- grep("if (SEX == 1) FRELSEX <- 1", code, fixed = TRUE)
+code <- append(code, "  FRELSEX <- 1  # default the scm branches leave implicit", after = at - 1)
+
+paramFunctionFixed <- eval(parse(text = paste(code, collapse = "\n")))
+```
+
+The unmodelled level now resolves to the reference, and the modelled ones are
+untouched — which is the property to check after any edit of this kind:
+
+```{r}
+vapply(1:3, function(s) paramFunctionFixed(thetas, data.frame(SEX = s))$FREL, numeric(1))
+```
+
+Three habits make this safe rather than a fork of the model:
+
+**Edit the object, not a copy.** `gen$code` is a character vector, so the change
+is `sub()`, `grep()` and `append()` in the script. Pasting the generated source
+into the file and hand-editing it there produces something that looks
+hand-written, cannot be regenerated, and will silently disagree with the model
+after the next run.
+
+**Match on content, not position.** `code[24]` is correct until a covariate is
+added to `$PK`. `grep(..., fixed = TRUE)` on the line's text still finds it, and
+`length(at) == 1` is worth asserting if the pattern could match twice.
+
+**Say why, in the code.** The inserted line carries a comment. When someone asks
+in six months why the Forest plot does not match the control stream exactly, the
+answer is in the script rather than in anyone's memory.
+
+If the edit grows past a few lines, that is a signal the model needs the
+correction rather than the plot — fix `$PK` and regenerate.
 
 ## Secondary parameters are yours
 
@@ -585,9 +728,6 @@ model. With the data-derived reference, every row that does not vary `WT` sits a
 does not vary `FORM` sits at 1.17 for Frel:
 
 ```{r}
-ext <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
-thetas <- as.numeric(ext[ext$ITERATION == -1000000000, 2:15])
-
 c(CL = (75 / 85.4)^thetas[2], V = (75 / 85.4)^thetas[3], Frel = 1 / (1 + thetas[12]))
 ```
 
