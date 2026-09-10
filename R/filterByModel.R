@@ -24,7 +24,29 @@
 #'   kept only if it matches some `ACCEPT` condition. NONMEM does not allow both
 #'   forms in one `$DATA` record and neither does this function.
 #'
-#'   **What is not.** The single-character form (`IGNORE=@`, `IGNORE=C`) is a rule
+#'   **Two comparison families, as in NM-TRAN.** `=`, `==`, `/=`, `.EQ.` and
+#'   `.NE.` compare the value as **text**; `.EQN.`, `.NEN.` and the inequalities
+#'   compare it **numerically**. This is NONMEM's own rule and it matters: a
+#'   control stream filtering a NONMEM table file, where an integer `1` is
+#'   written `1.0000E+00`, gets nothing from `IGNORE=(OCC.EQ.1)` and everything
+#'   it expects from `IGNORE=(OCC.EQN.1)`. That is why `.EQN.`/`.NEN.` exist,
+#'   and why `run7.mod` uses them.
+#'
+#'   There is a limit to how faithfully the text comparison can be reproduced
+#'   here. NONMEM compares against the text in the **data file**; this function
+#'   is handed a data frame, in which that text has already been parsed into
+#'   numbers, so it compares against `as.character()` of the value instead. The
+#'   two agree whenever the file wrote the value the way R renders it, which is
+#'   the ordinary case for a CSV of integers. They can disagree for a file whose
+#'   numbers carry a format of their own - a table file again. When a text
+#'   comparison selects no record but the numeric reading of the same condition
+#'   would have selected some, that is the signature of this disagreement and
+#'   the function warns, naming both texts. Prefer `.EQN.`/`.NEN.` in a
+#'   condition whose result matters.
+#'
+#'   **What is not.** A value compared as text (`IGNORE=(GEN='M')`) is refused:
+#'   NONMEM permits it, but the condition grammar shared with `$PK` has no string
+#'   literal. The single-character form (`IGNORE=@`, `IGNORE=C`) is a rule
 #'   about the first non-blank character of the raw record rather than a condition
 #'   on the data, so it cannot be applied to a data frame. `IGNORE=@` is the usual
 #'   way of skipping a header line, which `read.csv()` has already done, so this
@@ -212,6 +234,37 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
     )
   }
 
+  ## A text comparison that selects nothing, where the numeric reading of the
+  ## same condition would have selected something, is almost always a value
+  ## written in a different form from the data - IGNORE=(OCC.EQ.1) against a
+  ## table file holding 1.0000E+00. NONMEM behaves exactly this way and says
+  ## nothing; since the whole point here is to reproduce the model's own record
+  ## selection, say something.
+  for (cond in conds) {
+    txt <- nmTextComparison(cond)
+    if (is.null(txt) || !txt$label %in% names(work)) next
+    tHit <- eval(parse(text = nmConditionToR(cond, modFile)), envir = work)
+    nHit <- tryCatch(eval(parse(text = nmDeparse(nmParseCondExpr(cond, modFile))),
+      envir = work
+    ), error = function(e) NULL)
+    tHit[is.na(tHit)] <- FALSE
+    if (is.null(nHit)) next
+    nHit[is.na(nHit)] <- FALSE
+    if (!any(tHit) && any(nHit)) {
+      warning(
+        "The $DATA condition '", trimws(cond), "' in ", basename(modFile),
+        " selects no record, though it would select ", sum(nHit),
+        " compared numerically. NONMEM compares this operator as text, against ",
+        "the text in the data file - which a data frame no longer holds, so ",
+        "the comparison here is against ", dQuote(as.character(work[[txt$label]][which(nHit)[1]]), FALSE),
+        ". If the file wrote that value as ", dQuote(txt$value, FALSE),
+        " the model did select records here and this result is wrong. ",
+        ".EQN. / .NEN. compare numerically and are unambiguous.",
+        call. = FALSE
+      )
+    }
+  }
+
   hit <- eval(parse(text = full), envir = work)
   hit[is.na(hit)] <- FALSE
 
@@ -225,7 +278,45 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
 #'
 #' @noRd
 nmConditionToR <- function(cond, modFile) {
+  txt <- nmTextComparison(cond)
+  if (!is.null(txt)) {
+    return(paste0(
+      "as.character(", txt$label, ") ", txt$op, ' "', txt$value, '"'
+    ))
+  }
   nmDeparse(nmParseCondExpr(cond, modFile))
+}
+
+#' Split a $DATA condition that NM-TRAN compares as text
+#'
+#' NM-TRAN compares `=`, `==`, `/=`, `.EQ.` and `.NE.` as character strings and
+#' only `.EQN.`, `.NEN.` and the inequalities numerically. Returns
+#' `list(label, op, value)` for the first family and `NULL` for the second, so
+#' the caller can emit the right kind of comparison.
+#'
+#' `.EQ.` cannot be matched by looking for "EQ" alone - `.EQN.` starts the same
+#' way - so the pattern requires the closing dot. A bare `=` must not be taken
+#' out of `==` or `/=`: the alternation is ordered longest-first, which is what
+#' prevents that. `>=` and `<=` never reach the operator group at all, since the
+#' label pattern cannot consume the `>` or `<`. The lookbehind is therefore a
+#' guard rather than the mechanism, and removing it changes no result - it is
+#' kept so a later edit to the label pattern cannot open the hole quietly.
+#'
+#' @noRd
+nmTextComparison <- function(cond) {
+  m <- regmatches(
+    cond,
+    regexec(
+      "^\\s*([A-Za-z][A-Za-z0-9_]*)\\s*(\\.EQ\\.|\\.NE\\.|==|/=|(?<![<>=!/])=(?!=))\\s*(\\S+?)\\s*$",
+      cond,
+      perl = TRUE, ignore.case = TRUE
+    )
+  )[[1]]
+  if (length(m) != 4) {
+    return(NULL)
+  }
+  op <- if (toupper(m[3]) %in% c(".NE.", "/=")) "!=" else "=="
+  list(label = m[2], op = op, value = m[4])
 }
 
 #' @noRd
@@ -255,6 +346,18 @@ nmConditionSymbols <- function(cond, modFile) {
 #'
 #' @noRd
 nmParseCondExpr <- function(cond, modFile) {
+  ## NONMEM allows an alphabetic value, optionally quoted - IGNORE=(GEN='M').
+  ## The $PK grammar this shares has no string literal, so such a condition
+  ## would lex the value as a symbol and fail further on with "refers to M,
+  ## which $INPUT does not declare", which points at the wrong thing entirely.
+  if (grepl("['\"]", cond)) {
+    stop("The $DATA condition '", cond, "' in ", basename(modFile),
+      " compares against a text value. filterByModel() handles numeric ",
+      "comparisons only; drop the record selection to the data step, or ",
+      "recode the column before filtering.",
+      call. = FALSE
+    )
+  }
   cond <- gsub("(?<![<>!=])=(?!=)", "==", cond, perl = TRUE)
   p <- nmParser(nmLex(cond, 1L, modFile), 1L, modFile)
   e <- nmParseExpr(p)

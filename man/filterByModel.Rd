@@ -57,7 +57,29 @@ Reads the `IGNORE` and `ACCEPT` statements from a NONMEM control
   kept only if it matches some `ACCEPT` condition. NONMEM does not allow both
   forms in one `$DATA` record and neither does this function.
 
-  **What is not.** The single-character form (`IGNORE=@`, `IGNORE=C`) is a rule
+  **Two comparison families, as in NM-TRAN.** `=`, `==`, `/=`, `.EQ.` and
+  `.NE.` compare the value as **text**; `.EQN.`, `.NEN.` and the inequalities
+  compare it **numerically**. This is NONMEM's own rule and it matters: a
+  control stream filtering a NONMEM table file, where an integer `1` is
+  written `1.0000E+00`, gets nothing from `IGNORE=(OCC.EQ.1)` and everything
+  it expects from `IGNORE=(OCC.EQN.1)`. That is why `.EQN.`/`.NEN.` exist,
+  and why `run7.mod` uses them.
+
+  There is a limit to how faithfully the text comparison can be reproduced
+  here. NONMEM compares against the text in the **data file**; this function
+  is handed a data frame, in which that text has already been parsed into
+  numbers, so it compares against `as.character()` of the value instead. The
+  two agree whenever the file wrote the value the way R renders it, which is
+  the ordinary case for a CSV of integers. They can disagree for a file whose
+  numbers carry a format of their own - a table file again. When a text
+  comparison selects no record but the numeric reading of the same condition
+  would have selected some, that is the signature of this disagreement and
+  the function warns, naming both texts. Prefer `.EQN.`/`.NEN.` in a
+  condition whose result matters.
+
+  **What is not.** A value compared as text (`IGNORE=(GEN='M')`) is refused:
+  NONMEM permits it, but the condition grammar shared with `$PK` has no string
+  literal. The single-character form (`IGNORE=@`, `IGNORE=C`) is a rule
   about the first non-blank character of the raw record rather than a condition
   on the data, so it cannot be applied to a data frame. `IGNORE=@` is the usual
   way of skipping a header line, which `read.csv()` has already done, so this

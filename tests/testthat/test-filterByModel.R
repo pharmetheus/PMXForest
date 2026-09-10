@@ -97,6 +97,116 @@ test_that("the full comparison operator family is understood", {
   expect_equal(filterByModel(d, ne, quiet = TRUE)$WT, c(50, 60, 80, 90))
 })
 
+test_that(".EQN. and .NEN. behave as .EQ. and .NE.", {
+  # run7's own $DATA uses .EQN., so the variant the reference model depends on
+  # must be covered, and its partner with it.
+  d <- data.frame(ID = 1:4, DV = 1, WT = c(50, 60, 60, 70))
+  eqn <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.EQN.60)")
+  nen <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.NEN.60)")
+  eq <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.EQ.60)")
+  ne <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE(WT.NE.60)")
+
+  expect_equal(filterByModel(d, eqn, quiet = TRUE)$WT, c(50, 70))
+  expect_equal(filterByModel(d, nen, quiet = TRUE)$WT, c(60, 60))
+  # the .xxN. forms must agree with their plain partners
+  expect_equal(
+    filterByModel(d, eqn, quiet = TRUE), filterByModel(d, eq, quiet = TRUE)
+  )
+  expect_equal(
+    filterByModel(d, nen, quiet = TRUE), filterByModel(d, ne, quiet = TRUE)
+  )
+})
+
+test_that("a record the condition cannot be evaluated on is not selected", {
+  # A missing value makes the comparison NA, and NA row-indexing keeps an
+  # all-NA row rather than dropping it, so the result is forced to FALSE. That
+  # reads the same way for both keywords: the condition did not fire. For
+  # IGNORE the record is therefore kept, for ACCEPT it is dropped - which is
+  # the safe direction in each case, but it is a silent decision about which
+  # subjects reach the plot, so it is pinned here.
+  d <- data.frame(ID = 1:4, DV = 1, WT = c(50, NA, 80, 90))
+
+  ign <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=(WT.GT.70)")
+  acc <- tempMod("$INPUT ID DV WT", "$DATA d.csv ACCEPT=(WT.GT.70)")
+
+  expect_equal(filterByModel(d, ign, quiet = TRUE)$ID, c(1L, 2L))
+  expect_equal(filterByModel(d, acc, quiet = TRUE)$ID, c(3L, 4L))
+  # no row is both kept by IGNORE and kept by ACCEPT except through the NA rule
+  expect_false(2L %in% filterByModel(d, acc, quiet = TRUE)$ID)
+})
+
+test_that("several ACCEPT statements are alternatives, as several IGNOREs are", {
+  # NM-TRAN: "Multiple IGNORE options with different lists may be used", the
+  # conditions being joined by an implied .OR., and ACCEPT is "identical to the
+  # IGNORE list option, except that it specifies conditions for acceptance".
+  # So two ACCEPT statements accept the union, not the intersection.
+  d <- data.frame(ID = 1:6, DV = 1, AGE = c(10, 20, 30, 40, 50, 60), SEX = c(1, 1, 2, 2, 1, 2))
+  two <- tempMod("$INPUT ID DV AGE SEX", "$DATA d.csv ACCEPT=(AGE.GT.25) ACCEPT=(SEX.EQ.1)")
+  one <- tempMod("$INPUT ID DV AGE SEX", "$DATA d.csv ACCEPT=(AGE.GT.25,SEX.EQ.1)")
+
+  expect_equal(filterByModel(d, two, quiet = TRUE)$ID, 1:6)
+  # a single list with both conditions must give the same answer
+  expect_equal(
+    filterByModel(d, two, quiet = TRUE), filterByModel(d, one, quiet = TRUE)
+  )
+  # and it is a union, not an intersection - the intersection is ID 5 alone
+  expect_gt(nrow(filterByModel(d, two, quiet = TRUE)), 1)
+})
+
+test_that("a text value is refused with a message that names the problem", {
+  # NONMEM allows IGNORE=(GEN='M'); the condition grammar shared with $PK has
+  # no string literal, so it must say so rather than blaming $INPUT.
+  d <- data.frame(ID = 1:2, DV = 1, GEN = c("M", "F"), stringsAsFactors = FALSE)
+  f <- tempMod("$INPUT ID DV GEN", "$DATA d.csv IGNORE=(GEN.EQ.'M')")
+  expect_error(filterByModel(d, f, quiet = TRUE), "compares against a text value")
+  expect_error(filterByModel(d, f, quiet = TRUE), "numeric comparisons only")
+})
+
+test_that("the string family compares as text and the N family numerically", {
+  # NM-TRAN: "With =, ==, /=, .EQ. and .NE., the value in the data record and
+  # the value in the list are compared as character strings. Otherwise, they
+  # are converted to numeric" - which is the case with .NEN. and .EQN.
+  expect_equal(nmConditionToR("TYPE.EQ.2", "m.mod"), 'as.character(TYPE) == "2"')
+  expect_equal(nmConditionToR("TYPE.NE.2", "m.mod"), 'as.character(TYPE) != "2"')
+  expect_equal(nmConditionToR("OCC=1", "m.mod"), 'as.character(OCC) == "1"')
+  expect_equal(nmConditionToR("OCC/=1", "m.mod"), 'as.character(OCC) != "1"')
+  # the N variants and every inequality stay numeric
+  expect_equal(nmConditionToR("TYPE.EQN.2", "m.mod"), "TYPE == 2")
+  expect_equal(nmConditionToR("TYPE.NEN.2", "m.mod"), "TYPE != 2")
+  expect_equal(nmConditionToR("WT.GT.70", "m.mod"), "WT > 70")
+  # a bare = must not be taken out of >= or <=
+  expect_equal(nmConditionToR("WT.GE.70", "m.mod"), "WT >= 70")
+  expect_equal(nmConditionToR("WT>=70", "m.mod"), "WT >= 70")
+  expect_equal(nmConditionToR("WT<=70", "m.mod"), "WT <= 70")
+})
+
+test_that("a text comparison that finds nothing numerically would is warned about", {
+  # The table-file case the NM-TRAN help calls out: an integer 1 in the data is
+  # written 1.0000E+00 in a table file, so IGNORE=(OCC.EQ.1) matches nothing.
+  # We cannot see the file's text from a data frame, so the disagreement
+  # between the two readings is the only available signal - and it is loud.
+  d <- data.frame(ID = 1:4, DV = 1, OCC = c(1, 2, 1, 2))
+  trap <- tempMod("$INPUT ID DV OCC", "$DATA d.csv IGNORE=(OCC.EQ.1.0000E+00)")
+
+  expect_warning(
+    out <- filterByModel(d, trap, quiet = TRUE),
+    "selects no record"
+  )
+  expect_warning(filterByModel(d, trap, quiet = TRUE), "EQN")
+  # nothing was dropped, because the text did not match
+  expect_equal(nrow(out), 4L)
+
+  # the numeric operator does the job and says nothing
+  ok <- tempMod("$INPUT ID DV OCC", "$DATA d.csv IGNORE=(OCC.EQN.1.0000E+00)")
+  expect_no_warning(out2 <- filterByModel(d, ok, quiet = TRUE))
+  expect_equal(out2$ID, c(2L, 4L))
+
+  # and a text comparison that does match is silent
+  plain <- tempMod("$INPUT ID DV OCC", "$DATA d.csv IGNORE=(OCC.EQ.1)")
+  expect_no_warning(out3 <- filterByModel(d, plain, quiet = TRUE))
+  expect_equal(out3$ID, c(2L, 4L))
+})
+
 test_that("DROP columns still occupy a position", {
   f <- tempMod("$INPUT ID JUNK=DROP WT", "$DATA d.csv IGNORE=(WT.LT.70)")
   d <- data.frame(ID = 1:3, JUNK = 9, WT = c(60, 75, 80))
