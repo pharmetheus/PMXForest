@@ -302,6 +302,31 @@ test_that("Final coverage gaps for Reference Info and COVEFF overrides", {
   fp4 <- forestPlot(df_yes, referenceParameters = "func", referenceInfo = "auto")
   expect_s3_class(fp4, "gg")
 
+  # 5. The auto caption is wrapped so the device cannot clip it
+  #    Unwrapped, the longest of these is 153 characters and needs ~12.3 in at
+  #    the default text size - wider than R's 7 in default device, so it was
+  #    cut off at both ends in every vignette figure.
+  for (rr in c("NO", "YES")) {
+    for (rp in c("final", "func")) {
+      txt <- PMXForest:::refInfoText(rr, rp)
+      expect_true(all(nchar(strsplit(txt, "\n", fixed = TRUE)[[1]]) <= 80))
+    }
+  }
+  # wrapping must not change a single word
+  expect_equal(
+    gsub("\n", " ", PMXForest:::refInfoText("NO", "func"), fixed = TRUE),
+    paste0(
+      "The reference line is based on the average parameter estimates over the ",
+      "posterior parameter distribution and the reference covariate values in the model."
+    )
+  )
+  expect_equal(
+    gsub("\n", " ", PMXForest:::refInfoText("YES", "final"), fixed = TRUE),
+    "The reference line is based on the final parameter estimates and selected covariate values."
+  )
+  # a caller's own referenceInfo is passed through untouched, line breaks and all
+  expect_s3_class(forestPlot(df_mock, referenceInfo = "Line one\nline two"), "gg")
+
   # 2. Test manual setSignEff override (Hits setCOVEFF internal logic)
   # We use plotRelative=TRUE to match the Super Mock columns
   lsOverride <- list(c("V", "Weight"))

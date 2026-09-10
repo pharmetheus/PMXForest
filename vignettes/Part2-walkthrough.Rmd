@@ -171,6 +171,14 @@ not produce. Both, along with `additionalCovs`, `useMissVal` and `contRef`, are
 covered in the
 [Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html).
 
+More often, though, the answer is neither the wrapper nor the primitives: the
+generated structure is right except for one part. A protocol may specify weight
+bands rather than the observed percentiles, or the question may be about a
+*combination* of covariates, which `setupDfCovs()` does not produce because it
+varies one at a time. Take what it produced and edit that — the deep dive's
+[Adjusting what `setupDfCovs()` produced](Part3-deep-dive-forest-plot-inputs.html)
+works through both.
+
 # 2. Generate the parameter function
 
 The parameter function turns a vector of `thetas` and one row of covariate values
@@ -247,6 +255,11 @@ contract, why `df` is one row, and why the `-99` guards are needed even when the
 data has no missing values — is set out in
 [Preparing Forest plot inputs, Section 2.1](Part3-deep-dive-forest-plot-inputs.html).
 Read it when you need to write one by hand, which Section 2.3 there describes.
+
+And if the generated function is not quite right, it does not have to be thrown
+away. It is source text precisely so that it can be corrected: Section 2.4 shows
+how to patch the emitted code programmatically, so the translation stays derived
+from the model and the deviation stays visible in the script.
 
 # 3. Sample the parameter uncertainty
 
