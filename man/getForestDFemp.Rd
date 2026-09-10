@@ -35,7 +35,7 @@ getForestDFemp(
 
 \item{covExpressionsList}{A list of expressions that define the covariate values to visualize in the Forest plot.}
 
-\item{noBaseThetas}{the number of parameters from `dfParameters` to pass to the functions in `functionList`.}
+\item{noBaseThetas}{the number of parameters from \code{dfParameters} to pass to the functions in \code{functionList}.}
 
 \item{dfParameters}{A data frame with parameter samples from the uncertainty distribution.
 The vector of final parameter estimates is assumed to be in the first row.
@@ -84,15 +84,15 @@ covariates. Default is no grouping. See example.}
 
 \item{oneHot}{An optional one-hot encoding specification (see
 \code{\link{oneHotEncode}}). When supplied, raw multi-level categorical columns
-are one-hot encoded before the parameter functions are evaluated - in `dfCovs`
-and `dfRefRow` for `getForestDFSCM()`, in `dfData` for `getForestDFemp()` - so
+are one-hot encoded before the parameter functions are evaluated - in \code{dfCovs}
+and \code{dfRefRow} for \code{getForestDFSCM()}, in \code{dfData} for \code{getForestDFemp()} - so
 a single parameter function written against the dummy columns can serve both
-the parametric and empirical workflows. Default `NULL` (no encoding). For
-`getForestDFSCM()` the raw column is dropped after encoding.}
+the parametric and empirical workflows. Default \code{NULL} (no encoding). For
+\code{getForestDFSCM()} the raw column is dropped after encoding.}
 
 \item{oneHotSep}{The separator between the covariate name and the level in the
-dummy column names created when `oneHot` is used. Defaults to `"_"`. Set to
-`""` to match dummy columns named like `GENO1`, `GENO2`.}
+dummy column names created when \code{oneHot} is used. Defaults to \code{"_"}. Set to
+\code{""} to match dummy columns named like \code{GENO1}, \code{GENO2}.}
 
 \item{...}{additional variables to be forwarded to the the functionList functions}
 }
@@ -144,5 +144,5 @@ dfresEmp <- getForestDFemp(
 head(dfresEmp[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
 }
 \seealso{
-`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+\code{vignette("Part2-walkthrough", package = "PMXForest")} for how this fits the whole workflow.
 }

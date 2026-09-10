@@ -13,55 +13,55 @@ filterByModel(
 )
 }
 \arguments{
-\item{data}{A data frame holding at least the first `length($INPUT)` columns of
+\item{data}{A data frame holding at least the first \verb{length($INPUT)} columns of
 the model's data file, in that order.}
 
 \item{modFile}{Path to the NONMEM control stream.}
 
-\item{useInputNames}{Logical. If `FALSE` (default), the filtered rows are
-returned with the caller's own column names. If `TRUE`, the result is the
-data as NONMEM sees it: the first `length($INPUT)` columns only, renamed to
-the `$INPUT` names.}
+\item{useInputNames}{Logical. If \code{FALSE} (default), the filtered rows are
+returned with the caller's own column names. If \code{TRUE}, the result is the
+data as NONMEM sees it: the first \verb{length($INPUT)} columns only, renamed to
+the \verb{$INPUT} names.}
 
-\item{quiet}{Logical. If `FALSE` (default), reports the condition applied and
+\item{quiet}{Logical. If \code{FALSE} (default), reports the condition applied and
 how many records and subjects it removed.}
 
 \item{idVar}{The subject identifier, used only for that report. Defaults to
-`"ID"`.}
+\code{"ID"}.}
 }
 \value{
 A data frame containing the rows the model used.
 }
 \description{
-Reads the `IGNORE` and `ACCEPT` statements from a NONMEM control
-  stream's `$DATA` record and applies them to a data frame, returning the rows
-  the model actually used. Summarising the raw analysis file instead of the
-  filtered one gives covariate quantiles and reference values for a population
-  the model never saw.
+Reads the \code{IGNORE} and \code{ACCEPT} statements from a NONMEM control
+stream's \verb{$DATA} record and applies them to a data frame, returning the rows
+the model actually used. Summarising the raw analysis file instead of the
+filtered one gives covariate quantiles and reference values for a population
+the model never saw.
 }
 \details{
-**Columns are matched by position, not by name.** NONMEM skips the header
-  line and takes its column names from `$INPUT`, so the names in the data file
-  need not agree with the names the model uses - and where they disagree,
-  filtering by name reads the wrong column. This function maps the first
-  `length($INPUT)` columns of `data` onto the `$INPUT` names before evaluating
-  any condition. Columns beyond that are ignored, as NONMEM ignores them, and
-  `DROP`/`SKIP` columns still occupy a position. A `SYNONYM=REAL` pair can be
-  referred to by either name.
+\strong{Columns are matched by position, not by name.} NONMEM skips the header
+line and takes its column names from \verb{$INPUT}, so the names in the data file
+need not agree with the names the model uses - and where they disagree,
+filtering by name reads the wrong column. This function maps the first
+\verb{length($INPUT)} columns of \code{data} onto the \verb{$INPUT} names before evaluating
+any condition. Columns beyond that are ignored, as NONMEM ignores them, and
+\code{DROP}/\code{SKIP} columns still occupy a position. A \code{SYNONYM=REAL} pair can be
+referred to by either name.
 
-  **What is supported.** `IGNORE=(list)`, `IGNORE(list)`, `ACCEPT=(list)` and
-  `ACCEPT(list)`, with the `.EQ.`/`.NE.`/`.GT.`/`.GE.`/`.LT.`/`.LE.` operator
-  family, their `.EQN.`/`.NEN.` variants, and a bare `=` meaning equality.
-  Conditions separated by commas are combined with OR, as are multiple
-  statements. A record is dropped if it matches any `IGNORE` condition, and
-  kept only if it matches some `ACCEPT` condition. NONMEM does not allow both
-  forms in one `$DATA` record and neither does this function.
+\strong{What is supported.} \code{IGNORE=(list)}, \code{IGNORE(list)}, \code{ACCEPT=(list)} and
+\code{ACCEPT(list)}, with the \code{.EQ.}/\code{.NE.}/\code{.GT.}/\code{.GE.}/\code{.LT.}/\code{.LE.} operator
+family, their \code{.EQN.}/\code{.NEN.} variants, and a bare \code{=} meaning equality.
+Conditions separated by commas are combined with OR, as are multiple
+statements. A record is dropped if it matches any \code{IGNORE} condition, and
+kept only if it matches some \code{ACCEPT} condition. NONMEM does not allow both
+forms in one \verb{$DATA} record and neither does this function.
 
-  **What is not.** The single-character form (`IGNORE=@`, `IGNORE=C`) is a rule
-  about the first non-blank character of the raw record rather than a condition
-  on the data, so it cannot be applied to a data frame. `IGNORE=@` is the usual
-  way of skipping a header line, which `read.csv()` has already done, so this
-  is normally harmless - a warning is issued and the statement is skipped.
+\strong{What is not.} The single-character form (\verb{IGNORE=@}, \code{IGNORE=C}) is a rule
+about the first non-blank character of the raw record rather than a condition
+on the data, so it cannot be applied to a data frame. \verb{IGNORE=@} is the usual
+way of skipping a header line, which \code{read.csv()} has already done, so this
+is normally harmless - a warning is issued and the statement is skipped.
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
@@ -81,6 +81,6 @@ getCovStats(dfUsed, "CRCL", idVar = "ID")
 head(names(filterByModel(dfData, modFile, useInputNames = TRUE, quiet = TRUE)), 10)
 }
 \seealso{
-[createParamFunction()], [setupDfCovs()], [getCovStats()]
-  `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+\code{\link[=createParamFunction]{createParamFunction()}}, \code{\link[=setupDfCovs]{setupDfCovs()}}, \code{\link[=getCovStats]{getCovStats()}}
+\code{vignette("Part2-walkthrough", package = "PMXForest")} for how this fits the whole workflow.
 }

@@ -10,11 +10,11 @@ createInputForestData(listCovs, iMiss = -99)
 \item{listCovs}{A list where each element represents a covariate or a group
 of covariates.
 \itemize{
-  \item For simple (univariate) effects, elements should be a named vector
-    (e.g., `list(WT = c(70, 110))`).
-  \item For grouped (multivariate) effects, elements should be a nested,
-    named list of vectors (e.g., for a categorical variable `GENO`,
-    `list(GENO = list(GENO_2 = c(0,1,0), GENO_3 = c(0,0,1)))`).
+\item For simple (univariate) effects, elements should be a named vector
+(e.g., \code{list(WT = c(70, 110))}).
+\item For grouped (multivariate) effects, elements should be a nested,
+named list of vectors (e.g., for a categorical variable \code{GENO},
+\code{list(GENO = list(GENO_2 = c(0,1,0), GENO_3 = c(0,0,1)))}).
 }}
 
 \item{iMiss}{The numeric value that should be used to fill in columns that are
@@ -22,14 +22,14 @@ not applicable for a given row. Defaults to -99.}
 }
 \value{
 A data frame where each row represents a specific covariate value
-  (or combination of values for grouped effects). The data frame contains a
-  `COVARIATEGROUPS` column derived from the names in the input list, which is
-  used to group effects in a forest plot.
+(or combination of values for grouped effects). The data frame contains a
+\code{COVARIATEGROUPS} column derived from the names in the input list, which is
+used to group effects in a forest plot.
 }
 \description{
 This function transforms a specially formatted list of covariates
-  and their values into a data frame suitable for generating a forest plot.
-  It is designed to work with the output of the `getCovStats` function.
+and their values into a data frame suitable for generating a forest plot.
+It is designed to work with the output of the \code{getCovStats} function.
 }
 \examples{
 # --- Example 1: covariate values given as literals ---

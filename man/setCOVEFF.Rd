@@ -16,7 +16,7 @@ A data frame similar to \code{dfres} except that the COVEFF column has been modi
 }
 \description{
 Set the COEFF column in dfes to TRUE based on user input. Used to specify which
-  covariates that are significant in an SCM.
+covariates that are significant in an SCM.
 }
 \examples{
 \dontrun{

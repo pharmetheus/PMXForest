@@ -20,61 +20,61 @@ getCovStats(
 }
 \arguments{
 \item{data}{A data frame that includes the covariates to summarise. Only the
-first record per subject (identified by `idVar`) will be used.}
+first record per subject (identified by \code{idVar}) will be used.}
 
 \item{covariates}{A character vector of covariate names as they appear in the
 data frame.}
 
 \item{minLevels}{The maximum number of unique values a covariate can have to be
-treated as categorical. Covariates with more unique values than `minLevels`
+treated as categorical. Covariates with more unique values than \code{minLevels}
 are treated as continuous. Default is 10.}
 
 \item{probs}{A numeric vector of two probabilities used to calculate quantiles
-for continuous covariates. Defaults to `c(0.05, 0.95)`.}
+for continuous covariates. Defaults to \code{c(0.05, 0.95)}.}
 
 \item{idVar}{The name of the subject identifier column, used to select one
-record per subject. Defaults to `"ID"`.}
+record per subject. Defaults to \code{"ID"}.}
 
 \item{missVal}{The value indicating missing data, which will be excluded from
 calculations. Defaults to -99.}
 
-\item{nsig}{The number of significant digits (passed to the `signif`
+\item{nsig}{The number of significant digits (passed to the \code{signif}
 function) for rounding the summary of continuous covariates. Defaults to 3.}
 
 \item{catRef}{The reference level for multi-level categorical covariates -
 the level represented by the all-zero one-hot row. Either a single setting
-applied to every covariate or a named list with an optional `default`
-component; each entry is a level, `"lowest"` (the default), `"mode"` or
-`"model"`. For example `list(GENO = 2)`. Has no effect on continuous or
+applied to every covariate or a named list with an optional \code{default}
+component; each entry is a level, \code{"lowest"} (the default), \code{"mode"} or
+\code{"model"}. For example \code{list(GENO = 2)}. Has no effect on continuous or
 binary covariates.}
 
-\item{model}{The NONMEM control stream, required when `catRef` is `"model"`.
-Either a path to the `.mod` file or the list returned by
-[createParamFunction()].}
+\item{model}{The NONMEM control stream, required when \code{catRef} is \code{"model"}.
+Either a path to the \code{.mod} file or the list returned by
+\code{\link[=createParamFunction]{createParamFunction()}}.}
 
-\item{refLevels}{Deprecated. Use `catRef`.}
+\item{refLevels}{Deprecated. Use \code{catRef}.}
 
 \item{sep}{The separator between the covariate name and the level in the
 one-hot column names for multi-level categorical covariates. Defaults to
-`"_"`, matching the NONMEM FREM convention.}
+\code{"_"}, matching the NONMEM FREM convention.}
 }
 \value{
 A list where each element corresponds to a covariate.
-  \itemize{
-    \item For **continuous** covariates, the element is a named numeric vector
-      of quantiles.
-    \item For **binary** covariates, the element is a sorted vector of the two
-      unique values.
-    \item For **multi-level categorical** covariates, the element is a nested
-      list of one-hot encoded vectors. The reference level (the lowest level,
-      or the one named in `catRef`) is represented by all vectors being 0.
-  }
+\itemize{
+\item For \strong{continuous} covariates, the element is a named numeric vector
+of quantiles.
+\item For \strong{binary} covariates, the element is a sorted vector of the two
+unique values.
+\item For \strong{multi-level categorical} covariates, the element is a nested
+list of one-hot encoded vectors. The reference level (the lowest level,
+or the one named in \code{catRef}) is represented by all vectors being 0.
+}
 }
 \description{
 Quickly generates a list of summary statistics for specified
-  covariates, formatted for use in forest plots. The function handles
-  continuous, binary, and multi-level categorical variables differently based
-  on their number of unique values.
+covariates, formatted for use in forest plots. The function handles
+continuous, binary, and multi-level categorical variables differently based
+on their number of unique values.
 }
 \examples{
 dfData <- read.csv(

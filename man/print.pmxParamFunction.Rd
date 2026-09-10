@@ -7,13 +7,13 @@
 \method{print}{pmxParamFunction}(x, ...)
 }
 \arguments{
-\item{x}{A `pmxParamFunction` object, the `code` element of a
-[createParamFunction()] result.}
+\item{x}{A \code{pmxParamFunction} object, the \code{code} element of a
+\code{\link[=createParamFunction]{createParamFunction()}} result.}
 
 \item{...}{Ignored.}
 }
 \value{
-`x`, invisibly.
+\code{x}, invisibly.
 }
 \description{
 Print generated parameter-function source
