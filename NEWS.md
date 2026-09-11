@@ -294,6 +294,15 @@ PMXFrem uses it for FREM parameter functions.
   of appearance in the data, so row order in a Forest plot depended on which
   subject came first. Now always `c(0, 1)`.
 
+  **Check any `cdfCovsNames` you pass positionally.** Row labels are matched to
+  rows by position, so for a covariate whose data order was not already sorted,
+  the labels for its two levels now attach to the opposite levels - silently,
+  with no error. On the bundled data exactly one covariate is affected
+  (`ETHNIC`, which appears as `1, 0`); `NCIL`, `RACEL2` and `SEX` were already
+  in sorted order and are unchanged. If you generate labels with
+  `setupDfCovs()` or `setupCovExpressionsList()` rather than writing them out,
+  nothing changes.
+
 * **`getCovStats()` refuses a covariate with no non-missing value** instead of
   returning an empty result. `createInputForestData()` emits no rows for such a
   covariate, so it silently vanished from the plot. `setupDfCovs()` inherits the
@@ -327,6 +336,23 @@ PMXFrem uses it for FREM parameter functions.
   returned a negative reference value. The relative quantiles are now computed
   from the ratio directly rather than by dividing the absolute quantiles by a
   possibly negative reference.
+
+* **`verifyParamFunction()` could not read half the tables in the wild.** It
+  assumed NONMEM's own layout - a `TABLE NO.` banner, then a header, then
+  whitespace-separated rows. Tables are routinely post-processed on the way to
+  a plotting tool, and what reaches disk is as often comma-separated with the
+  header on the first line and no banner. Those were mis-parsed silently: the
+  header became a data row and every column came back as text. The layout is
+  now detected.
+
+* **`verifyParamFunction()` reported a failure it was not possible to pass.**
+  Where a table row carries `missVal` in a covariate column but the `$PK` block
+  has no missing-value handling for that covariate, NONMEM computed the tabled
+  value from the real covariate value - which the table no longer shows - while
+  the generated function substitutes the model's reference. The row cannot be
+  reconciled by any correct translation. Such rows are now dropped, with a
+  warning naming the covariates. Rows where `$PK` does handle `missVal`
+  explicitly are still compared, because those are reconcilable.
 
 * **`getCovStats()` leaked `NA` into level counting and quantiles.**
   `x != missVal` is `NA` where `x` is `NA`, and indexing rows by a logical `NA`

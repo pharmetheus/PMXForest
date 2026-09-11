@@ -95,7 +95,7 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
     }
   }
 
-  tab <- utils::read.table(tabFile, skip = 1, header = TRUE, check.names = TRUE)
+  tab <- nmReadTable(tabFile)
 
   ## Every covariate the function reads must be in the table. The generated code
   ## silently falls back to the reference value for an absent column, which would
@@ -109,6 +109,39 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
       "the comparison below is NOT a valid check. Add them to $TABLE.",
       call. = FALSE
     )
+  }
+
+  ## A row in which a covariate equals `missVal` can only be reconciled when
+  ## $PK handles that missing value itself. Where the reference was inferred
+  ## from a normalisation constant or a branch label, $PK has no -99 guard, so
+  ## NONMEM computed the tabled value from the real covariate value - which the
+  ## table no longer shows. Comparing such a row measures the table, not the
+  ## translation, and reports a failure that no change to the generator could
+  ## fix.
+  guarded <- vapply(x$covRef, function(r) {
+    isTRUE(grepl("explicit missing-value handling", r$source, fixed = TRUE))
+  }, logical(1))
+  unguarded <- intersect(names(guarded)[!guarded], names(tab))
+  if (length(unguarded) > 0 && !is.null(x$missVal)) {
+    bad <- Reduce(`|`, lapply(unguarded, function(cv) {
+      isMiss <- tab[[cv]] == x$missVal
+      isMiss[is.na(isMiss)] <- FALSE
+      isMiss
+    }))
+    if (any(bad)) {
+      warning(
+        sum(bad), " row(s) of ", basename(tabFile), " cannot be reconciled and ",
+        "were dropped: a covariate is ", x$missVal, " there, but the $PK block ",
+        "has no missing-value handling for it, so NONMEM computed the tabled ",
+        "value from the real covariate value rather than from a reference. ",
+        "Affected covariate(s): ", paste(unguarded, collapse = ", "), ".",
+        call. = FALSE
+      )
+      tab <- tab[!bad, , drop = FALSE]
+      if (nrow(tab) == 0) {
+        stop("No reconcilable rows left in ", basename(tabFile), ".", call. = FALSE)
+      }
+    }
   }
 
   ## One row per distinct covariate combination is enough, and much faster.
@@ -275,4 +308,31 @@ print.pmxParamVerify <- function(x, ...) {
   )
   print(d, row.names = FALSE)
   invisible(x)
+}
+
+## Read a NONMEM $TABLE file, whatever shape it is in.
+##
+## NONMEM's own output is a "TABLE NO." banner, a header, then whitespace
+## separated rows - but tables are routinely post-processed on the way to a
+## plotting tool, and what reaches disk is as often comma separated with the
+## header on the first line and no banner. Assuming one shape silently
+## mis-parses the other: the header becomes a data row and every column comes
+## back as text.
+##
+## @noRd
+nmReadTable <- function(tabFile) {
+  head3 <- readLines(tabFile, n = 3L, warn = FALSE)
+  head3 <- sub("\r$", "", head3)
+  if (length(head3) < 2L) {
+    stop("Table file ", basename(tabFile), " has fewer than two lines.", call. = FALSE)
+  }
+  banner <- grepl("^\\s*TABLE NO", head3[1])
+  header <- if (banner) head3[2] else head3[1]
+  nComma <- length(strsplit(header, ",", fixed = TRUE)[[1]])
+  nSpace <- length(strsplit(trimws(header), "[ \t]+")[[1]])
+  sep <- if (nComma > 1L && nComma >= nSpace) "," else ""
+  utils::read.table(tabFile,
+    sep = sep, skip = if (banner) 1L else 0L,
+    header = TRUE, check.names = TRUE, comment.char = ""
+  )
 }
