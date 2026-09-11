@@ -45,7 +45,7 @@ the reference value chosen for each.}
 
 \item{secondary}{An optional named list of secondary parameters to append to
 the generated function's return list. Each entry's value is a single string
-(R code whose last value is the result, \code{list(AUC = "df$DOSE / CL")}, or
+(R code whose last value is the result, \code{list(AUC = "500 / CL")}, or
 the path to an \code{.R} file of arbitrary code such as an \code{mrgsolve}
 simulation, \code{list(CMAX = "cmax.R")}), or a list \verb{list(source = <string>, ...)} carrying that \code{source} plus named atomic constants the code needs
 (\code{list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))}). A file's
@@ -113,7 +113,7 @@ covariate that matches no rule is an error - supply its reference through
 reached through \verb{$ERROR} or \verb{$DES} are not derivable from \verb{$PK} - the dose
 used for an AUC, for instance, appears nowhere in the control stream.
 Supply them through \code{secondary}, a named list. Each entry's value is
-either a line of R code (\code{secondary = list(AUC = "df$DOSE / CL")}), the
+either a line of R code (\code{secondary = list(AUC = "500 / CL")}), the
 path to an \code{.R} file of arbitrary code - including a \code{deSolve} or
 \code{mrgsolve} simulation (\code{secondary = list(CMAX = "cmax.R")}) - or a list
 carrying that \code{source} plus constants the code needs
