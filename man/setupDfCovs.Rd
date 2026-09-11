@@ -7,7 +7,7 @@
 setupDfCovs(
   data,
   covariates,
-  additionalCovs = NULL,
+  conditionalCovs = NULL,
   useMissVal = TRUE,
   contRef = "median",
   catRef = NULL,
@@ -23,46 +23,46 @@ setupDfCovs(
 }
 \arguments{
 \item{data}{A data frame that includes the covariates to summarize. Only the
-first record per subject (identified by `idVar`) will be used for both
+first record per subject (identified by \code{idVar}) will be used for both
 primary quantile derivation and reference calculations.}
 
 \item{covariates}{A character vector of primary covariate names to evaluate.}
 
-\item{additionalCovs}{A character vector of supplementary covariates. These are
+\item{conditionalCovs}{A character vector of supplementary covariates. These are
 expanded into their own rows like primary covariates, but when "inactive",
 they default to their dataset reference value (mode for categorical, mean/median
-for continuous) rather than `missVal`. Defaults to `NULL`.}
+for continuous) rather than \code{missVal}. Defaults to \code{NULL}.}
 
-\item{useMissVal}{Logical. If `TRUE` (default), inactive primary `covariates`
-retain `missVal`. If `FALSE`, inactive primary covariates are replaced with
+\item{useMissVal}{Logical. If \code{TRUE} (default), inactive primary \code{covariates}
+retain \code{missVal}. If \code{FALSE}, inactive primary covariates are replaced with
 their computed baseline references.}
 
 \item{contRef}{Reference setting for continuous covariates: a number,
-`"mean"`, `"median"` (default) or `"model"`, or a named list of those with
-an optional `default` component, e.g.
-`list(WT = 75, AGE = "mean", default = "median")`. Applies to
-`additionalCovs`, and to the primary covariates when `useMissVal = FALSE`.}
+\code{"mean"}, \code{"median"} (default) or \code{"model"}, or a named list of those with
+an optional \code{default} component, e.g.
+\code{list(WT = 75, AGE = "mean", default = "median")}. Applies to
+\code{conditionalCovs}, and to the primary covariates when \code{useMissVal = FALSE}.}
 
 \item{catRef}{Reference setting for categorical covariates: a level,
-`"mode"`, `"lowest"` or `"model"`, or a named list of those with an optional
-`default` component, e.g. `list(GENO = 2)`. It selects both the level
+\code{"mode"}, \code{"lowest"} or \code{"model"}, or a named list of those with an optional
+\code{default} component, e.g. \code{list(GENO = 2)}. It selects both the level
 represented by the all-zero one-hot row and, for background cells, the
-reference level. Pass the same `catRef` to [setupDfRefRow()] so the columns
-line up. Replaces `refLevels`.}
+reference level. Pass the same \code{catRef} to \code{\link[=setupDfRefRow]{setupDfRefRow()}} so the columns
+line up. Replaces \code{refLevels}.}
 
 \item{model}{The NONMEM control stream, required when a reference is set to
-`"model"`. Either a path to the `.mod` file or the list returned by
-[createParamFunction()].}
+\code{"model"}. Either a path to the \code{.mod} file or the list returned by
+\code{\link[=createParamFunction]{createParamFunction()}}.}
 
-\item{refLevels}{Deprecated. Use `catRef`.}
+\item{refLevels}{Deprecated. Use \code{catRef}.}
 
 \item{minLevels}{The maximum number of unique values a covariate can have to be
 treated as categorical. Default is 10.}
 
 \item{probs}{A numeric vector of two probabilities used to calculate quantiles
-for continuous covariates. Defaults to `c(0.05, 0.95)`.}
+for continuous covariates. Defaults to \code{c(0.05, 0.95)}.}
 
-\item{idVar}{The name of the subject identifier column. Defaults to `"ID"`.}
+\item{idVar}{The name of the subject identifier column. Defaults to \code{"ID"}.}
 
 \item{missVal}{The numeric value indicating missing data, used to fill inactive
 states. Defaults to -99.}
@@ -71,26 +71,26 @@ states. Defaults to -99.}
 Defaults to 3.}
 
 \item{sep}{The separator between the covariate name and the level in the
-one-hot column names. Defaults to `"_"`.}
+one-hot column names. Defaults to \code{"_"}.}
 }
 \value{
 A data frame formatted for use in empirical and SCM forest plot functions.
 }
 \description{
 A high-level wrapper that streamlines the creation of the covariate
-  input data frame for `getForestDF` functions. It calculates summary statistics
-  and reshapes the output into the required plotting format. It natively supports
-  `additionalCovs` (e.g., for FREM workflows) and allows explicit control over
-  how inactive covariate cells are populated.
+input data frame for \code{getForestDF} functions. It calculates summary statistics
+and reshapes the output into the required plotting format. It natively supports
+\code{conditionalCovs} (e.g., for FREM workflows) and allows explicit control over
+how inactive covariate cells are populated.
 }
 \details{
-**Methodological Note on Reference Calculations:** To maintain mathematical
-  symmetry with how primary `covariates` are evaluated, the reference values
-  for `additionalCovs` (and primary covariates when `useMissVal = FALSE`) are
-  calculated strictly on **deduplicated baseline data** (one record per `idVar`).
-  This prevents subjects with dense longitudinal sampling from skewing the reference
-  values. If you require longitudinal aggregation, you must pre-process your
-  dataset before passing it to this function or post-process the output data.frame.
+\strong{Methodological Note on Reference Calculations:} To maintain mathematical
+symmetry with how primary \code{covariates} are evaluated, the reference values
+for \code{conditionalCovs} (and primary covariates when \code{useMissVal = FALSE}) are
+calculated strictly on \strong{deduplicated baseline data} (one record per \code{idVar}).
+This prevents subjects with dense longitudinal sampling from skewing the reference
+values. If you require longitudinal aggregation, you must pre-process your
+dataset before passing it to this function or post-process the output data.frame.
 }
 \examples{
 dfData <- read.csv(
@@ -101,10 +101,10 @@ dfData <- read.csv(
 # Inactive cells hold missVal (-99); the parameter function handles that.
 setupDfCovs(dfData, covariates = c("WT", "AGE", "SEX", "GENO"), idVar = "ID")
 
-# CRCL as an additionalCov: it sits at its median on the WT/SEX rows
+# CRCL as an conditionalCov: it sits at its median on the WT/SEX rows
 # instead of at missVal.
 setupDfCovs(dfData,
-  covariates = c("WT", "SEX"), additionalCovs = "CRCL",
+  covariates = c("WT", "SEX"), conditionalCovs = "CRCL",
   idVar = "ID"
 )
 
@@ -122,6 +122,6 @@ setupDfCovs(dfData,
 }
 \seealso{
 \code{\link{getCovStats}}, \code{\link{createInputForestData}}
-  `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole
-  workflow.
+\code{vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")} for how this fits the whole
+workflow.
 }

@@ -104,10 +104,10 @@ test_that("nsig rounds the threshold in expression and label", {
   expect_equal(out$cdfCovsNames, c(paste0("CRP <", m2), paste0("CRP >=", m2)))
 })
 
-test_that("categorical additionalCov: own rows plus a condition on the others", {
+test_that("categorical conditionalCov: own rows plus a condition on the others", {
   out <- setupCovExpressionsList(mock_data, c("WT", "SEX"),
     contSplit = "median",
-    additionalCovs = list(FOOD = 1)
+    conditionalCovs = list(FOOD = 1)
   )
 
   expect_equal(
@@ -121,13 +121,13 @@ test_that("categorical additionalCov: own rows plus a condition on the others", 
   expect_equal(es[5:6], c("FOOD == 0", "FOOD == 1"))
 })
 
-test_that("continuous additionalCov with prob places the condition at the quantile", {
+test_that("continuous conditionalCov with prob places the condition at the quantile", {
   v <- mock_data$CRCL[!duplicated(mock_data$ID)]
   p <- signif(stats::quantile(v, probs = 0.5, names = FALSE), 3)
 
   out <- setupCovExpressionsList(mock_data, "WT",
     contSplit = "median",
-    additionalCovs = list(CRCL = list(prob = 0.5, dir = "gt"))
+    conditionalCovs = list(CRCL = list(prob = 0.5, dir = "gt"))
   )
   es <- expr_strings(out)
   expect_true(all(grepl(paste0("& CRCL > ", p, "$"), es[grepl("^WT", es)])))
@@ -135,19 +135,19 @@ test_that("continuous additionalCov with prob places the condition at the quanti
   expect_true(any(grepl("^CRCL < ", es)))
 })
 
-test_that("continuous additionalCov with value and dir = lt", {
+test_that("continuous conditionalCov with value and dir = lt", {
   out <- setupCovExpressionsList(mock_data, "WT",
     contSplit = "median",
-    additionalCovs = list(CRCL = list(value = 118, dir = "lt"))
+    conditionalCovs = list(CRCL = list(value = 118, dir = "lt"))
   )
   es <- expr_strings(out)
   expect_true(all(grepl("& CRCL < 118$", es[grepl("^WT", es)])))
 })
 
-test_that("multiple additionalCovs cross-condition each other but not themselves", {
+test_that("multiple conditionalCovs cross-condition each other but not themselves", {
   out <- setupCovExpressionsList(mock_data, "WT",
     contSplit = "median",
-    additionalCovs = list(
+    conditionalCovs = list(
       FOOD = 1,
       CRCL = list(prob = 0.25, dir = "gt")
     )
@@ -183,48 +183,48 @@ test_that("probs and minSubjects are validated", {
   )
 })
 
-test_that("additionalCovs argument is validated", {
+test_that("conditionalCovs argument is validated", {
   expect_error(
-    setupCovExpressionsList(mock_data, "WT", additionalCovs = list(1)),
+    setupCovExpressionsList(mock_data, "WT", conditionalCovs = list(1)),
     "named list"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-      additionalCovs = list(CRCL = 100)
+      conditionalCovs = list(CRCL = 100)
     ),
     "continuous covariate"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-      additionalCovs = list(CRCL = list(prob = 0.5))
+      conditionalCovs = list(CRCL = list(prob = 0.5))
     ),
     "dir"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-      additionalCovs = list(CRCL = list(prob = 1.5, dir = "gt"))
+      conditionalCovs = list(CRCL = list(prob = 1.5, dir = "gt"))
     ),
     "in \\(0, 1\\)"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-      additionalCovs = list(CRCL = list(prob = 0.5, value = 1, dir = "gt"))
+      conditionalCovs = list(CRCL = list(prob = 0.5, value = 1, dir = "gt"))
     ),
     "exactly one of"
   )
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
-      additionalCovs = list(SEX = list(prob = 0.5, dir = "gt"))
+      conditionalCovs = list(SEX = list(prob = 0.5, dir = "gt"))
     ),
     "categorical covariate"
   )
   expect_error(
-    setupCovExpressionsList(mock_data, "WT", additionalCovs = list(FOOD = 9)),
+    setupCovExpressionsList(mock_data, "WT", conditionalCovs = list(FOOD = 9)),
     "not present in the data"
   )
   expect_error(
     setupCovExpressionsList(mock_data, c("WT", "FOOD"),
-      additionalCovs = list(FOOD = 1)
+      conditionalCovs = list(FOOD = 1)
     ),
     "both primary and additional"
   )
@@ -235,11 +235,11 @@ test_that("minSubjects stops when an expression selects too few subjects", {
     setupCovExpressionsList(mock_data, "WT", probs = c(0.02, 0.98)),
     "minSubjects"
   )
-  # a restrictive additionalCov condition that empties a primary subset
+  # a restrictive conditionalCov condition that empties a primary subset
   expect_error(
     setupCovExpressionsList(mock_data, "WT",
       probs = c(0.05, 0.95),
-      additionalCovs = list(CRCL = list(value = 157, dir = "gt"))
+      conditionalCovs = list(CRCL = list(value = 157, dir = "gt"))
     ),
     "minSubjects"
   )
@@ -250,10 +250,10 @@ test_that("minSubjects stops when an expression selects too few subjects", {
   )
   expect_type(out$covExpressionsList, "list")
 
-  # a continuous additionalCov condition that empties the primary subsets
+  # a continuous conditionalCov condition that empties the primary subsets
   expect_error(
     setupCovExpressionsList(mock_data, "SEX",
-      additionalCovs = list(WT = list(value = 118, dir = "gt"))
+      conditionalCovs = list(WT = list(value = 118, dir = "gt"))
     ),
     "minSubjects"
   )

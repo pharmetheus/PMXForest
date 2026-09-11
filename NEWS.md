@@ -119,9 +119,11 @@ error no test would catch.
 
 * **`setupDfCovs()`** composes `getCovStats()` and `createInputForestData()`
   into one call: continuous covariates become their 5th and 95th percentiles,
-  categorical ones one row per level. `additionalCovs` adds supplementary
-  covariates (FREM workflows, for instance) and `useMissVal` toggles whether
-  inactive cells hold `missVal` or a computed baseline. Statistics are computed
+  categorical ones one row per level. `conditionalCovs` names the covariates the
+  others are conditioned on - fed state rather than fasted, patients rather than
+  healthy volunteers. They get their own rows and sit at their reference on every
+  other row, rather than at `missVal`. `useMissVal` toggles whether inactive
+  cells hold `missVal` or a computed baseline. Statistics are computed
   on deduplicated data - one record per `idVar` - so longitudinal data cannot
   skew them.
 

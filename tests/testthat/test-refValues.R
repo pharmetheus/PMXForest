@@ -132,7 +132,7 @@ test_that("references are computed on deduplicated data", {
 test_that("refLevels is deprecated but still honoured", {
   expect_warning(
     dfr <- setupDfCovs(mockData,
-      covariates = "WT", additionalCovs = "RACE",
+      covariates = "WT", conditionalCovs = "RACE",
       refLevels = list(RACE = 2)
     ),
     "`refLevels` is deprecated"

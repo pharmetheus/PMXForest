@@ -94,3 +94,91 @@ test_that("setupDfRefRow errors when a covariate is entirely missing", {
     "contains only missing values"
   )
 })
+
+test_that("catRef and sep are inherited from the dfCovs they were used to build", {
+  # Requiring the same two arguments in two calls, kept in step by hand, is a
+  # standing invitation to a silent mismatch: a different sep gives GENO_1 where
+  # dfCovs has GENO1, and the reference for that covariate is quietly lost.
+  d <- read.csv(system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv",
+    package = "PMXForest"
+  ))
+  dfCovs <- setupDfCovs(d,
+    covariates = c("WT", "SEX", "GENO"),
+    catRef = list(GENO = 2), sep = "", idVar = "ID"
+  )
+
+  inherited <- setupDfRefRow(dfCovs, d,
+    covariates = c("WT", "SEX", "GENO"), idVar = "ID"
+  )
+  explicit <- setupDfRefRow(dfCovs, d,
+    covariates = c("WT", "SEX", "GENO"),
+    catRef = list(GENO = 2), sep = "", idVar = "ID"
+  )
+  expect_identical(inherited, explicit)
+  expect_true(all(c("GENO1", "GENO3", "GENO4") %in% names(inherited)))
+
+  # an argument given explicitly still wins over the recorded one
+  override <- suppressMessages(setupDfRefRow(dfCovs, d,
+    covariates = c("WT", "SEX", "GENO"), sep = "_", idVar = "ID"
+  ))
+  expect_true(all(override$GENO1 == -99)) # looked for GENO_1, found nothing
+
+  # and a dfCovs without the attribute behaves exactly as before
+  plain <- dfCovs
+  attr(plain, "pmxCovSetup") <- NULL
+  expect_identical(
+    suppressMessages(setupDfRefRow(plain, d,
+      covariates = c("WT", "SEX", "GENO"), idVar = "ID"
+    )),
+    suppressMessages(setupDfRefRow(dfCovs, d,
+      covariates = c("WT", "SEX", "GENO"), sep = "_", idVar = "ID"
+    ))
+  )
+})
+
+test_that("a covariate in dfCovs but not in covariates falls back to missVal", {
+  # covariates need not cover every column of dfCovs. An unresolved column gets
+  # missVal, which every parameter function already understands as "not active
+  # on this row" and answers with its own reference. It must not be NA: the
+  # generated preamble tests `df[[cov]] != missVal`, and `if (NA)` is an error.
+  d <- read.csv(system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv",
+    package = "PMXForest"
+  ))
+  dfCovs <- setupDfCovs(d,
+    covariates = c("WT", "SEX", "GENO"),
+    catRef = list(GENO = 2), sep = "", idVar = "ID"
+  )
+
+  expect_message(
+    partial <- setupDfRefRow(dfCovs, d, covariates = c("WT", "SEX"), idVar = "ID"),
+    "set to -99"
+  )
+  expect_equal(unname(unlist(partial[, c("GENO1", "GENO3", "GENO4")])), rep(-99, 3))
+  expect_false(anyNA(partial))
+
+  # the row is usable: a generated parameter function runs on it
+  gen <- createParamFunction(
+    system.file("extdata", "SimVal/run7.mod", package = "PMXForest"),
+    parameters = c("CL", "V"),
+    covRef = list(GENO1 = 0, GENO3 = 0), quiet = TRUE
+  )
+  fun <- eval(parse(text = gen$code))
+  ext <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
+  thetas <- as.numeric(ext[ext$ITERATION == -1000000000, 2:15])
+  vals <- fun(thetas, partial[, setdiff(names(partial), "COVARIATEGROUPS"), drop = FALSE])
+  expect_false(anyNA(unlist(vals)))
+
+  # singleRef = FALSE: a cell is replaced by the reference only where the
+  # covariate is active on that row. With no reference resolved for GENO, its
+  # own rows keep the dfCovs values and every other row stays at missVal - so
+  # the GENO rows end up equal to the reference and plot at 1, which is the
+  # honest answer for a covariate no reference was asked for.
+  wide <- suppressMessages(setupDfRefRow(dfCovs, d,
+    covariates = c("WT", "SEX"),
+    idVar = "ID", singleRef = FALSE
+  ))
+  isGeno <- wide$COVARIATEGROUPS == "GENO"
+  expect_true(all(wide$GENO1[!isGeno] == -99))
+  expect_equal(wide$GENO1[isGeno], dfCovs$GENO1[dfCovs$COVARIATEGROUPS == "GENO"])
+  expect_false(anyNA(wide))
+})

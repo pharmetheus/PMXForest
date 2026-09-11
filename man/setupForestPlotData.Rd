@@ -27,7 +27,7 @@ setupForestPlotData(
 column to be included in the output.}
 
 \item{parameterLabels}{A vector of labels for the parameters. Should either have the same
-  length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+length as \code{parameters} or the same length as the number of rows in \code{dfres}.
 If a vector of the same length as \code{parameters} should also be ordered to match
 \code{parameters}. If \code{parameters} is not specified, then is should match the order in
 \code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar
@@ -37,15 +37,15 @@ panels in the Forest plot in the x-direction (columns).}
 facet strip for the parameter panels.}
 
 \item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the
- same length as the number unique values in \code{dfres$GROUPNAME} or the same length as
- the number of rows in \code{dfres}.
+same length as the number unique values in \code{dfres$GROUPNAME} or the same length as
+the number of rows in \code{dfres}.
 Is by default the same as \code{dfres$GROUPNAME}.}
 
 \item{statisticsLabels}{A character string that will precede the \code{parameterLabels} in
 the facet labels for the statistics panels. It is prepended verbatim, with no
-separator added, so include any space you want: `"Statistics: "` gives
-`Statistics: CL`, `"Statistics:"` gives `Statistics:CL`. Default is
-`"Statistics: "`.}
+separator added, so include any space you want: \code{"Statistics: "} gives
+\code{Statistics: CL}, \code{"Statistics:"} gives \code{Statistics:CL}. Default is
+\code{"Statistics: "}.}
 
 \item{plotRelative}{Should the plot be made on the relative scale (TRUE or FALSE)}
 
@@ -68,7 +68,7 @@ all covariates regardless of significance (FALSE).}
 }
 \value{
 A processed data.frame to the used for creating the Forest plot. Only the columns
-  used in the actual Forest plot is included:
+used in the actual Forest plot is included:
 \describe{
 \item{GROUPNAME}{The names of the covariate group, as specified in the call to
 \code{\link{createInputForestData}}.}
