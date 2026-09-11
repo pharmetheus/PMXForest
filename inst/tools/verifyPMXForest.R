@@ -651,7 +651,7 @@ pmxfTierC <- function(ctx, out, row) {
     row$tierCSkipReason <- reason
     row
   }
-  if (is.null(out)) return(skip("TIER_B_FAILED"))
+  if (is.null(out)) return(skip("NO_GENERATED_FUNCTION"))
   tabs <- pmxfTableRecords(ctx$recs, ctx$lst$omegaDim)
   row$nTableRecords <- length(tabs)
   if (!length(tabs)) return(skip("NO_TABLE_RECORD"))
@@ -739,7 +739,7 @@ pmxfTierD <- function(ctx, out, row) {
     row$tierDSource <- r
     row
   }
-  if (is.null(out)) return(skip("TIER_B_FAILED"))
+  if (is.null(out)) return(skip("NO_GENERATED_FUNCTION"))
   hw <- pmxfFindHandwritten(ctx$modFile, ctx$handwritten, ctx$manifest)
   if (is.null(hw)) return(skip("NO_HANDWRITTEN"))
 
@@ -1034,18 +1034,27 @@ verifyPMXForest <- function(paths,
   pmxfMsg("Installed PMXForest : ", priorVer %||% "none", "  in  ", priorLib %||% "-")
   pmxfMsg("Wanted for this test: ", PMXF_WANT_VERSION)
 
+  havePrior <- !is.na(priorVer)
   if (install) {
     pmxfMsg("")
-    pmxfMsg("Installing will OVERWRITE PMXForest ", priorVer, " in ", priorLib, ".")
-    pmxfMsg("That is a change on disk, not just in this session.")
+    if (havePrior) {
+      pmxfMsg("Installing will OVERWRITE PMXForest ", priorVer, " in ", priorLib, ".")
+      pmxfMsg("That is a change on disk, not just in this session.")
+    } else {
+      pmxfMsg("PMXForest is not installed, so nothing will be overwritten.")
+    }
     if (!requireNamespace("PMXRenv", quietly = TRUE)) {
       stop("PMXRenv is not available; install PMXForest ", PMXF_WANT_VERSION, " yourself.", call. = FALSE)
     }
     PMXRenv::activate.unqualified.packages()
     PMXRenv::install.unqualified.packages("PMXForest", repoName = "development")
-    pmxfMsg("To go back: reinstall PMXForest ", priorVer, " into ", priorLib,
-            ", then start a FRESH R session (activate.unqualified.packages() ",
-            "changes .libPaths() for this session only).")
+    if (havePrior) {
+      pmxfMsg("To go back: reinstall PMXForest ", priorVer, " into ", priorLib,
+              ", then start a FRESH R session (activate.unqualified.packages() ",
+              "changes .libPaths() for this session only).")
+    } else {
+      pmxfMsg("Nothing to restore - PMXForest was not installed before this run.")
+    }
   }
 
   have <- as.character(utils::packageVersion("PMXForest"))
@@ -1123,10 +1132,10 @@ verifyPMXForest <- function(paths,
   invisible(report)
 }
 
-pmxfTally <- function(x) {
+pmxfTally <- function(x, indent = "  ") {
   t <- table(factor(x[!is.na(x)]))
-  if (!length(t)) return("  (none)")
-  paste0("  ", format(names(t), width = 22), " ", as.integer(t), collapse = "\n")
+  if (!length(t)) return(paste0(indent, "(none)"))
+  paste0(indent, format(names(t), width = 22), " ", as.integer(t), collapse = "\n")
 }
 
 pmxfSummarise <- function(report, suggestions, csvPath, rdsPath, blanked, full) {
@@ -1137,12 +1146,34 @@ pmxfSummarise <- function(report, suggestions, csvPath, rdsPath, blanked, full) 
     col <- paste0("tier", tier, "Status")
     pmxfMsg("\nTier ", tier, ":")
     cat(pmxfTally(report[[col]]), "\n")
+    ## A count of refusals or skips is not actionable on its own - the reason
+    ## is the whole point, and it is what decides whether the generator needs
+    ## to learn something or the model simply lacks an artefact.
+    why <- switch(tier,
+      A = report$tierASkipReason,
+      B = report$tierBRefusalKind,
+      C = report$tierCSkipReason,
+      D = report$tierDSource
+    )
+    if (any(!is.na(why))) {
+      cat("  why:\n")
+      cat(pmxfTally(why, indent = "    "), "\n")
+    }
   }
 
   infA <- report[report$tierAInformative %in% TRUE, ]
+  nRanA <- sum(report$tierAStatus %in% c("PASS", "FAIL"))
   pmxfRule("Headline")
-  pmxfMsg("Tier A pass rate (informative tests only): ",
-          sum(infA$tierAStatus == "PASS"), "/", nrow(infA))
+  if (nrow(infA) > 0) {
+    pmxfMsg("Tier A pass rate (informative tests only): ",
+            sum(infA$tierAStatus == "PASS"), "/", nrow(infA))
+  } else {
+    pmxfMsg("Tier A pass rate (informative tests only): none were informative")
+    pmxfMsg("  ", nRanA, " model(s) ran, but the $DATA filter removed no records ",
+            "in any of them,")
+    pmxfMsg("  so they agree with the .lst trivially and prove nothing about ",
+            "filterByModel().")
+  }
   pmxfMsg("Tier B unclassified errors               : ",
           sum(report$tierBRefusalKind %in% c("UNCLASSIFIED", "LIKELY_REFUSAL_UNLISTED")))
   pmxfMsg("Tier B crashes                           : ",
