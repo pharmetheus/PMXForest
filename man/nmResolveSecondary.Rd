@@ -2,56 +2,56 @@
 % Please edit documentation in R/nmCovRef.R
 \name{nmResolveSecondary}
 \alias{nmResolveSecondary}
-\title{Resolve a `secondary` specification for the parameter-function emitters}
+\title{Resolve a \code{secondary} specification for the parameter-function emitters}
 \usage{
 nmResolveSecondary(secondary, quiet = FALSE)
 }
 \arguments{
-\item{secondary}{A named list, or `NULL`. Each entry's value is one of:
+\item{secondary}{A named list, or \code{NULL}. Each entry's value is one of:
 \itemize{
-  \item a length-1 character string - R code (an expression, or several
-    statements whose last value is the result), or the path to an `.R`
-    file; or
-  \item a list with a length-1 character `source` (same meaning) plus any
-    number of extra **named atomic** constants (`dose = 100`, `tau = 12`,
-    ...). Each is emitted as `name <- value` immediately before the
-    `source`, inside the same `local()` block, so the code can refer to it by
-    name.
+\item a length-1 character string - R code (an expression, or several
+statements whose last value is the result), or the path to an \code{.R}
+file; or
+\item a list with a length-1 character \code{source} (same meaning) plus any
+number of extra \strong{named atomic} constants (\code{dose = 100}, \code{tau = 12},
+...). Each is emitted as \code{name <- value} immediately before the
+\code{source}, inside the same \code{local()} block, so the code can refer to it by
+name.
 }
 The entry names must be valid, unique R names and become the extra
 return-list elements.}
 
-\item{quiet}{If `FALSE`, prints one line per entry saying how it was read.}
+\item{quiet}{If \code{FALSE}, prints one line per entry saying how it was read.}
 }
 \value{
 A list with one entry per secondary parameter - each a list of
-  `name`, `src` (the file path, or `NA` for a snippet), `lines` (a character
-  vector of R source) and `consts` (a character vector of `name <- value`
-  lines, empty when none). An empty list when `secondary` is `NULL`.
+\code{name}, \code{src} (the file path, or \code{NA} for a snippet), \code{lines} (a character
+vector of R source) and \code{consts} (a character vector of \code{name <- value}
+lines, empty when none). An empty list when \code{secondary} is \code{NULL}.
 }
 \description{
-Turns the `secondary` argument of [createParamFunction()] (and
-  `PMXFrem::createFREMParamFunction()`) into a validated list the emitters
-  splice into the generated function. Each element of `secondary` names the
-  variable the generated function adds to its return list; its value is
-  either a snippet of R code / the path to an `.R` file, or a list carrying
-  that `source` plus constants to bind ahead of it.
+Turns the \code{secondary} argument of \code{\link[=createParamFunction]{createParamFunction()}} (and
+\code{PMXFrem::createFREMParamFunction()}) into a validated list the emitters
+splice into the generated function. Each element of \code{secondary} names the
+variable the generated function adds to its return list; its value is
+either a snippet of R code / the path to an \code{.R} file, or a list carrying
+that \code{source} plus constants to bind ahead of it.
 }
 \details{
-A string is treated as a **file** when [file.exists()] is true for
-  it. A string that is not an existing file but ends in `.R` / `.r` is an
-  error, rather than being taken as a mistyped snippet. Every snippet and
-  file is parsed immediately; a syntax error names the offending entry and
-  stops.
+A string is treated as a \strong{file} when \code{\link[=file.exists]{file.exists()}} is true for
+it. A string that is not an existing file but ends in \code{.R} / \code{.r} is an
+error, rather than being taken as a mistyped snippet. Every snippet and
+file is parsed immediately; a syntax error names the offending entry and
+stops.
 
-  The resolved code is spliced into the body of the generated function and
-  wrapped in a `local()` block, so it sees `thetas`, `df`, `...`, any
-  constants passed alongside `source`, and every structural parameter by
-  name, while its own temporaries do not leak into the return list.
-  Covariate columns are reached as `df$NAME`. Entries are emitted in the
-  order given, so a later one may use an earlier one. A constant name that
-  clashes with a `$PK` variable shadows it inside that `local()` block.
+The resolved code is spliced into the body of the generated function and
+wrapped in a \code{local()} block, so it sees \code{thetas}, \code{df}, \code{...}, any
+constants passed alongside \code{source}, and every structural parameter by
+name, while its own temporaries do not leak into the return list.
+Covariate columns are reached as \code{df$NAME}. Entries are emitted in the
+order given, so a later one may use an earlier one. A constant name that
+clashes with a \verb{$PK} variable shadows it inside that \code{local()} block.
 }
 \seealso{
-[createParamFunction()], [verifyParamFunction()].
+\code{\link[=createParamFunction]{createParamFunction()}}, \code{\link[=verifyParamFunction]{verifyParamFunction()}}.
 }

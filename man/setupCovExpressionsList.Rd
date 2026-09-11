@@ -23,36 +23,36 @@ setupCovExpressionsList(
 }
 \arguments{
 \item{data}{A data frame that includes the covariates to summarise. Only the
-first record per subject (identified by `idVar`) is used.}
+first record per subject (identified by \code{idVar}) is used.}
 
 \item{covariates}{A character vector of primary covariate names to evaluate.}
 
 \item{conditionalCovs}{An optional named list, one entry per additional
 covariate. A scalar value is the level for a categorical covariate; a list
-`list(dir = "lt"/"gt", prob = )` or `list(dir = "lt"/"gt", value = )` is the
-split for a continuous covariate (supply exactly one of `prob` or `value`;
-`prob` must lie in `(0, 1)`). Defaults to `NULL`. A name may not also appear
-in `covariates`.}
+\code{list(dir = "lt"/"gt", prob = )} or \code{list(dir = "lt"/"gt", value = )} is the
+split for a continuous covariate (supply exactly one of \code{prob} or \code{value};
+\code{prob} must lie in \verb{(0, 1)}). Defaults to \code{NULL}. A name may not also appear
+in \code{covariates}.}
 
-\item{contSplit}{How to split continuous covariates into two rows. `"quantile"`
-(default) uses the `probs` quantile tails; `"median"` splits at the median.}
+\item{contSplit}{How to split continuous covariates into two rows. \code{"quantile"}
+(default) uses the \code{probs} quantile tails; \code{"median"} splits at the median.}
 
-\item{includeReference}{Logical. If `TRUE` (default), a multi-level categorical
-covariate emits a row for every level. If `FALSE`, the reference level is
+\item{includeReference}{Logical. If \code{TRUE} (default), a multi-level categorical
+covariate emits a row for every level. If \code{FALSE}, the reference level is
 dropped.}
 
 \item{minSubjects}{The minimum number of subjects an expression may select in
-the deduplicated `data`. The function stops if any expression selects fewer.
+the deduplicated \code{data}. The function stops if any expression selects fewer.
 Default is 10.}
 
 \item{probs}{A numeric vector of two probabilities used to split continuous
 covariates and, when requested, to place a continuous conditional-covariate
-condition. Defaults to `c(0.05, 0.95)`.}
+condition. Defaults to \code{c(0.05, 0.95)}.}
 
 \item{minLevels}{The maximum number of unique values a covariate can have to be
 treated as categorical. Default is 10.}
 
-\item{idVar}{The name of the subject identifier column. Defaults to `"ID"`.}
+\item{idVar}{The name of the subject identifier column. Defaults to \code{"ID"}.}
 
 \item{missVal}{The numeric value indicating missing data, excluded per
 covariate before any calculation. Defaults to -99.}
@@ -61,88 +61,88 @@ covariate before any calculation. Defaults to -99.}
 thresholds. Defaults to 3.}
 
 \item{catRef}{The reference level for multi-level categorical covariates,
-e.g. `list(GENO = 2)`; also accepts `"lowest"` (the default), `"mode"` or
-`"model"`, either as a single setting or in a named list with a `default`
-component. Only consulted when `includeReference = FALSE`. Replaces
-`refLevels`.}
+e.g. \code{list(GENO = 2)}; also accepts \code{"lowest"} (the default), \code{"mode"} or
+\code{"model"}, either as a single setting or in a named list with a \code{default}
+component. Only consulted when \code{includeReference = FALSE}. Replaces
+\code{refLevels}.}
 
-\item{model}{The NONMEM control stream, required when `catRef` is `"model"`.
-Either a path to the `.mod` file or the list returned by
-[createParamFunction()].}
+\item{model}{The NONMEM control stream, required when \code{catRef} is \code{"model"}.
+Either a path to the \code{.mod} file or the list returned by
+\code{\link[=createParamFunction]{createParamFunction()}}.}
 
-\item{refLevels}{Deprecated. Use `catRef`.}
+\item{refLevels}{Deprecated. Use \code{catRef}.}
 }
 \value{
-A list of two elements, named for the [getForestDFemp()] arguments they
-  feed:
-  \itemize{
-    \item `covExpressionsList` -- a named list of `expression()` objects, one
-      per forest-plot row; the names are the covariate names and drive the
-      `GROUPNAME` grouping.
-    \item `cdfCovsNames` -- a character vector of row labels, the same length as
-      `covExpressionsList`.
-  }
+A list of two elements, named for the \code{\link[=getForestDFemp]{getForestDFemp()}} arguments they
+feed:
+\itemize{
+\item \code{covExpressionsList} -- a named list of \code{expression()} objects, one
+per forest-plot row; the names are the covariate names and drive the
+\code{GROUPNAME} grouping.
+\item \code{cdfCovsNames} -- a character vector of row labels, the same length as
+\code{covExpressionsList}.
+}
 }
 \description{
-The empirical-workflow counterpart of [setupDfCovs()]. It turns a
-  data frame plus a vector of covariate names into the named
-  `covExpressionsList` (and a matching `cdfCovsNames` label vector) consumed by
-  [getForestDFemp()]. Each covariate becomes one or more forest-plot rows,
-  each row an `expression()` that selects the subjects it summarises.
+The empirical-workflow counterpart of \code{\link[=setupDfCovs]{setupDfCovs()}}. It turns a
+data frame plus a vector of covariate names into the named
+\code{covExpressionsList} (and a matching \code{cdfCovsNames} label vector) consumed by
+\code{\link[=getForestDFemp]{getForestDFemp()}}. Each covariate becomes one or more forest-plot rows,
+each row an \code{expression()} that selects the subjects it summarises.
 
-  It follows the same deduplication, level and quantile rules as
-  [getCovStats()], but implements them separately rather than calling it -
-  the two produce rows of different shapes. Keep them in step: a change to
-  the statistics of one belongs in the other too.
+It follows the same deduplication, level and quantile rules as
+\code{\link[=getCovStats]{getCovStats()}}, but implements them separately rather than calling it -
+the two produce rows of different shapes. Keep them in step: a change to
+the statistics of one belongs in the other too.
 }
 \details{
-Statistics are computed on **deduplicated baseline data** (one record per
-  `idVar`), matching [setupDfCovs()] and [setupDfRefRow()]. Rows equal to
-  `missVal`, and `NA`, are dropped per covariate before any calculation.
+Statistics are computed on \strong{deduplicated baseline data} (one record per
+\code{idVar}), matching \code{\link[=setupDfCovs]{setupDfCovs()}} and \code{\link[=setupDfRefRow]{setupDfRefRow()}}. Rows equal to
+\code{missVal}, and \code{NA}, are dropped per covariate before any calculation.
 
-  **Continuous covariates** (more than `minLevels` unique values) produce two
-  rows. With `contSplit = "quantile"` (default) they are `cov < q_low` and
-  `cov >= q_high`, where `q_low` / `q_high` are the `probs` quantiles rounded to
-  `nsig` significant digits; subjects between the two quantiles fall in neither
-  row (a deliberate tails-versus-reference contrast). With
-  `contSplit = "median"` the split is `cov < m` / `cov >= m` at the median, so
-  every subject lands in exactly one row.
+\strong{Continuous covariates} (more than \code{minLevels} unique values) produce two
+rows. With \code{contSplit = "quantile"} (default) they are \code{cov < q_low} and
+\code{cov >= q_high}, where \code{q_low} / \code{q_high} are the \code{probs} quantiles rounded to
+\code{nsig} significant digits; subjects between the two quantiles fall in neither
+row (a deliberate tails-versus-reference contrast). With
+\code{contSplit = "median"} the split is \code{cov < m} / \code{cov >= m} at the median, so
+every subject lands in exactly one row.
 
-  **Binary covariates** produce one row per level, `cov == lo` and `cov == hi`.
+\strong{Binary covariates} produce one row per level, \code{cov == lo} and \code{cov == hi}.
 
-  **Multi-level categorical covariates** (`minLevels` or fewer unique values,
-  more than two) produce one `cov == level` row per level. With
-  `includeReference = TRUE` (default) every level gets a row, since in an
-  empirical plot each level is a real subject subset. With
-  `includeReference = FALSE` the reference level is dropped (from
-  `catRef[[cov]]` if named, otherwise the lowest level), mirroring the
-  parametric `dfCovs`.
+\strong{Multi-level categorical covariates} (\code{minLevels} or fewer unique values,
+more than two) produce one \code{cov == level} row per level. With
+\code{includeReference = TRUE} (default) every level gets a row, since in an
+empirical plot each level is a real subject subset. With
+\code{includeReference = FALSE} the reference level is dropped (from
+\code{catRef[[cov]]} if named, otherwise the lowest level), mirroring the
+parametric \code{dfCovs}.
 
-  **Conditional covariates.** Each entry of `conditionalCovs` gets its own rows,
-  exactly like a primary covariate, appended after the primary blocks. In
-  addition, a fixed condition on that covariate is combined with `&` into every
-  other covariate's expression: a level for a categorical covariate
-  (`list(FOOD = 1)` gives `FOOD == 1`), or a `prob` / `value` split with a
-  direction for a continuous covariate
-  (`list(CRCL = list(prob = 0.5, dir = "gt"))` gives `CRCL > q_0.5`,
-  `list(AGE = list(value = 65, dir = "lt"))` gives `AGE < 65`). A primary
-  covariate's rows carry every conditional-covariate condition; an additional
-  covariate's own rows carry every *other* conditional-covariate condition, not
-  its own.
+\strong{Conditional covariates.} Each entry of \code{conditionalCovs} gets its own rows,
+exactly like a primary covariate, appended after the primary blocks. In
+addition, a fixed condition on that covariate is combined with \code{&} into every
+other covariate's expression: a level for a categorical covariate
+(\code{list(FOOD = 1)} gives \code{FOOD == 1}), or a \code{prob} / \code{value} split with a
+direction for a continuous covariate
+(\code{list(CRCL = list(prob = 0.5, dir = "gt"))} gives \code{CRCL > q_0.5},
+\code{list(AGE = list(value = 65, dir = "lt"))} gives \code{AGE < 65}). A primary
+covariate's rows carry every conditional-covariate condition; an additional
+covariate's own rows carry every \emph{other} conditional-covariate condition, not
+its own.
 
-  **Subject-count safeguard.** Every generated expression is evaluated against
-  the deduplicated `data`. If any selects fewer than `minSubjects` subjects the
-  function stops, so no empty or near-empty subset reaches [getForestDFemp()].
-  The check uses the `data` given here; if a different or subset `dfData` is
-  later passed to [getForestDFemp()], re-verify.
+\strong{Subject-count safeguard.} Every generated expression is evaluated against
+the deduplicated \code{data}. If any selects fewer than \code{minSubjects} subjects the
+function stops, so no empty or near-empty subset reaches \code{\link[=getForestDFemp]{getForestDFemp()}}.
+The check uses the \code{data} given here; if a different or subset \code{dfData} is
+later passed to \code{\link[=getForestDFemp]{getForestDFemp()}}, re-verify.
 
-  **Labels.** `cdfCovsNames` holds terse generated labels (`"WT <63.2"`,
-  `"SEX 1"`, `"GENO 2"`). Publication plots normally override them with domain
-  labels; the conditional-covariate conditions are not repeated in the labels.
+\strong{Labels.} \code{cdfCovsNames} holds terse generated labels (\code{"WT <63.2"},
+\code{"SEX 1"}, \code{"GENO 2"}). Publication plots normally override them with domain
+labels; the conditional-covariate conditions are not repeated in the labels.
 
-  For a fixed reference row, build one with [setupDfCovs()] and
-  [setupDfRefRow()] (`singleRef = TRUE`) and pass it to
-  `getForestDFemp(dfRefRow = )`, exactly as for a parametric forest plot.
+For a fixed reference row, build one with \code{\link[=setupDfCovs]{setupDfCovs()}} and
+\code{\link[=setupDfRefRow]{setupDfRefRow()}} (\code{singleRef = TRUE}) and pass it to
+\code{getForestDFemp(dfRefRow = )}, exactly as for a parametric forest plot.
 }
 \examples{
 dfData <- read.csv(
@@ -208,7 +208,7 @@ dfresEmp <- getForestDFemp(
 dfresEmp[, c("COVNAME", "GROUPNAME", "PARAMETER", "POINT", "POINT_REL_REFFUNC")]
 }
 \seealso{
-[getForestDFemp()], [getCovStats()], [setupDfCovs()],
-  [setupDfRefRow()]
-  `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole workflow.
+\code{\link[=getForestDFemp]{getForestDFemp()}}, \code{\link[=getCovStats]{getCovStats()}}, \code{\link[=setupDfCovs]{setupDfCovs()}},
+\code{\link[=setupDfRefRow]{setupDfRefRow()}}
+\code{vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")} for how this fits the whole workflow.
 }

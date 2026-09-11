@@ -7,12 +7,12 @@
 \method{print}{pmxParamVerify}(x, ...)
 }
 \arguments{
-\item{x}{A `pmxParamVerify` object, as returned by [verifyParamFunction()].}
+\item{x}{A \code{pmxParamVerify} object, as returned by \code{\link[=verifyParamFunction]{verifyParamFunction()}}.}
 
 \item{...}{Ignored.}
 }
 \value{
-`x`, invisibly.
+\code{x}, invisibly.
 }
 \description{
 Print a parameter-function verification result

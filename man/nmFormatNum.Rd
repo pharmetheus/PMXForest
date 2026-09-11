@@ -7,21 +7,21 @@
 nmFormatNum(x)
 }
 \arguments{
-\item{x}{A single numeric value (or `NA`).}
+\item{x}{A single numeric value (or \code{NA}).}
 }
 \value{
-A length-one character string that `as.numeric()` maps back to `x`.
+A length-one character string that \code{as.numeric()} maps back to \code{x}.
 }
 \description{
-Keeps ordinary values readable (`75`, `0.75`) while allowing
-  scientific notation where writing the digits out would be absurd
-  (`1e-12`). Exported for emitters built on [nmParsePK()] that need to write
-  covariate reference values into generated source.
+Keeps ordinary values readable (\code{75}, \code{0.75}) while allowing
+scientific notation where writing the digits out would be absurd
+(\code{1e-12}). Exported for emitters built on \code{\link[=nmParsePK]{nmParsePK()}} that need to write
+covariate reference values into generated source.
 }
 \examples{
 nmFormatNum(75)
 nmFormatNum(1e-12)
 }
 \seealso{
-[nmParsePK()].
+\code{\link[=nmParsePK]{nmParsePK()}}.
 }
