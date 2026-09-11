@@ -36,7 +36,7 @@
 #'   reached through `$ERROR` or `$DES` are not derivable from `$PK` - the dose
 #'   used for an AUC, for instance, appears nowhere in the control stream.
 #'   Supply them through `secondary`, a named list. Each entry's value is
-#'   either a line of R code (`secondary = list(AUC = "df$DOSE / CL")`), the
+#'   either a line of R code (`secondary = list(AUC = "500 / CL")`), the
 #'   path to an `.R` file of arbitrary code - including a `deSolve` or
 #'   `mrgsolve` simulation (`secondary = list(CMAX = "cmax.R")`) - or a list
 #'   carrying that `source` plus constants the code needs
@@ -77,7 +77,7 @@
 #'   the reference value chosen for each.
 #' @param secondary An optional named list of secondary parameters to append to
 #'   the generated function's return list. Each entry's value is a single string
-#'   (R code whose last value is the result, `list(AUC = "df$DOSE / CL")`, or
+#'   (R code whose last value is the result, `list(AUC = "500 / CL")`, or
 #'   the path to an `.R` file of arbitrary code such as an `mrgsolve`
 #'   simulation, `list(CMAX = "cmax.R")`), or a list `list(source = <string>,
 #'   ...)` carrying that `source` plus named atomic constants the code needs

@@ -86,7 +86,7 @@ error no test would catch.
 
 * **`secondary`** attaches quantities `$PK` does not contain - AUC, `Cmax`, an
   event probability. Each entry is a line of R code
-  (`secondary = list(AUC = "df$DOSE / CL")`) or the path to an `.R` file of
+  (`secondary = list(AUC = "500 / CL")`) or the path to an `.R` file of
   arbitrary code, including a `deSolve` or `mrgsolve` simulation, whose text is
   **inlined** so the result stays self-contained. Entries are spliced inside
   `local({ ... })`, so each sees `thetas`, `df` and every structural parameter
