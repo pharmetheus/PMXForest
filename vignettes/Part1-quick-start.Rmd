@@ -79,7 +79,7 @@ subject, and the formatting arguments of `forestPlot()`.
 
 # 1. Describe the covariates
 
-`setupDfCovs()` reads an analysis data set, summarises each covariate, and returns
+`setupDfCovs()` reads a data set, summarises each covariate, and returns
 a data frame in which every row is one row of the Forest plot. Continuous
 covariates are represented by their 5th and 95th percentiles; binary covariates
 are expanded to one row per level.
@@ -136,6 +136,11 @@ paramFunction <- eval(parse(text = paste(gen$code, collapse = "\n")))
 
 `gen` also carries the parameter names and the THETA count, so neither has to be
 typed in and kept up to date by hand.
+
+If the translation is not right for what you need, the source text is the
+starting point rather than a dead end —
+[Preparing Forest plot inputs, Section 2.4](Part3-deep-dive-forest-plot-inputs.html)
+shows how to adjust it without losing the parts that were right.
 
 ::: {.callout-note}
 If the model was run with a `$TABLE` holding the parameters and the covariates,
