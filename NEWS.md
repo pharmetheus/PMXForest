@@ -15,15 +15,15 @@ behaviour**; read that section before regenerating a figure you have shipped.
 
 The package had no vignettes and patchy help pages. It now has both.
 
-* **A three-tier vignette set.** A `vignette("Part1-quick-start", package =
-  "PMXForest")` that gets a plot out of a NONMEM model in five steps; an
-  end-to-end `vignette("Part2-walkthrough", package = "PMXForest")` that builds
-  a publication figure; and four deep dives -
-  `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")`,
-  `vignette("Part3-deep-dive-secondary-parameters", package = "PMXForest")`,
-  `vignette("Part3-deep-dive-r-coded-models", package = "PMXForest")` and
-  `vignette("Part3-deep-dive-tte-models", package = "PMXForest")`. The Quick
-  start opens with a "Which vignette do I want?" table.
+* **A three-tier vignette set.** [Quick start](https://rpkgs-docs.pmx.one/PMXForest/articles/Part1-quick-start.html)
+  gets a plot out of a NONMEM model in five steps;
+  [Walkthrough](https://rpkgs-docs.pmx.one/PMXForest/articles/Part2-walkthrough.html) builds a publication figure
+  end to end; and four deep dives go under the surface -
+  [Preparing Forest plot inputs](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-forest-plot-inputs.html),
+  [Secondary parameters](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html),
+  [R-coded models](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-r-coded-models.html) and
+  [Time-to-event models](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-tte-models.html). Quick start opens
+  with a "Which vignette do I want?" table.
 
 * **The top two vignettes teach the convenience functions**, and the Forest plot
   inputs deep dive is the explicit layer underneath: its introduction maps each
@@ -41,8 +41,8 @@ The package had no vignettes and patchy help pages. It now has both.
   page is something you can execute rather than only read. Eleven carry a
   `@seealso` pointing at the vignette that puts them in context.
 
-* Help pages are written in markdown (`Roxygen: list(markdown = TRUE)`), so
-  cross-references and code spans render as links instead of as literal markup.
+* **Cross-references and links work.** Help pages render their code references
+  as working links to the functions they name, instead of showing the markup.
   The previously undocumented `forestPlot()` arguments `setSignEff`, `size` and
   `xlim` are documented.
 
@@ -57,7 +57,7 @@ those inputs from the model and the data instead.
 They are a starting point, not a straitjacket. Where the output does not match
 what a particular plot needs, the intended workflow is to take what the function
 returns and modify it programmatically - shown in
-`vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")`.
+[Preparing Forest plot inputs](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-forest-plot-inputs.html).
 
 ### `setupDfCovs()`
 
@@ -154,8 +154,8 @@ introduce an error no test would catch.
 * Every `ETA(n)` is set to 0, so the function returns typical values. Only the
   exponential-IIV idiom `P = <expr> * EXP(ETA(n))` is recognised, so a
   MU-referenced model yields an empty `etaMap` and nothing to compare.
-* See `vignette("Part3-deep-dive-secondary-parameters", package = "PMXForest")`
-  for the secondary-parameter workflow.
+* See [Secondary parameters](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html) for
+  the secondary-parameter workflow.
 
 ### `setupCovExpressionsList()`
 
