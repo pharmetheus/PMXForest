@@ -27,7 +27,14 @@ setupDfRefRow(
 \item{data}{The raw data frame used to calculate the reference values. Only
 the first record per subject (identified by `idVar`) is used.}
 
-\item{covariates}{A character vector of primary covariate base names.}
+\item{covariates}{A character vector of primary covariate base names - the
+covariates a reference should be **computed from the data** for. Base names,
+not encoded column names: `GENO` rather than `GENO_2`, `GENO_3`, `GENO_4`.
+It need not cover every column of `dfCovs`. A `dfCovs` column with no
+reference resolved for it is set to `missVal`, which a parameter function
+reads as "not active here" and answers with its own reference - so leaving a
+covariate out means *use the model's reference for this one*. A message
+names any columns this applies to.}
 
 \item{conditionalCovs}{A character vector of supplementary covariate base
 names. Defaults to `NULL`.}
@@ -43,7 +50,9 @@ optional `default` component.}
 
 \item{catRef}{Reference setting for categorical covariates: a level, `"mode"`
 (default), `"lowest"` or `"model"`, or a named list of those with an optional
-`default` component. Replaces `refLevels`.}
+`default` component. Replaces `refLevels`. When `dfCovs` came from
+[setupDfCovs()] this defaults to the `catRef` that call used, so it does not
+normally need repeating; supplying it here overrides that.}
 
 \item{model}{The NONMEM control stream, required when any reference is set to
 `"model"`. Either a path to the `.mod` file or the list returned by
@@ -63,7 +72,9 @@ to -99.}
 mean or median. An explicitly supplied value is never rounded. Defaults to 3.}
 
 \item{sep}{The separator between the covariate name and the level in the
-one-hot column names. Defaults to `"_"`; must match [setupDfCovs()].}
+one-hot column names. When `dfCovs` came from [setupDfCovs()] this defaults
+to the separator that call used, so it does not normally need repeating;
+otherwise `"_"`. Supplying it here overrides the recorded value.}
 }
 \value{
 A data frame formatted to be passed as the `dfRefRow` argument.

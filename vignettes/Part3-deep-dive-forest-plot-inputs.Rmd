@@ -709,9 +709,42 @@ covariates
 So `GENO` appears in `covariates` once, and the resulting reference is written
 across the `GENO_2`, `GENO_3`, `GENO_4` columns that `dfCovs` carries. Passing
 the encoded names instead would ask for a reference for each dummy separately,
-which is not the same question. This is also why the same `catRef` and `sep`
-have to be given to both calls: they decide what those columns are called, and
-`setupDfRefRow()` matches its result to them by name.
+which is not the same question.
+
+::: {.callout-note}
+**`catRef` and `sep` do not have to be repeated.** They decide what the one-hot
+columns are called, and `setupDfRefRow()` has to agree with `setupDfCovs()` or
+the reference for those covariates is matched by a name that does not exist.
+Asking for the same two arguments twice and trusting they stay in step is a
+standing invitation to a silent mismatch, so `setupDfCovs()` records what it
+used on the object it returns and `setupDfRefRow()` reads it back:
+
+```{r}
+str(attr(dfCovs, "pmxCovSetup"))
+```
+
+Passing either argument explicitly still wins, which is what you want when
+`dfCovs` was built some other way. The record is an ordinary attribute, so
+subsetting `dfCovs` drops it — pass them by hand in that case, exactly as
+before.
+:::
+
+**`covariates` need not cover every column of `dfCovs`.** It is the set of
+covariates you want a reference *computed from the data* for, not a description
+of `dfCovs`. Leave one out and its columns are set to `missVal` rather than to a
+data-derived value:
+
+```{r}
+setupDfRefRow(dfCovs, data = dfData, covariates = c("WT", "AGE"), idVar = "ID")
+```
+
+That is a useful thing to be able to say, not a degraded result. `missVal` is
+what every parameter function already reads as "this covariate is not active
+here", so it answers with its own reference — for a generated function, the one
+read out of `$PK`. So omitting a covariate here means *use the model's reference
+for this one* and including it means *use the data's*, which is a real choice
+and the same one Section 4 is about. A message names the columns so the choice
+is never made by accident.
 
 `singleRef = TRUE` gives a one-row data frame with every covariate at its
 reference value:

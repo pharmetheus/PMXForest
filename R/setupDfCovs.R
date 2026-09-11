@@ -156,5 +156,15 @@ setupDfCovs <- function(data, covariates, conditionalCovs = NULL, useMissVal = T
     }
   }
 
+  ## Record the settings that decided the column names, so setupDfRefRow() can
+  ## default to them instead of the caller having to repeat catRef and sep in
+  ## two places and keep them in step by hand. An ordinary subset of the result
+  ## drops the attribute, which is why setupDfRefRow() treats it as a default
+  ## rather than a requirement and still accepts both arguments directly.
+  attr(df_covs, "pmxCovSetup") <- list(
+    catRef = catRef, sep = sep, missVal = missVal,
+    covariates = covariates, conditionalCovs = conditionalCovs
+  )
+
   return(df_covs)
 }

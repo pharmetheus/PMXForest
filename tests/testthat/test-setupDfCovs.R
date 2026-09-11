@@ -16,6 +16,14 @@ test_that("setupDfCovs produces identical output to manual two-step process", {
   # Wrapper process
   wrapper_df <- setupDfCovs(mock_data, covs_to_test, missVal = -99)
 
+  # setupDfCovs() records the settings that decided the column names, so
+  # setupDfRefRow() can read them back instead of the caller repeating catRef
+  # and sep. That is metadata about how the frame was built, not data in it, so
+  # it is dropped before comparing - the point of this test is that the wrapper
+  # composes the two primitives faithfully, which the attribute does not affect.
+  expect_false(is.null(attr(wrapper_df, "pmxCovSetup")))
+  attr(wrapper_df, "pmxCovSetup") <- NULL
+
   # Assert equivalence
   expect_equal(wrapper_df, manual_df, info = "Wrapper output diverges from manual two-step process.")
 })
