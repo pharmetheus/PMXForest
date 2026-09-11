@@ -53,3 +53,6 @@ Rplot00*.svg
 
 # Built pkgdown site - CI builds and deploys it (.github/workflows/pkgdown.yml)
 docs/
+
+# Stray graphics-device output from headless example/test runs
+Rplots.pdf

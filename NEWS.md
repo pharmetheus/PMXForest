@@ -329,10 +329,11 @@ encode.
   the contract, and why the `-99` guard is needed even when the data has no
   missing values - and what the generator refuses and why.
 
-* Every exported function has a runnable `@examples` section against the
-  bundled `SimVal` output, and eleven now carry a `@seealso` pointing at the
-  vignette that puts them in context. The previously undocumented `forestPlot()`
-  arguments `setSignEff`, `size` and `xlim` are documented.
+* Every user-facing exported function has a runnable `@examples` section
+  against the bundled `SimVal` output, and eleven now carry a `@seealso`
+  pointing at the vignette that puts them in context. The previously
+  undocumented `forestPlot()` arguments `setSignEff`, `size` and `xlim` are
+  documented.
 
 * The README uses the current API and `system.file()` paths, so its example runs
   from an installed package rather than only from the source tree.
@@ -357,8 +358,10 @@ encode.
 
 * Test coverage is 96.4% (measured for this release), with a `make coverage`
   target that fails below a 95% floor. The remaining gaps are the parallel
-  (`ncores > 1`) branches and a few unreachable defensive guards. Added a `.lintr` configuration, and the package is
-  now clean under `lintr` and `styler`.
+  (`ncores > 1`) branches and a few unreachable defensive guards.
+
+* Added a `.lintr` configuration; the package is now clean under `lintr` and
+  `styler`.
 
 # PMXForest 1.2.15
 
