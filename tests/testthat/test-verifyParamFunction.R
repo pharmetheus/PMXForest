@@ -295,3 +295,68 @@ test_that("bad input is rejected", {
     "Table file not found"
   )
 })
+
+## --- table formats other than "banner + whitespace" ------------------------
+
+writeCsvTable <- function(df, path, banner = FALSE) {
+  lines <- c(
+    paste(names(df), collapse = ","),
+    apply(df, 1, function(r) paste(formatC(as.numeric(r), format = "E", digits = 4), collapse = ","))
+  )
+  writeLines(if (banner) c("TABLE NO.  1", lines) else lines, path)
+  path
+}
+
+test_that("a comma-separated table with no banner is read, not mis-parsed", {
+  out <- suppressWarnings(createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE))
+  thetas <- run7Thetas()
+  f <- withr::local_tempfile(fileext = ".csv")
+  writeCsvTable(makeTable(out, thetas), f)
+
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+
+  expect_true(as.logical(v))
+  expect_true(all(attr(v, "checks")$PASS))
+})
+
+test_that("a whitespace table with no banner is read", {
+  out <- suppressWarnings(createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE))
+  thetas <- run7Thetas()
+  df <- makeTable(out, thetas)
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeLines(c(
+    paste(names(df), collapse = " "),
+    apply(df, 1, function(r) paste(formatC(as.numeric(r), format = "E", digits = 4), collapse = " "))
+  ), f)
+
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+
+  expect_true(as.logical(v))
+})
+
+## --- rows the table cannot reconcile ---------------------------------------
+
+test_that("a missVal covariate row is dropped when $PK has no guard for it", {
+  ## run7's WT reference comes from the normalisation constant in (WT/75), so
+  ## $PK has no IF(WT.EQ.-99) guard. A table row carrying WT = -99 therefore
+  ## cannot be reconciled: NONMEM computed the tabled value from the real
+  ## weight, which the table no longer shows. Comparing it measures the table.
+  out <- suppressWarnings(createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE))
+  expect_false(grepl("explicit missing-value handling", out$covRef$WT$source))
+
+  thetas <- run7Thetas()
+  df <- makeTable(out, thetas)
+  ## Blank one row's WT after its CL was computed - exactly what a
+  ## post-processed table looks like.
+  df$WT[1] <- out$missVal
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(df, f)
+
+  expect_warning(
+    v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+    "cannot be reconciled"
+  )
+  ## The remaining rows are consistent, so the check still passes.
+  expect_true(as.logical(v))
+  expect_true(all(attr(v, "checks")$N < nrow(df)))
+})
