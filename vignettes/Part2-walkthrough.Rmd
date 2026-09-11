@@ -85,9 +85,19 @@ dfData <- read.csv(dataFile)
 ```
 
 `modFile` is the `run7` control stream itself. Everything this walkthrough
-derives comes out of it, so it is worth having open alongside — the whole file
-is `cat(readLines(modFile), sep = "\n")`, and the records that matter here are
-`$DATA` in Section 0 and `$PK` in Section 2.
+derives comes out of it, so it is worth having open alongside. It is bundled
+with the package, so it can be read straight off disk — the whole file is
+below, and the records that matter here are `$DATA` in Section 0 and `$PK` in
+Section 2.
+
+<details>
+<summary>Show the full run7.mod control stream</summary>
+
+```{r}
+cat(readLines(modFile), sep = "\n")
+```
+
+</details>
 
 # 0. Use the data the model actually saw
 
@@ -96,8 +106,8 @@ record carries `IGNORE` statements, so NONMEM dropped records before estimating,
 and a Forest plot built from everything in the file describes a population the
 model never saw.
 
-The control stream is bundled with the package, so its `$DATA` record can be
-read directly — this is the rule the filtering has to reproduce:
+That `$DATA` record is the rule the filtering has to reproduce, so read it
+directly:
 
 ```{r}
 nmLines <- readLines(modFile)
