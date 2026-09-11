@@ -19,58 +19,58 @@ oneHotEncode(
 
 \item{spec}{The covariates to encode, in one of two forms:
 \itemize{
-  \item A character vector of column names. Each is encoded with its lowest
-    non-missing level as the reference.
-  \item A named list. Each element is either `NULL` (lowest level as
-    reference), a single value (used as the reference level), or a list with
-    `ref` (reference level) and optional `levels` (the non-reference levels
-    to create columns for; defaults to all remaining levels).
+\item A character vector of column names. Each is encoded with its lowest
+non-missing level as the reference.
+\item A named list. Each element is either \code{NULL} (lowest level as
+reference), a single value (used as the reference level), or a list with
+\code{ref} (reference level) and optional \code{levels} (the non-reference levels
+to create columns for; defaults to all remaining levels).
 }}
 
 \item{sep}{The separator between the covariate name and the level in the new
-column names. Defaults to `"_"`, matching the FREM convention. Changing it
+column names. Defaults to \code{"_"}, matching the FREM convention. Changing it
 breaks alignment with FREM tooling and is discouraged.}
 
-\item{missVal}{The value indicating missing data. Rows holding `missVal` (or
-`NA`) in the raw column receive `missVal` in the dummy columns unless
-`imputeMissing = TRUE`. Defaults to -99.}
+\item{missVal}{The value indicating missing data. Rows holding \code{missVal} (or
+\code{NA}) in the raw column receive \code{missVal} in the dummy columns unless
+\code{imputeMissing = TRUE}. Defaults to -99.}
 
-\item{includeReference}{Logical. If `TRUE`, a dummy column is also created for
-the reference level. Defaults to `FALSE`.}
+\item{includeReference}{Logical. If \code{TRUE}, a dummy column is also created for
+the reference level. Defaults to \code{FALSE}.}
 
-\item{imputeMissing}{Logical. If `TRUE`, rows with a missing raw value are set
-to `0` in every dummy column (imputed to the reference category). If `FALSE`
-(default), they are set to `missVal`, so downstream code can keep treating
+\item{imputeMissing}{Logical. If \code{TRUE}, rows with a missing raw value are set
+to \code{0} in every dummy column (imputed to the reference category). If \code{FALSE}
+(default), they are set to \code{missVal}, so downstream code can keep treating
 them as missing.}
 
-\item{dropOriginal}{Logical. If `TRUE`, the raw categorical column is removed
-after its dummy columns have been added. Defaults to `FALSE`.}
+\item{dropOriginal}{Logical. If \code{TRUE}, the raw categorical column is removed
+after its dummy columns have been added. Defaults to \code{FALSE}.}
 }
 \value{
-`data` with the dummy columns added (numeric `0`/`1`, or `missVal` on
-  missing rows when `imputeMissing = FALSE`). If a `COVARIATEGROUPS` column is
-  present it is moved back to the last position.
+\code{data} with the dummy columns added (numeric \code{0}/\code{1}, or \code{missVal} on
+missing rows when \code{imputeMissing = FALSE}). If a \code{COVARIATEGROUPS} column is
+present it is moved back to the last position.
 }
 \description{
 Adds one-hot (dummy) columns for multi-level categorical
-  covariates to a data frame, following the naming convention used across the
-  Pharmetheus forest-plot tooling: `<covariate><sep><level>`, with the lowest
-  level dropped as the reference unless stated otherwise.
+covariates to a data frame, following the naming convention used across the
+Pharmetheus forest-plot tooling: \verb{<covariate><sep><level>}, with the lowest
+level dropped as the reference unless stated otherwise.
 
-  It is the shared building block behind `setupDfCovs()` and the optional
-  `oneHot` argument of `getForestDFSCM()` and `getForestDFemp()`, and it
-  matches the columns produced by NONMEM FREM data sets and
-  `PMXFrem::createFREMModel()`.
+It is the shared building block behind \code{setupDfCovs()} and the optional
+\code{oneHot} argument of \code{getForestDFSCM()} and \code{getForestDFemp()}, and it
+matches the columns produced by NONMEM FREM data sets and
+\code{PMXFrem::createFREMModel()}.
 }
 \details{
-For a covariate `GENO` with non-missing levels `1, 2, 3, 4` and the default
-  reference (level 1), the function adds `GENO_2`, `GENO_3`, and `GENO_4`; the
-  reference level is represented by all three being `0`.
+For a covariate \code{GENO} with non-missing levels \verb{1, 2, 3, 4} and the default
+reference (level 1), the function adds \code{GENO_2}, \code{GENO_3}, and \code{GENO_4}; the
+reference level is represented by all three being \code{0}.
 
-  The function is idempotent: if a target column already exists it is left
-  untouched when its non-missing rows agree with the requested encoding, and
-  an error is raised when they do not. This makes it safe to call on data sets
-  that already carry FREM dummy columns.
+The function is idempotent: if a target column already exists it is left
+untouched when its non-missing rows agree with the requested encoding, and
+an error is raised when they do not. This makes it safe to call on data sets
+that already carry FREM dummy columns.
 }
 \examples{
 dfData <- read.csv(

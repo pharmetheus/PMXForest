@@ -17,123 +17,122 @@ createParamFunction(
 )
 }
 \arguments{
-\item{modFile}{Path to the NONMEM control stream (`.mod` or `.ctl`).}
+\item{modFile}{Path to the NONMEM control stream (\code{.mod} or \code{.ctl}).}
 
-\item{parameters}{A character vector of `$PK` variables the function should
-return. Defaults to `NULL`, meaning every variable assigned in `$PK`; trim
+\item{parameters}{A character vector of \verb{$PK} variables the function should
+return. Defaults to \code{NULL}, meaning every variable assigned in \verb{$PK}; trim
 it to the parameters you actually want to plot.}
 
 \item{covRef}{An optional named list of covariate reference values, e.g.
-`list(WT = 75)`. Overrides the values derived from the control stream, and
+\code{list(WT = 75)}. Overrides the values derived from the control stream, and
 supplies them for covariates where no rule fires.}
 
 \item{functionName}{The name given to the generated function. Defaults to
-`"paramFunction"`.}
+\code{"paramFunction"}.}
 
-\item{extFile}{An optional path to the model's `.ext` file. When supplied, the
+\item{extFile}{An optional path to the model's \code{.ext} file. When supplied, the
 THETA count is read from its header, which is authoritative, instead of
-being counted from the `$THETA` records.}
+being counted from the \verb{$THETA} records.}
 
 \item{file}{An optional path to write the generated source to. The source is
 returned either way.}
 
-\item{missVal}{The value marking an inactive covariate in `dfCovs`. Defaults
-to -99, matching `getForestDFSCM()`.}
+\item{missVal}{The value marking an inactive covariate in \code{dfCovs}. Defaults
+to -99, matching \code{getForestDFSCM()}.}
 
-\item{quiet}{Logical. If `FALSE` (default), reports the covariates found and
+\item{quiet}{Logical. If \code{FALSE} (default), reports the covariates found and
 the reference value chosen for each.}
 
 \item{secondary}{An optional named list of secondary parameters to append to
 the generated function's return list. Each entry's value is a single string
-(R code whose last value is the result, `list(AUC = "df$DOSE / CL")`, or
-the path to an `.R` file of arbitrary code such as an `mrgsolve`
-simulation, `list(CMAX = "cmax.R")`), or a list `list(source = <string>,
-...)` carrying that `source` plus named atomic constants the code needs
-(`list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))`). A file's
+(R code whose last value is the result, \code{list(AUC = "500 / CL")}, or
+the path to an \code{.R} file of arbitrary code such as an \code{mrgsolve}
+simulation, \code{list(CMAX = "cmax.R")}), or a list \verb{list(source = <string>, ...)} carrying that \code{source} plus named atomic constants the code needs
+(\code{list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))}). A file's
 text is inlined into the generated source, so the result stays
 self-contained. See Details.}
 }
 \value{
 A list of:
-  \itemize{
-    \item `code` - the generated R source, a character vector of lines with
-      class `"pmxParamFunction"` so that printing it renders the source.
-    \item `functionListName` - a character vector matching the order of the
-      returned parameters, for `getForestDFSCM()`. Includes the `secondary`
-      names, appended after the `$PK` parameters.
-    \item `primaryNames` - the `$PK` parameters only.
-    \item `secondaryNames` - the `secondary` parameter names (`character(0)`
-      when none). [verifyParamFunction()] skips these by default.
-    \item `noBaseThetas` - the number of THETAs in the model.
-    \item `covRef` - the reference value used for each covariate, with the
-      rule and control-stream line it came from.
-    \item `etaMap` - for each returned parameter written as
-      `P = <expr> * EXP(ETA(n))`, the ETA index `n`. Used by
-      [verifyParamFunction()] to recover typical values from a NONMEM table.
-      Only that one idiom is recognised: a MU-referenced parameter, written
-      `MU_4 = LOG(TVCL)` / `CL = EXP(MU_4 + ETA(4))` as SAEM and IMP models
-      normally are, yields an empty map, and [verifyParamFunction()] then has
-      no typical values to compare against.
-    \item `modFile`, `missVal` - as supplied.
-  }
+\itemize{
+\item \code{code} - the generated R source, a character vector of lines with
+class \code{"pmxParamFunction"} so that printing it renders the source.
+\item \code{functionListName} - a character vector matching the order of the
+returned parameters, for \code{getForestDFSCM()}. Includes the \code{secondary}
+names, appended after the \verb{$PK} parameters.
+\item \code{primaryNames} - the \verb{$PK} parameters only.
+\item \code{secondaryNames} - the \code{secondary} parameter names (\code{character(0)}
+when none). \code{\link[=verifyParamFunction]{verifyParamFunction()}} skips these by default.
+\item \code{noBaseThetas} - the number of THETAs in the model.
+\item \code{covRef} - the reference value used for each covariate, with the
+rule and control-stream line it came from.
+\item \code{etaMap} - for each returned parameter written as
+\verb{P = <expr> * EXP(ETA(n))}, the ETA index \code{n}. Used by
+\code{\link[=verifyParamFunction]{verifyParamFunction()}} to recover typical values from a NONMEM table.
+Only that one idiom is recognised: a MU-referenced parameter, written
+\code{MU_4 = LOG(TVCL)} / \code{CL = EXP(MU_4 + ETA(4))} as SAEM and IMP models
+normally are, yields an empty map, and \code{\link[=verifyParamFunction]{verifyParamFunction()}} then has
+no typical values to compare against.
+\item \code{modFile}, \code{missVal} - as supplied.
+}
 }
 \description{
-Translates the `$PK` block of a NONMEM control stream into R
-  source code for a `paramFunction` of the form
-  `function(thetas, df, ...)`, the shape required by `getForestDFSCM()` and
-  `getForestDFemp()`. The result is **source text for you to read, check and
-  edit** - nothing is evaluated. Writing this function by hand duplicates code
-  that already exists in the control stream and is an easy place to introduce
-  a silent error.
+Translates the \verb{$PK} block of a NONMEM control stream into R
+source code for a \code{paramFunction} of the form
+\verb{function(thetas, df, ...)}, the shape required by \code{getForestDFSCM()} and
+\code{getForestDFemp()}. The result is \strong{source text for you to read, check and
+edit} - nothing is evaluated. Writing this function by hand duplicates code
+that already exists in the control stream and is an easy place to introduce
+a silent error.
 }
 \details{
-**Typical values.** Every `ETA(n)` in `$PK` is set to 0, so the generated
-  function returns typical values, which is what a Forest plot needs.
+\strong{Typical values.} Every \code{ETA(n)} in \verb{$PK} is set to 0, so the generated
+function returns typical values, which is what a Forest plot needs.
 
-  **Covariate references.** `getForestDFSCM()` evaluates the parameter
-  function on a row where every covariate equals `missVal` whenever it is
-  called without a `dfRefRow`, so each covariate needs a reference value. All
-  of that handling is hoisted into a single preamble block at the top of the
-  generated function - one line per covariate, each annotated with where its
-  reference came from - after which the `$PK` algebra is a straight
-  transliteration. The references are taken from the control stream, using
-  four rules in decreasing order of confidence:
-  \enumerate{
-    \item explicit handling in the code, `IF(WT.EQ.-99) WT = 75`;
-    \item the branch that PsN's scm marks with `; Most common`;
-    \item the branch whose right-hand side is the identity value (`1` for a
-      multiplicative term, `0` for an additive one);
-    \item the normalisation constant in `(WT/75)` or `(AGE-50)`.
-  }
-  A fifth, weaker rule proposes the level that no `IF()` on the covariate
-  tests, and **warns**; confirm it or override it through `covRef`. A
-  covariate that matches no rule is an error - supply its reference through
-  `covRef`. The generator never guesses in silence.
+\strong{Covariate references.} \code{getForestDFSCM()} evaluates the parameter
+function on a row where every covariate equals \code{missVal} whenever it is
+called without a \code{dfRefRow}, so each covariate needs a reference value. All
+of that handling is hoisted into a single preamble block at the top of the
+generated function - one line per covariate, each annotated with where its
+reference came from - after which the \verb{$PK} algebra is a straight
+transliteration. The references are taken from the control stream, using
+four rules in decreasing order of confidence:
+\enumerate{
+\item explicit handling in the code, \verb{IF(WT.EQ.-99) WT = 75};
+\item the branch that PsN's scm marks with \verb{; Most common};
+\item the branch whose right-hand side is the identity value (\code{1} for a
+multiplicative term, \code{0} for an additive one);
+\item the normalisation constant in \code{(WT/75)} or \code{(AGE-50)}.
+}
+A fifth, weaker rule proposes the level that no \code{IF()} on the covariate
+tests, and \strong{warns}; confirm it or override it through \code{covRef}. A
+covariate that matches no rule is an error - supply its reference through
+\code{covRef}. The generator never guesses in silence.
 
-  **Secondary parameters.** AUC, Cmax, event probabilities and anything else
-  reached through `$ERROR` or `$DES` are not derivable from `$PK` - the dose
-  used for an AUC, for instance, appears nowhere in the control stream.
-  Supply them through `secondary`, a named list. Each entry's value is
-  either a line of R code (`secondary = list(AUC = "df$DOSE / CL")`), the
-  path to an `.R` file of arbitrary code - including a `deSolve` or
-  `mrgsolve` simulation (`secondary = list(CMAX = "cmax.R")`) - or a list
-  carrying that `source` plus constants the code needs
-  (`secondary = list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))`).
-  Each entry is spliced into the generated function inside a `local()` block -
-  so it sees `thetas`, `df`, `...`, any constants passed alongside `source`,
-  and every structural parameter by name, with covariate columns reached as
-  `df$NAME` - and its value is added to the return list under the entry's
-  name. The names also appear in `functionListName`, so `getForestDFSCM()`
-  picks the secondary parameters up automatically. Entries are evaluated in
-  order, so a later one may use an earlier one. Without `secondary`, the
-  emitted source carries a marked extension point for you to add them by
-  hand instead.
+\strong{Secondary parameters.} AUC, Cmax, event probabilities and anything else
+reached through \verb{$ERROR} or \verb{$DES} are not derivable from \verb{$PK} - the dose
+used for an AUC, for instance, appears nowhere in the control stream.
+Supply them through \code{secondary}, a named list. Each entry's value is
+either a line of R code (\code{secondary = list(AUC = "500 / CL")}), the
+path to an \code{.R} file of arbitrary code - including a \code{deSolve} or
+\code{mrgsolve} simulation (\code{secondary = list(CMAX = "cmax.R")}) - or a list
+carrying that \code{source} plus constants the code needs
+(\code{secondary = list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))}).
+Each entry is spliced into the generated function inside a \code{local()} block -
+so it sees \code{thetas}, \code{df}, \code{...}, any constants passed alongside \code{source},
+and every structural parameter by name, with covariate columns reached as
+\code{df$NAME} - and its value is added to the return list under the entry's
+name. The names also appear in \code{functionListName}, so \code{getForestDFSCM()}
+picks the secondary parameters up automatically. Entries are evaluated in
+order, so a later one may use an earlier one. Without \code{secondary}, the
+emitted source carries a marked extension point for you to add them by
+hand instead.
 
-  **Accepted syntax.** Assignments, one-line `IF(...) VAR = ...`,
-  `IF/ELSE IF/ELSE/END IF` blocks, arithmetic (`**` becomes `^`), the
-  `.EQ.`/`.AND.` operator family, and the usual intrinsic functions.
-  Anything else - `$DES`, compartment amounts `A(n)`, verbatim FORTRAN, `DO`
-  loops, `CALL` - raises an error naming the file and line.
+\strong{Accepted syntax.} Assignments, one-line \verb{IF(...) VAR = ...},
+\verb{IF/ELSE IF/ELSE/END IF} blocks, arithmetic (\verb{**} becomes \code{^}), the
+\code{.EQ.}/\code{.AND.} operator family, and the usual intrinsic functions.
+Anything else - \verb{$DES}, compartment amounts \code{A(n)}, verbatim FORTRAN, \code{DO}
+loops, \code{CALL} - raises an error naming the file and line.
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
@@ -167,7 +166,7 @@ out2$functionListName # c("CL", "V", "AUC24", "KEL")
 cat(out2$code, sep = "\n")
 }
 \seealso{
-[verifyParamFunction()] to check the generated function against a
-  NONMEM `$TABLE`; [getForestDFSCM()], [getForestDFemp()].
-  `vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")` for how this fits the whole workflow.
+\code{\link[=verifyParamFunction]{verifyParamFunction()}} to check the generated function against a
+NONMEM \verb{$TABLE}; \code{\link[=getForestDFSCM]{getForestDFSCM()}}, \code{\link[=getForestDFemp]{getForestDFemp()}}.
+\code{vignette("Part3-deep-dive-forest-plot-inputs", package = "PMXForest")} for how this fits the whole workflow.
 }

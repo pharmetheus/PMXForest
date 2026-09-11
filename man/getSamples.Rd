@@ -15,8 +15,8 @@ getSamples(
 }
 \arguments{
 \item{input}{The input file name (character string). If the file name
-extension is `.cov` it is assumed that the file is a NONMEM .cov file.
-If the extension is `.csv`, it is assumed to be a PsN raw results file
+extension is \code{.cov} it is assumed that the file is a NONMEM .cov file.
+If the extension is \code{.csv}, it is assumed to be a PsN raw results file
 from a bootstrap or SIR. Can also be a numeric data.frame containing
 only parameter estimates; in this case, the user is responsible for
 column naming and subsetting.}
@@ -27,43 +27,43 @@ allows for manual alignment or "padding" of parameters if NONMEM has
 omitted columns in the .cov file.}
 
 \item{n}{The number of samples to generate when sampling from a
-variance-covariance matrix. This is required if `input` is a `.cov` file.
+variance-covariance matrix. This is required if \code{input} is a \code{.cov} file.
 NULL is permissible if the input is a SIR or bootstrap raw_results file.}
 
 \item{indexvec}{A vector used to subset columns in the raw results file
 so parameters appear in the order: THETA, SIGMA, OMEGA. Not required
-if a PsN `raw_results_structure` file is in the same directory.}
+if a PsN \code{raw_results_structure} file is in the same directory.}
 
 \item{zerosindex}{A vector of indices indicating which parameters are
 fixed to zero.}
 
-\item{quiet}{If `FALSE` (default), an informational message is printed when a
-SIR raw_results file is detected (and when `n` is ignored for such a file).
-Set to `TRUE` to silence these messages.}
+\item{quiet}{If \code{FALSE} (default), an informational message is printed when a
+SIR raw_results file is detected (and when \code{n} is ignored for such a file).
+Set to \code{TRUE} to silence these messages.}
 }
 \value{
 A data frame with $n + 1$ rows (if $n$ is specified for file inputs)
-  or the full set of resamples. The first row contains the final parameter
-  estimates (ITERATION -1000000000), followed by the samples. For a SIR
-  raw_results file the samples are the importance-resampled parameter vectors
-  (`resamples == 1`), again with the final estimates prepended as the first
-  row.
-  **Note:** If `input` is a data.frame, the function returns exactly $n$
-  samples (if $n$ is specified) or the exact input data.frame (if $n$ is NULL),
-  without appending a row of base estimates.
+or the full set of resamples. The first row contains the final parameter
+estimates (ITERATION -1000000000), followed by the samples. For a SIR
+raw_results file the samples are the importance-resampled parameter vectors
+(\code{resamples == 1}), again with the final estimates prepended as the first
+row.
+\strong{Note:} If \code{input} is a data.frame, the function returns exactly $n$
+samples (if $n$ is specified) or the exact input data.frame (if $n$ is NULL),
+without appending a row of base estimates.
 }
 \description{
 Function that gets samples, either from a regular bootstrap (PsN
-  output), a SIR (PsN output), or a covariance matrix (NONMEM output).
-  It includes protective coding to ensure the parameter estimates in the
-  .ext data align with the dimensions of the .cov matrix.
+output), a SIR (PsN output), or a covariance matrix (NONMEM output).
+It includes protective coding to ensure the parameter estimates in the
+.ext data align with the dimensions of the .cov matrix.
 }
 \details{
-**Protective Coding:** When sampling from a `.cov` file, the function
-  verifies that the number of parameters in the `extFile` matches the
-  dimensions of the covariance matrix. If a mismatch is detected (a known
-  NONMEM edge case), the function will `stop()` and prompt the user to
-  provide a manually aligned data.frame to `extFile`.
+\strong{Protective Coding:} When sampling from a \code{.cov} file, the function
+verifies that the number of parameters in the \code{extFile} matches the
+dimensions of the covariance matrix. If a mismatch is detected (a known
+NONMEM edge case), the function will \code{stop()} and prompt the user to
+provide a manually aligned data.frame to \code{extFile}.
 }
 \examples{
 covFile <- system.file("extdata", "SimVal/run7.cov", package = "PMXForest")
@@ -93,5 +93,5 @@ getSamples(dfParameters) # use the rows as-is
 getSamples(dfParameters, n = 50) # or resample from their covariance
 }
 \seealso{
-`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+\code{vignette("Part2-walkthrough", package = "PMXForest")} for how this fits the whole workflow.
 }

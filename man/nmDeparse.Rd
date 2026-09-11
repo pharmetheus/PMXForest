@@ -2,29 +2,29 @@
 % Please edit documentation in R/nmParsePK.R
 \name{nmDeparse}
 \alias{nmDeparse}
-\title{Render a parsed `$PK` expression node as R source}
+\title{Render a parsed \verb{$PK} expression node as R source}
 \usage{
 nmDeparse(node, thetaVar = "thetas", etaValue = "0")
 }
 \arguments{
-\item{node}{An expression node - a `rhs` or `cond` from an [nmParsePK()]
+\item{node}{An expression node - a \code{rhs} or \code{cond} from an \code{\link[=nmParsePK]{nmParsePK()}}
 statement, or a sub-node of one.}
 
-\item{thetaVar}{Name of the vector that `THETA(n)` indexes into. Default
-`"thetas"`.}
+\item{thetaVar}{Name of the vector that \code{THETA(n)} indexes into. Default
+\code{"thetas"}.}
 
-\item{etaValue}{Text substituted for every `ETA(n)`. Default `"0"`. Pass, for
-example, `"eta[3]"` to keep the random effect.}
+\item{etaValue}{Text substituted for every \code{ETA(n)}. Default \code{"0"}. Pass, for
+example, \code{"eta[3]"} to keep the random effect.}
 }
 \value{
 A length-one character string of R source.
 }
 \description{
-Turns one expression node from the `statements` tree of
-  [nmParsePK()] into a string of R code. `THETA(n)` becomes `<thetaVar>[n]`
-  and every `ETA(n)` becomes the literal text `etaValue` (`"0"` gives typical
-  values). Symbols and covariate names are emitted unchanged, `**` becomes
-  `^`, and parentheses are added only where operator precedence needs them.
+Turns one expression node from the \code{statements} tree of
+\code{\link[=nmParsePK]{nmParsePK()}} into a string of R code. \code{THETA(n)} becomes \verb{<thetaVar>[n]}
+and every \code{ETA(n)} becomes the literal text \code{etaValue} (\code{"0"} gives typical
+values). Symbols and covariate names are emitted unchanged, \verb{**} becomes
+\code{^}, and parentheses are added only where operator precedence needs them.
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
@@ -34,5 +34,5 @@ first <- Find(function(s) s$type == "assign", p$statements)
 nmDeparse(first$rhs, thetaVar = "thetas")
 }
 \seealso{
-[nmParsePK()].
+\code{\link[=nmParsePK]{nmParsePK()}}.
 }

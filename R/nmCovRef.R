@@ -302,7 +302,7 @@ nmResolveSecondary <- function(secondary, quiet = FALSE) {
   if (!is.list(secondary) || is.null(names(secondary)) ||
     any(!nzchar(names(secondary)))) {
     stop("`secondary` must be a named list, e.g. ",
-      "secondary = list(AUC = \"df$DOSE / CL\").",
+      "secondary = list(AUC = \"500 / CL\").",
       call. = FALSE
     )
   }

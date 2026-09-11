@@ -2,7 +2,7 @@
 % Please edit documentation in R/createParamFunction.R
 \name{nmParsePK}
 \alias{nmParsePK}
-\title{Parse a NONMEM `$PK` block into a reusable structure}
+\title{Parse a NONMEM \verb{$PK} block into a reusable structure}
 \usage{
 nmParsePK(
   modFile,
@@ -13,60 +13,60 @@ nmParsePK(
 )
 }
 \arguments{
-\item{modFile}{Path to the NONMEM control stream (`.mod` or `.ctl`).}
+\item{modFile}{Path to the NONMEM control stream (\code{.mod} or \code{.ctl}).}
 
-\item{parameters}{A character vector of `$PK` variables the function should
-return. Defaults to `NULL`, meaning every variable assigned in `$PK`; trim
+\item{parameters}{A character vector of \verb{$PK} variables the function should
+return. Defaults to \code{NULL}, meaning every variable assigned in \verb{$PK}; trim
 it to the parameters you actually want to plot.}
 
 \item{covRef}{An optional named list of covariate reference values, e.g.
-`list(WT = 75)`. Overrides the values derived from the control stream, and
+\code{list(WT = 75)}. Overrides the values derived from the control stream, and
 supplies them for covariates where no rule fires.}
 
-\item{extFile}{An optional path to the model's `.ext` file. When supplied, the
+\item{extFile}{An optional path to the model's \code{.ext} file. When supplied, the
 THETA count is read from its header, which is authoritative, instead of
-being counted from the `$THETA` records.}
+being counted from the \verb{$THETA} records.}
 
-\item{missVal}{The value marking an inactive covariate in `dfCovs`. Defaults
-to -99, matching `getForestDFSCM()`.}
+\item{missVal}{The value marking an inactive covariate in \code{dfCovs}. Defaults
+to -99, matching \code{getForestDFSCM()}.}
 }
 \value{
 A list:
-  \itemize{
-    \item `statements` - the parsed `$PK` statement tree. Each element is an
-      `assign` (`lhs`, `rhs`, `lineno`, `comment`) or an `if`
-      (`cond`, `then`, `elifs`, `else_`, `lineno`); `rhs`/`cond` are
-      expression nodes. Use [nmDeparse()] to render a node as R source.
-    \item `covariates` - covariate names: `$INPUT` columns that `$PK` reads
-      before assigning them, in first-use order. Being assigned later does
-      not disqualify a column, since NONMEM populates the data items before
-      `$PK` runs - that is what makes `IF(WT.EQ.-99) WT = 75` a covariate
-      rather than a local.
-    \item `covRef` - a named list, one entry per covariate, each with
-      `value`, `line`, `confident` (logical) and `source` (how the reference
-      was found). `covRef` overrides and user-supplied entries are merged in.
-    \item `parameters` - the `$PK` variables to return: `parameters` as given,
-      or every assigned variable when `NULL`.
-    \item `noBaseThetas` - the THETA count (from the `.ext` header when
-      `extFile` is supplied, otherwise the `$THETA` records).
-    \item `etaMap` - a named integer vector: for each parameter written
-      `P = <expr> * EXP(ETA(n))`, the ETA index `n`.
-    \item `inputNames` - the `$INPUT` column names.
-    \item `modFile`, `missVal` - as supplied.
-  }
+\itemize{
+\item \code{statements} - the parsed \verb{$PK} statement tree. Each element is an
+\code{assign} (\code{lhs}, \code{rhs}, \code{lineno}, \code{comment}) or an \code{if}
+(\code{cond}, \code{then}, \code{elifs}, \code{else_}, \code{lineno}); \code{rhs}/\code{cond} are
+expression nodes. Use \code{\link[=nmDeparse]{nmDeparse()}} to render a node as R source.
+\item \code{covariates} - covariate names: \verb{$INPUT} columns that \verb{$PK} reads
+before assigning them, in first-use order. Being assigned later does
+not disqualify a column, since NONMEM populates the data items before
+\verb{$PK} runs - that is what makes \verb{IF(WT.EQ.-99) WT = 75} a covariate
+rather than a local.
+\item \code{covRef} - a named list, one entry per covariate, each with
+\code{value}, \code{line}, \code{confident} (logical) and \code{source} (how the reference
+was found). \code{covRef} overrides and user-supplied entries are merged in.
+\item \code{parameters} - the \verb{$PK} variables to return: \code{parameters} as given,
+or every assigned variable when \code{NULL}.
+\item \code{noBaseThetas} - the THETA count (from the \code{.ext} header when
+\code{extFile} is supplied, otherwise the \verb{$THETA} records).
+\item \code{etaMap} - a named integer vector: for each parameter written
+\verb{P = <expr> * EXP(ETA(n))}, the ETA index \code{n}.
+\item \code{inputNames} - the \verb{$INPUT} column names.
+\item \code{modFile}, \code{missVal} - as supplied.
+}
 }
 \description{
-The shared front end of [createParamFunction()]: it reads the
-  control stream, parses `$PK` into a statement tree, and works out the
-  covariates, their reference values, the THETA count and the ETA that
-  carries each parameter's between-subject variability. [createParamFunction()]
-  emits SCM-style parameter-function source from this structure; other
-  packages emit their own (PMXFrem's FREM parameter functions wrap each
-  covariate parameter as `TV * exp(covthetas + eta)` instead).
+The shared front end of \code{\link[=createParamFunction]{createParamFunction()}}: it reads the
+control stream, parses \verb{$PK} into a statement tree, and works out the
+covariates, their reference values, the THETA count and the ETA that
+carries each parameter's between-subject variability. \code{\link[=createParamFunction]{createParamFunction()}}
+emits SCM-style parameter-function source from this structure; other
+packages emit their own (PMXFrem's FREM parameter functions wrap each
+covariate parameter as \code{TV * exp(covthetas + eta)} instead).
 
-  Nothing is evaluated and no source is generated - this returns the parse
-  only. The statement tree keeps `ETA()` references intact, so a downstream
-  emitter can decide what to do with them.
+Nothing is evaluated and no source is generated - this returns the parse
+only. The statement tree keeps \code{ETA()} references intact, so a downstream
+emitter can decide what to do with them.
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
@@ -76,5 +76,5 @@ p$noBaseThetas
 p$etaMap
 }
 \seealso{
-[createParamFunction()], [nmDeparse()].
+\code{\link[=createParamFunction]{createParamFunction()}}, \code{\link[=nmDeparse]{nmDeparse()}}.
 }

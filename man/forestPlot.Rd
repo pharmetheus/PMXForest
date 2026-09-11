@@ -86,7 +86,7 @@ exclusive with \code{sigdigits}. See \code{sigdigits} for the default behaviour.
 column to be included in the output.}
 
 \item{parameterLabels}{A vector of labels for the parameters. Should either have the same
-  length as \code{parameters} or the same length as the number of rows in \code{dfres}.
+length as \code{parameters} or the same length as the number of rows in \code{dfres}.
 If a vector of the same length as \code{parameters} should also be ordered to match
 \code{parameters}. If \code{parameters} is not specified, then is should match the order in
 \code{dfres}. Is by default the same as \code{parameters}. Used for faceting the errorbar
@@ -96,12 +96,12 @@ panels in the Forest plot in the x-direction (columns).}
 facet strip for the parameter panels.}
 
 \item{groupNameLabels}{A vector of labels for the covariate groups. Should either have the
- same length as the number unique values in \code{dfres$GROUPNAME} or the same length as
- the number of rows in \code{dfres}.
+same length as the number unique values in \code{dfres$GROUPNAME} or the same length as
+the number of rows in \code{dfres}.
 Is by default the same as \code{dfres$GROUPNAME}.}
 
 \item{referenceInfo}{A character string or NULL. If set to NULL, no information about how
-  the reference line was derived will be displayed. If set to "auto",
+the reference line was derived will be displayed. If set to "auto",
 generic information based on \code{referenceParameters} and the \code{REFROW} column in
 \code{dfres} will be included at the bottom of the plot. If not NULL or "auto",
 then the character string will be displayed below the plot. Uses
@@ -109,15 +109,15 @@ then the character string will be displayed below the plot. Uses
 Formatting instructions to \code{ggpubr::text_grob} are passed on through \code{...}. Default is "auto".}
 
 \item{labelfun}{A label function compatible with \code{labeller}. Used to format
-  \code{parameterLabels} used as column facet labels for the errorbar and table plots.
+\code{parameterLabels} used as column facet labels for the errorbar and table plots.
 Default is \code{label_value}.}
 
 \item{groupname_labelfun}{A label function compatible with \code{labeller}. Used to format
-  \code{groupNameLabels} used as row facet labels for the errorbar and table plots.
+\code{groupNameLabels} used as row facet labels for the errorbar and table plots.
 Default is \code{label_value}.}
 
 \item{ref_area}{Numerical vector indicating the horizontal size of the reference area. The
-  default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
+default is \code{c(0.8,1.25)}. Used to multiply the reference value to derive the actual
 xmin and xmax values for the reference area.}
 
 \item{ref_fill_col}{Reference area color.}
@@ -173,8 +173,8 @@ interval in the figure legend. Default is "Confidence interval".}
 
 \item{statisticsLabel}{Text placed before each parameter label in the facet labels
 of the statistics panels. Prepended verbatim, with no separator added, so
-include any space you want. Default is `"Statistics: "`, giving
-`Statistics: CL`.}
+include any space you want. Default is \code{"Statistics: "}, giving
+\code{Statistics: CL}.}
 
 \item{xlb}{x-axis label for the errorbar plots}
 
@@ -213,7 +213,7 @@ two-element character vectors \code{c(PARAMETER, GROUPNAME)}. When supplied, the
 \code{COVEFF} column is set \code{TRUE} for the matching parameter/covariate-group
 combinations and \code{FALSE} otherwise, overriding any existing \code{COVEFF} values.}
 
-\item{size}{Base font size (points) for the plot text. Defaults to 80\% of the current
+\item{size}{Base font size (points) for the plot text. Defaults to 80\\% of the current
 \code{ggplot2} theme font size.}
 
 \item{addcodeErr}{A string of code to be applied to each of the panels with error bars.}
@@ -228,7 +228,7 @@ A \code{ggpubr::ggarrange} object, a list of plots or a \code{data.frame}.
 }
 \description{
 Create Forest plots consisting of alternating columns of errorbar plots and
-  tabulated numerical statistics.
+tabulated numerical statistics.
 }
 \details{
 If \code{plotData} is NULL, \code{dfres} is passed to \code{setupForestPlotData} to create a
@@ -327,5 +327,5 @@ forestPlot(dfres,
 )
 }
 \seealso{
-`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+\code{vignette("Part2-walkthrough", package = "PMXForest")} for how this fits the whole workflow.
 }
