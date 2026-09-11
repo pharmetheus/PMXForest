@@ -18,7 +18,7 @@ A data frame with a structure similar to a NONMEM ext file.
 }
 \description{
 Transforms a PsN raw reasults file to a format that is the same as a NONMEM ext
-  file. This involves adding columns for fixed parameters, rearranging and renaming columns.
+file. This involves adding columns for fixed parameters, rearranging and renaming columns.
 }
 \examples{
 \dontrun{

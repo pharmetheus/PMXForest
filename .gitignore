@@ -50,3 +50,6 @@ doc
 Meta
 
 Rplot00*.svg
+
+# Built pkgdown site - CI builds and deploys it (.github/workflows/pkgdown.yml)
+docs/

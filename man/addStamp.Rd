@@ -7,39 +7,39 @@
 addStamp(p, size = 6, source = NULL)
 }
 \arguments{
-\item{p}{A `ggplot` object.}
+\item{p}{A \code{ggplot} object.}
 
-\item{size}{Text size of the caption. Defaults to `6`, matching
-`PhRame::add_stamp()`.}
+\item{size}{Text size of the caption. Defaults to \code{6}, matching
+\code{PhRame::add_stamp()}.}
 
 \item{source}{Optional character string used instead of the derived
 directory / file / chunk path, for a caller that knows better.}
 }
 \value{
-The `ggplot` object with the caption added.
+The \code{ggplot} object with the caption added.
 }
 \description{
 Adds a caption recording where and when a figure was produced,
-  so a plot pasted into a report can be traced back to the code that made it.
+so a plot pasted into a report can be traced back to the code that made it.
 }
 \details{
-Inside a `knitr` / R Markdown chunk the caption reads
-  `<working directory name>/<input file>/<chunk label>` followed by the
-  creation time. Outside one, the file and chunk are unknown and simply
-  omitted, so the caption is the working directory name and the time.
+Inside a \code{knitr} / R Markdown chunk the caption reads
+\verb{<working directory name>/<input file>/<chunk label>} followed by the
+creation time. Outside one, the file and chunk are unknown and simply
+omitted, so the caption is the working directory name and the time.
 
-  Only the name of the working directory is used, not its full path -
-  `PMXForest-private`, not `/home/you/github/PMXForest-private`. That
-  matches `PhRame::add_stamp()` and keeps local paths out of a figure that
-  may be pasted into a report, at the cost of being ambiguous between two
-  checkouts whose leaf directory has the same name. Pass `source` to say
-  something more specific.
+Only the name of the working directory is used, not its full path -
+\code{PMXForest-private}, not \verb{/home/you/github/PMXForest-private}. That
+matches \code{PhRame::add_stamp()} and keeps local paths out of a figure that
+may be pasted into a report, at the cost of being ambiguous between two
+checkouts whose leaf directory has the same name. Pass \code{source} to say
+something more specific.
 
-  This is a native reimplementation of the stamp Pharmetheus' internal
-  `PhRame::add_stamp()` applies, kept dependency-free (`ggplot2` only) so it
-  can be used from the public packages. Only the "return the annotated plot"
-  behaviour is reproduced - saving and printing are left to the caller, which
-  is all any of the plotting functions here need.
+This is a native reimplementation of the stamp Pharmetheus' internal
+\code{PhRame::add_stamp()} applies, kept dependency-free (\code{ggplot2} only) so it
+can be used from the public packages. Only the "return the annotated plot"
+behaviour is reproduced - saving and printing are left to the caller, which
+is all any of the plotting functions here need.
 }
 \examples{
 library(ggplot2)
@@ -49,5 +49,5 @@ addStamp(p)
 
 }
 \seealso{
-`vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
+\code{vignette("Part2-walkthrough", package = "PMXForest")} for how this fits the whole workflow.
 }
