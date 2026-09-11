@@ -3,13 +3,13 @@
 #' @description A high-level wrapper that streamlines the creation of the covariate
 #'   input data frame for `getForestDF` functions. It calculates summary statistics
 #'   and reshapes the output into the required plotting format. It natively supports
-#'   `additionalCovs` (e.g., for FREM workflows) and allows explicit control over
+#'   `conditionalCovs` (e.g., for FREM workflows) and allows explicit control over
 #'   how inactive covariate cells are populated.
 #'
 #' @details
 #'   **Methodological Note on Reference Calculations:** To maintain mathematical
 #'   symmetry with how primary `covariates` are evaluated, the reference values
-#'   for `additionalCovs` (and primary covariates when `useMissVal = FALSE`) are
+#'   for `conditionalCovs` (and primary covariates when `useMissVal = FALSE`) are
 #'   calculated strictly on **deduplicated baseline data** (one record per `idVar`).
 #'   This prevents subjects with dense longitudinal sampling from skewing the reference
 #'   values. If you require longitudinal aggregation, you must pre-process your
@@ -19,7 +19,7 @@
 #'   first record per subject (identified by `idVar`) will be used for both
 #'   primary quantile derivation and reference calculations.
 #' @param covariates A character vector of primary covariate names to evaluate.
-#' @param additionalCovs A character vector of supplementary covariates. These are
+#' @param conditionalCovs A character vector of supplementary covariates. These are
 #'   expanded into their own rows like primary covariates, but when "inactive",
 #'   they default to their dataset reference value (mode for categorical, mean/median
 #'   for continuous) rather than `missVal`. Defaults to `NULL`.
@@ -30,7 +30,7 @@
 #'   `"mean"`, `"median"` (default) or `"model"`, or a named list of those with
 #'   an optional `default` component, e.g.
 #'   `list(WT = 75, AGE = "mean", default = "median")`. Applies to
-#'   `additionalCovs`, and to the primary covariates when `useMissVal = FALSE`.
+#'   `conditionalCovs`, and to the primary covariates when `useMissVal = FALSE`.
 #' @param minLevels The maximum number of unique values a covariate can have to be
 #'   treated as categorical. Default is 10.
 #' @param probs A numeric vector of two probabilities used to calculate quantiles
@@ -69,10 +69,10 @@
 #' # Inactive cells hold missVal (-99); the parameter function handles that.
 #' setupDfCovs(dfData, covariates = c("WT", "AGE", "SEX", "GENO"), idVar = "ID")
 #'
-#' # CRCL as an additionalCov: it sits at its median on the WT/SEX rows
+#' # CRCL as an conditionalCov: it sits at its median on the WT/SEX rows
 #' # instead of at missVal.
 #' setupDfCovs(dfData,
-#'   covariates = c("WT", "SEX"), additionalCovs = "CRCL",
+#'   covariates = c("WT", "SEX"), conditionalCovs = "CRCL",
 #'   idVar = "ID"
 #' )
 #'
@@ -87,13 +87,13 @@
 #'   covariates = c("WT", "GENO"), catRef = list(GENO = 2),
 #'   idVar = "ID"
 #' )
-setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TRUE,
+setupDfCovs <- function(data, covariates, conditionalCovs = NULL, useMissVal = TRUE,
                         contRef = "median", catRef = NULL, model = NULL,
                         refLevels = NULL, minLevels = 10,
                         probs = c(0.05, 0.95), idVar = "ID",
                         missVal = -99, nsig = 3, sep = "_") {
   catRef <- refLevelsToCatRef(refLevels, catRef, "setupDfCovs")
-  all_covs <- unique(c(covariates, additionalCovs))
+  all_covs <- unique(c(covariates, conditionalCovs))
 
   # 1. Calculate statistical summaries
   stats_list <- getCovStats(
@@ -117,8 +117,8 @@ setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TR
 
   # 3. Determine which covariates require background reference replacement
   target_covs <- NULL
-  if (!is.null(additionalCovs)) {
-    target_covs <- setdiff(additionalCovs, covariates)
+  if (!is.null(conditionalCovs)) {
+    target_covs <- setdiff(conditionalCovs, covariates)
   }
   if (!useMissVal) {
     target_covs <- unique(c(target_covs, covariates))
@@ -155,6 +155,16 @@ setupDfCovs <- function(data, covariates, additionalCovs = NULL, useMissVal = TR
       }
     }
   }
+
+  ## Record the settings that decided the column names, so setupDfRefRow() can
+  ## default to them instead of the caller having to repeat catRef and sep in
+  ## two places and keep them in step by hand. An ordinary subset of the result
+  ## drops the attribute, which is why setupDfRefRow() treats it as a default
+  ## rather than a requirement and still accepts both arguments directly.
+  attr(df_covs, "pmxCovSetup") <- list(
+    catRef = catRef, sep = sep, missVal = missVal,
+    covariates = covariates, conditionalCovs = conditionalCovs
+  )
 
   return(df_covs)
 }

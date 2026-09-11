@@ -229,6 +229,66 @@ test_that("getForestDFSCM errors on a dfRefRow with an invalid number of rows", 
   )
 })
 
+test_that("functionList may hold several functions, named end to end", {
+  # functionList is a list because it can carry more than one function. Each is
+  # evaluated for every dfCovs row and every parameter vector, and the returns
+  # are concatenated in order, so functionListName names all of them end to end.
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_covs <- data.frame(
+    WT = c(70, 100), COVARIATEGROUPS = "WT",
+    stringsAsFactors = FALSE
+  )
+
+  pk <- function(thetas, df, ...) list(thetas[1], thetas[2])
+  exposure <- function(thetas, df, ...) list(80 / thetas[1])
+
+  both <- getForestDFSCM(
+    dfCovs = df_covs,
+    functionList = list(pk, exposure),
+    functionListName = c("CL", "V", "AUC"),
+    noBaseThetas = 2, dfParameters = df_params, ncores = 1
+  )
+
+  # PARAMETER is a factor, which is what preserves the functionListName order
+  # downstream; compare the levels rather than the codes.
+  expect_equal(as.character(unique(both$PARAMETER)), c("CL", "V", "AUC"))
+  expect_equal(levels(both$PARAMETER), c("CL", "V", "AUC"))
+
+  # each function sees the same thetas and row as it would alone
+  alone1 <- getForestDFSCM(
+    dfCovs = df_covs, functionList = list(pk),
+    functionListName = c("CL", "V"),
+    noBaseThetas = 2, dfParameters = df_params, ncores = 1
+  )
+  alone2 <- getForestDFSCM(
+    dfCovs = df_covs, functionList = list(exposure),
+    functionListName = "AUC",
+    noBaseThetas = 2, dfParameters = df_params, ncores = 1
+  )
+  expect_equal(
+    both$POINT[both$PARAMETER == "CL"], alone1$POINT[alone1$PARAMETER == "CL"]
+  )
+  expect_equal(
+    both$POINT[both$PARAMETER == "AUC"], alone2$POINT[alone2$PARAMETER == "AUC"]
+  )
+})
+
+test_that("functionListName must cover every return of every function", {
+  df_params <- data.frame(THETA1 = c(10, 11), THETA2 = c(2, 2.1))
+  df_covs <- data.frame(WT = 70, COVARIATEGROUPS = "WT", stringsAsFactors = FALSE)
+  pk <- function(thetas, df, ...) list(thetas[1], thetas[2])
+  exposure <- function(thetas, df, ...) list(80 / thetas[1])
+
+  # three returns across the two functions, only two names
+  expect_error(
+    getForestDFSCM(
+      dfCovs = df_covs, functionList = list(pk, exposure),
+      functionListName = c("CL", "V"),
+      noBaseThetas = 2, dfParameters = df_params, ncores = 1
+    )
+  )
+})
+
 test_that("getForestDFSCM oneHot also encodes a data.frame dfRefRow", {
   df_params <- data.frame(THETA1 = c(10, 11, 9, 12), THETA2 = c(0.3, 0.35, 0.28, 0.31))
   df_covs <- data.frame(

@@ -8,7 +8,7 @@ setupDfRefRow(
   dfCovs,
   data,
   covariates,
-  additionalCovs = NULL,
+  conditionalCovs = NULL,
   singleRef = TRUE,
   contRef = "median",
   catRef = NULL,
@@ -27,9 +27,16 @@ setupDfRefRow(
 \item{data}{The raw data frame used to calculate the reference values. Only
 the first record per subject (identified by \code{idVar}) is used.}
 
-\item{covariates}{A character vector of primary covariate base names.}
+\item{covariates}{A character vector of primary covariate base names - the
+covariates a reference should be \strong{computed from the data} for. Base names,
+not encoded column names: \code{GENO} rather than \code{GENO_2}, \code{GENO_3}, \code{GENO_4}.
+It need not cover every column of \code{dfCovs}. A \code{dfCovs} column with no
+reference resolved for it is set to \code{missVal}, which a parameter function
+reads as "not active here" and answers with its own reference - so leaving a
+covariate out means \emph{use the model's reference for this one}. A message
+names any columns this applies to.}
 
-\item{additionalCovs}{A character vector of supplementary covariate base
+\item{conditionalCovs}{A character vector of supplementary covariate base
 names. Defaults to \code{NULL}.}
 
 \item{singleRef}{Logical. If \code{TRUE} (default), returns a single-row data frame
@@ -43,7 +50,9 @@ optional \code{default} component.}
 
 \item{catRef}{Reference setting for categorical covariates: a level, \code{"mode"}
 (default), \code{"lowest"} or \code{"model"}, or a named list of those with an optional
-\code{default} component. Replaces \code{refLevels}.}
+\code{default} component. Replaces \code{refLevels}. When \code{dfCovs} came from
+\code{\link[=setupDfCovs]{setupDfCovs()}} this defaults to the \code{catRef} that call used, so it does not
+normally need repeating; supplying it here overrides that.}
 
 \item{model}{The NONMEM control stream, required when any reference is set to
 \code{"model"}. Either a path to the \code{.mod} file or the list returned by
@@ -63,7 +72,9 @@ to -99.}
 mean or median. An explicitly supplied value is never rounded. Defaults to 3.}
 
 \item{sep}{The separator between the covariate name and the level in the
-one-hot column names. Defaults to \code{"_"}; must match \code{\link[=setupDfCovs]{setupDfCovs()}}.}
+one-hot column names. When \code{dfCovs} came from \code{\link[=setupDfCovs]{setupDfCovs()}} this defaults
+to the separator that call used, so it does not normally need repeating;
+otherwise \code{"_"}. Supplying it here overrides the recorded value.}
 }
 \value{
 A data frame formatted to be passed as the \code{dfRefRow} argument.

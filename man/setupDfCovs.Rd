@@ -7,7 +7,7 @@
 setupDfCovs(
   data,
   covariates,
-  additionalCovs = NULL,
+  conditionalCovs = NULL,
   useMissVal = TRUE,
   contRef = "median",
   catRef = NULL,
@@ -28,7 +28,7 @@ primary quantile derivation and reference calculations.}
 
 \item{covariates}{A character vector of primary covariate names to evaluate.}
 
-\item{additionalCovs}{A character vector of supplementary covariates. These are
+\item{conditionalCovs}{A character vector of supplementary covariates. These are
 expanded into their own rows like primary covariates, but when "inactive",
 they default to their dataset reference value (mode for categorical, mean/median
 for continuous) rather than \code{missVal}. Defaults to \code{NULL}.}
@@ -41,7 +41,7 @@ their computed baseline references.}
 \code{"mean"}, \code{"median"} (default) or \code{"model"}, or a named list of those with
 an optional \code{default} component, e.g.
 \code{list(WT = 75, AGE = "mean", default = "median")}. Applies to
-\code{additionalCovs}, and to the primary covariates when \code{useMissVal = FALSE}.}
+\code{conditionalCovs}, and to the primary covariates when \code{useMissVal = FALSE}.}
 
 \item{catRef}{Reference setting for categorical covariates: a level,
 \code{"mode"}, \code{"lowest"} or \code{"model"}, or a named list of those with an optional
@@ -80,13 +80,13 @@ A data frame formatted for use in empirical and SCM forest plot functions.
 A high-level wrapper that streamlines the creation of the covariate
 input data frame for \code{getForestDF} functions. It calculates summary statistics
 and reshapes the output into the required plotting format. It natively supports
-\code{additionalCovs} (e.g., for FREM workflows) and allows explicit control over
+\code{conditionalCovs} (e.g., for FREM workflows) and allows explicit control over
 how inactive covariate cells are populated.
 }
 \details{
 \strong{Methodological Note on Reference Calculations:} To maintain mathematical
 symmetry with how primary \code{covariates} are evaluated, the reference values
-for \code{additionalCovs} (and primary covariates when \code{useMissVal = FALSE}) are
+for \code{conditionalCovs} (and primary covariates when \code{useMissVal = FALSE}) are
 calculated strictly on \strong{deduplicated baseline data} (one record per \code{idVar}).
 This prevents subjects with dense longitudinal sampling from skewing the reference
 values. If you require longitudinal aggregation, you must pre-process your
@@ -101,10 +101,10 @@ dfData <- read.csv(
 # Inactive cells hold missVal (-99); the parameter function handles that.
 setupDfCovs(dfData, covariates = c("WT", "AGE", "SEX", "GENO"), idVar = "ID")
 
-# CRCL as an additionalCov: it sits at its median on the WT/SEX rows
+# CRCL as an conditionalCov: it sits at its median on the WT/SEX rows
 # instead of at missVal.
 setupDfCovs(dfData,
-  covariates = c("WT", "SEX"), additionalCovs = "CRCL",
+  covariates = c("WT", "SEX"), conditionalCovs = "CRCL",
   idVar = "ID"
 )
 

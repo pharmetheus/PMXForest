@@ -196,7 +196,7 @@ covariateGroupNames <- c(
 chooses the values, `createInputForestData()` lays them out as rows. Call them
 yourself when you want values the data does not supply — a weight of exactly 70
 kg, a covariate combination no subject has — or a geometry `setupDfCovs()` does
-not produce. Both, along with `additionalCovs`, `useMissVal` and `contRef`, are
+not produce. Both, along with `conditionalCovs`, `useMissVal` and `contRef`, are
 covered in the
 [Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html).
 

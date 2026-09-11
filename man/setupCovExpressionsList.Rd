@@ -7,7 +7,7 @@
 setupCovExpressionsList(
   data,
   covariates,
-  additionalCovs = NULL,
+  conditionalCovs = NULL,
   contSplit = c("quantile", "median"),
   includeReference = TRUE,
   minSubjects = 10,
@@ -27,7 +27,7 @@ first record per subject (identified by \code{idVar}) is used.}
 
 \item{covariates}{A character vector of primary covariate names to evaluate.}
 
-\item{additionalCovs}{An optional named list, one entry per additional
+\item{conditionalCovs}{An optional named list, one entry per additional
 covariate. A scalar value is the level for a categorical covariate; a list
 \code{list(dir = "lt"/"gt", prob = )} or \code{list(dir = "lt"/"gt", value = )} is the
 split for a continuous covariate (supply exactly one of \code{prob} or \code{value};
@@ -46,7 +46,7 @@ the deduplicated \code{data}. The function stops if any expression selects fewer
 Default is 10.}
 
 \item{probs}{A numeric vector of two probabilities used to split continuous
-covariates and, when requested, to place a continuous additional-covariate
+covariates and, when requested, to place a continuous conditional-covariate
 condition. Defaults to \code{c(0.05, 0.95)}.}
 
 \item{minLevels}{The maximum number of unique values a covariate can have to be
@@ -118,7 +118,7 @@ empirical plot each level is a real subject subset. With
 \code{catRef[[cov]]} if named, otherwise the lowest level), mirroring the
 parametric \code{dfCovs}.
 
-\strong{Additional covariates.} Each entry of \code{additionalCovs} gets its own rows,
+\strong{Conditional covariates.} Each entry of \code{conditionalCovs} gets its own rows,
 exactly like a primary covariate, appended after the primary blocks. In
 addition, a fixed condition on that covariate is combined with \code{&} into every
 other covariate's expression: a level for a categorical covariate
@@ -126,8 +126,8 @@ other covariate's expression: a level for a categorical covariate
 direction for a continuous covariate
 (\code{list(CRCL = list(prob = 0.5, dir = "gt"))} gives \code{CRCL > q_0.5},
 \code{list(AGE = list(value = 65, dir = "lt"))} gives \code{AGE < 65}). A primary
-covariate's rows carry every additional-covariate condition; an additional
-covariate's own rows carry every \emph{other} additional-covariate condition, not
+covariate's rows carry every conditional-covariate condition; an additional
+covariate's own rows carry every \emph{other} conditional-covariate condition, not
 its own.
 
 \strong{Subject-count safeguard.} Every generated expression is evaluated against
@@ -138,7 +138,7 @@ later passed to \code{\link[=getForestDFemp]{getForestDFemp()}}, re-verify.
 
 \strong{Labels.} \code{cdfCovsNames} holds terse generated labels (\code{"WT <63.2"},
 \code{"SEX 1"}, \code{"GENO 2"}). Publication plots normally override them with domain
-labels; the additional-covariate conditions are not repeated in the labels.
+labels; the conditional-covariate conditions are not repeated in the labels.
 
 For a fixed reference row, build one with \code{\link[=setupDfCovs]{setupDfCovs()}} and
 \code{\link[=setupDfRefRow]{setupDfRefRow()}} (\code{singleRef = TRUE}) and pass it to
@@ -170,12 +170,12 @@ setupCovExpressionsList(dfData,
   idVar = "ID"
 )$covExpressionsList
 
-# FOOD as a categorical additional covariate and CRCL as a continuous one:
+# FOOD as a categorical conditional covariate and CRCL as a continuous one:
 # every WT/SEX row is also conditioned on FOOD == 1 and CRCL above its lower quartile
 setupCovExpressionsList(
   dfData,
   covariates = c("WT", "SEX"), contSplit = "median",
-  additionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
+  conditionalCovs = list(FOOD = 1, CRCL = list(prob = 0.25, dir = "gt")),
   idVar = "ID"
 )$covExpressionsList
 

@@ -16,6 +16,14 @@ test_that("setupDfCovs produces identical output to manual two-step process", {
   # Wrapper process
   wrapper_df <- setupDfCovs(mock_data, covs_to_test, missVal = -99)
 
+  # setupDfCovs() records the settings that decided the column names, so
+  # setupDfRefRow() can read them back instead of the caller repeating catRef
+  # and sep. That is metadata about how the frame was built, not data in it, so
+  # it is dropped before comparing - the point of this test is that the wrapper
+  # composes the two primitives faithfully, which the attribute does not affect.
+  expect_false(is.null(attr(wrapper_df, "pmxCovSetup")))
+  attr(wrapper_df, "pmxCovSetup") <- NULL
+
   # Assert equivalence
   expect_equal(wrapper_df, manual_df, info = "Wrapper output diverges from manual two-step process.")
 })
@@ -37,9 +45,9 @@ test_that("setupDfCovs correctly propagates custom missing values", {
 })
 
 
-# --- Tests for additionalCovs feature in setupDfCovs ---
+# --- Tests for conditionalCovs feature in setupDfCovs ---
 
-test_that("setupDfCovs correctly handles continuous additionalCovs with deduplication", {
+test_that("setupDfCovs correctly handles continuous conditionalCovs with deduplication", {
   # Mock data: Subject 3 has 9 duplicate rows.
   # Deduplicated AGE vector: c(20, 60, 100) -> 3 unique levels.
   # Median = 60, Mean = 60.
@@ -54,7 +62,7 @@ test_that("setupDfCovs correctly handles continuous additionalCovs with deduplic
   df_median <- setupDfCovs(
     data = mock_data,
     covariates = "WT",
-    additionalCovs = "AGE",
+    conditionalCovs = "AGE",
     contRef = "median",
     minLevels = 2,
     idVar = "ID"
@@ -69,7 +77,7 @@ test_that("setupDfCovs correctly handles continuous additionalCovs with deduplic
   df_mean <- setupDfCovs(
     data = mock_data,
     covariates = "WT",
-    additionalCovs = "AGE",
+    conditionalCovs = "AGE",
     contRef = "mean",
     minLevels = 2,
     idVar = "ID"
@@ -81,7 +89,7 @@ test_that("setupDfCovs correctly handles continuous additionalCovs with deduplic
   )
 })
 
-test_that("setupDfCovs accurately backfills binary categorical additionalCovs (mode)", {
+test_that("setupDfCovs accurately backfills binary categorical conditionalCovs (mode)", {
   mock_data <- data.frame(
     ID = 1:5,
     WT = rep(70, 5),
@@ -91,17 +99,17 @@ test_that("setupDfCovs accurately backfills binary categorical additionalCovs (m
   df_binary <- setupDfCovs(
     data = mock_data,
     covariates = "WT",
-    additionalCovs = "FOOD",
+    conditionalCovs = "FOOD",
     minLevels = 3
   )
 
   wt_rows <- df_binary[df_binary$COVARIATEGROUPS == "WT", ]
   expect_true(all(wt_rows$FOOD == 1),
-    info = "Binary additional covariate did not inherit the baseline mode."
+    info = "Binary conditional covariate did not inherit the baseline mode."
   )
 })
 
-test_that("setupDfCovs accurately handles one-hot mapping for multi-level additionalCovs", {
+test_that("setupDfCovs accurately handles one-hot mapping for multi-level conditionalCovs", {
   mock_data <- data.frame(
     ID = 1:6,
     WT = rep(70, 6),
@@ -113,7 +121,7 @@ test_that("setupDfCovs accurately handles one-hot mapping for multi-level additi
   df_multi <- setupDfCovs(
     data = mock_data,
     covariates = "WT",
-    additionalCovs = "RACE",
+    conditionalCovs = "RACE",
     minLevels = 4
   )
 
@@ -128,7 +136,7 @@ test_that("setupDfCovs accurately handles one-hot mapping for multi-level additi
   )
 })
 
-test_that("setupDfCovs throws error if additionalCovs consists purely of missing values", {
+test_that("setupDfCovs throws error if conditionalCovs consists purely of missing values", {
   mock_data <- data.frame(
     ID = 1:3,
     WT = c(70, 80, 90),
@@ -136,9 +144,9 @@ test_that("setupDfCovs throws error if additionalCovs consists purely of missing
   )
 
   expect_error(
-    setupDfCovs(mock_data, covariates = "WT", additionalCovs = "BROKEN_COV", missVal = -99),
+    setupDfCovs(mock_data, covariates = "WT", conditionalCovs = "BROKEN_COV", missVal = -99),
     regexp = "contains only missing values",
-    info = "Function failed to stop when an additional covariate was entirely missing."
+    info = "Function failed to stop when an conditional covariate was entirely missing."
   )
 })
 
@@ -194,7 +202,7 @@ test_that("setupDfCovs passes refLevels through to the one-hot column names", {
   expect_false("GENO_2" %in% names(df_ref2))
 })
 
-test_that("setupDfCovs sep passthrough and additionalCovs backfill honour catRef", {
+test_that("setupDfCovs sep passthrough and conditionalCovs backfill honour catRef", {
   mock_data <- data.frame(
     ID   = 1:8,
     WT   = c(60, 70, 80, 90, 65, 75, 72, 68),
@@ -203,10 +211,10 @@ test_that("setupDfCovs sep passthrough and additionalCovs backfill honour catRef
 
   df <- setupDfCovs(
     mock_data,
-    covariates     = "WT",
-    additionalCovs = "RACE",
-    catRef         = list(RACE = 1),
-    sep            = "."
+    covariates = "WT",
+    conditionalCovs = "RACE",
+    catRef = list(RACE = 1),
+    sep = "."
   )
 
   # catRef says RACE = 1 is the reference, so it is both the level dropped when
@@ -226,7 +234,7 @@ test_that("without catRef the background still comes from the mode", {
   )
 
   df <- setupDfCovs(mock_data,
-    covariates = "WT", additionalCovs = "RACE",
+    covariates = "WT", conditionalCovs = "RACE",
     sep = "."
   )
 
