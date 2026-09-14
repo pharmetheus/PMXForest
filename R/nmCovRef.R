@@ -73,8 +73,10 @@ nmUsedInArithmetic <- function(flat, cov) {
       }
     }
     if (!is.null(node$args)) {
-      for (a in node$args) if (uses(a)) {
-        return(TRUE)
+      for (a in node$args) {
+        if (uses(a)) {
+          return(TRUE)
+        }
       }
     }
     FALSE
