@@ -56,3 +56,9 @@ docs/
 
 # Stray graphics-device output from headless example/test runs
 Rplots.pdf
+
+# pkgdown renders inst/ READMEs in place
+inst/**/README.html
+
+# R CMD check artefacts
+*.Rout.fail

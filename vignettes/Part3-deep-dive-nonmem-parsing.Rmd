@@ -1,0 +1,524 @@
+---
+title: "3. Deep Dive: How the NONMEM Model is Parsed"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: default
+vignette: >
+  %\VignetteIndexEntry{3. Deep Dive: How the NONMEM Model is Parsed}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{css, echo=FALSE}
+.callout-note {
+  background-color: #e7f1ff;
+  border-left: 4px solid #0dcaf0;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+.callout-warning {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  warning  = FALSE,
+  message  = FALSE
+)
+```
+
+```{r setup}
+library(PMXForest)
+```
+
+# Introduction
+
+[createParamFunction()](../reference/createParamFunction.html) reads a `$PK`
+block and writes the R that a Forest plot is computed from. That makes it the
+most consequential function in the package: a mistake in it does not produce an
+error, it produces a plot.
+
+This vignette says what the translation promises, so you can judge whether it
+holds. It is not a tour of the source. It is the set of claims the generator
+makes, each one demonstrated on a model small enough to check by eye.
+
+Every model here is written in the vignette itself, one per idiom, because a
+model that already works confirms the parser rather than tests the explanation.
+
+```{r}
+# Write a throwaway control stream and return its path.
+mod <- function(...) {
+  f <- tempfile(fileext = ".mod")
+  writeLines(c(...), f)
+  f
+}
+
+# Show what a call refuses, without stopping the vignette.
+refusal <- function(expr) {
+  msg <- tryCatch(
+    {
+      expr
+      "no refusal"
+    },
+    error = function(e) conditionMessage(e)
+  )
+  cat(strwrap(msg, 76), sep = "\n")
+}
+```
+
+# 1. What the grammar accepts
+
+Assignments, `IF` constructs, and closed-form arithmetic. Every `THETA(n)`
+becomes `thetas[n]`, every `ETA(n)` becomes 0, and the covariates are lifted
+into an annotated preamble.
+
+```{r}
+m <- mod(
+  "$PROBLEM grammar", "$INPUT ID TIME DV AMT WT",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "TVCL = THETA(1)",
+  "CL   = TVCL * (WT/75)**THETA(2) * EXP(ETA(1))",
+  "$THETA (0,7) (0,0.75)"
+)
+gen <- createParamFunction(m, parameters = "CL", quiet = TRUE)
+cat(gen$code, sep = "\n")
+```
+
+Two things to notice. `**` became `^`, and `ETA(1)` became `exp(0)` rather than
+being dropped — the generated function returns *typical* values, and it says so
+in a comment on the line where it happened.
+
+## 1.1 Why a faithful translation is not the obvious one
+
+Fortran and R disagree about `MOD()`, in two independent ways. `%%` binds
+tighter than `*` and `/` in R while `MOD()` is a call, so the obvious
+transliteration of `MOD(A*B, C)` gives `A * (B %% C)`. And Fortran's `MOD()`
+truncates towards zero where R's `%%` floors, so the two disagree in sign for a
+negative first argument.
+
+```{r}
+m <- mod(
+  "$PROBLEM mod", "$INPUT ID TIME DV AMT OCC",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "CYCLE = MOD(OCC*2, 3)",
+  "CL    = THETA(1) * (1 + CYCLE)",
+  "$THETA (0,7)"
+)
+gen <- createParamFunction(m, parameters = "CL", covRef = list(OCC = 0), quiet = TRUE)
+grep("CYCLE", gen$code, value = TRUE)
+```
+
+`a - b * trunc(a / b)` is correct for either sign and gets its parentheses from
+ordinary precedence.
+
+```{r}
+f <- eval(parse(text = paste(gen$code, collapse = "\n")))
+# Fortran MOD(-7, 3) is -1. R's -7 %% 3 is 2.
+c(fortran = -7 - 3 * trunc(-7 / 3), r_modulo = -7 %% 3)
+```
+
+# 2. Folding the ETAs
+
+The generated function returns typical values, so every `ETA(n)` goes to 0. The
+generator also records **which** eta belongs to which parameter, in `etaMap`,
+and [verifyParamFunction()](../reference/verifyParamFunction.html) uses that to
+recover a typical value from a table of individual ones by dividing out
+`exp(eta)`.
+
+That division is only valid when the eta separates. Two idioms separate, and
+they are the two in common use:
+
+```{r}
+m <- mod(
+  "$PROBLEM etas", "$INPUT ID TIME DV AMT WT",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "TVCL = THETA(1)", "TVV = THETA(2)",
+  "MU_2 = LOG(TVV)",
+  "CL   = TVCL * EXP(ETA(1))", # classic
+  "V    = EXP(MU_2 + ETA(2))", # MU-referenced, as IMP and SAEM write it
+  "$THETA (0,7) (0,3)"
+)
+createParamFunction(m, parameters = c("CL", "V"), quiet = TRUE)$etaMap
+```
+
+They separate for the same reason: `EXP(a + eta)` is `EXP(a) * EXP(eta)`.
+
+## 2.1 When the eta does not separate
+
+An eta that is scaled, transformed, or shared does not come out of the
+expression by division, and no entry is claimed for it.
+
+```{r}
+m <- mod(
+  "$PROBLEM inseparable", "$INPUT ID TIME DV AMT WT",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "TVCL = THETA(1)", "TVKA = THETA(2)", "TVF = THETA(3)",
+  "BXPAR = THETA(4)",
+  "CL   = TVCL * EXP(ETA(1))",
+  # a shared eta, scaled by a theta
+  "KA   = TVKA * EXP(ETA(1)*(1 + THETA(5)))",
+  # Box-Cox transformed
+  "BSV  = (EXP(ETA(2))**BXPAR - 1)/BXPAR",
+  "F1   = TVF * EXP(BSV)",
+  "$THETA (0,7) (0,1) (0,1) (-2,0.5) (-1,0.9)"
+)
+createParamFunction(m, parameters = c("CL", "KA", "F1"), quiet = TRUE)$etaMap
+```
+
+Only `CL` is there. `KA` and `F1` are translated perfectly well — they are
+simply not parameters whose typical value can be recovered from a tabled
+individual value by division, so `verifyParamFunction()` will say it cannot
+check them rather than check them wrongly.
+
+The third way an eta fails to separate is the one that is easiest to miss,
+because nothing in the expression looks wrong. Inter-occasion variability is
+normally assigned to a name in an occasion block and then added inside the
+exponent, so the expression contains exactly one `ETA()` and still carries two
+sources of randomness:
+
+```{r}
+m <- mod(
+  "$PROBLEM iov", "$INPUT ID TIME DV AMT OCC",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "TVCL = THETA(1)", "TVV = THETA(2)",
+  "IOV  = 0",
+  "IF(OCC.EQ.1) IOV = ETA(3)",
+  "IF(OCC.EQ.2) IOV = ETA(4)",
+  "CL   = TVCL * EXP(ETA(1) + IOV)", # two sources, one ETA() node
+  "V    = TVV  * EXP(ETA(2))",
+  "$THETA (0,7) (0,3)"
+)
+createParamFunction(m,
+  parameters = c("CL", "V"),
+  covRef = list(OCC = 1), quiet = TRUE
+)$etaMap
+```
+
+`V` is claimed and `CL` is not, which is the answer we want: dividing `CL`'s
+tabled individual value by `exp(eta1)` would leave `exp(IOV)` behind, and
+`verifyParamFunction()` would report a mismatch on arithmetic that was never
+comparable in the first place. The generator resolves each name in the exponent
+back to what assigned it, so a symbol that carries randomness disqualifies the
+term just as a visible `ETA()` would.
+
+<div class="callout-note">
+`TV` in front of a parameter name is a convention, not a rule. `tvMap` records
+the symbol the control stream itself treats as each parameter's typical value,
+and `verifyParamFunction()` uses that rather than guessing from the name — a
+model can perfectly well assign `TVD1` as a fraction that `D1` is computed
+from.
+</div>
+
+```{r}
+m <- mod(
+  "$PROBLEM tvmap", "$INPUT ID TIME DV AMT",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "TVMAT = THETA(1)", "TVD1 = THETA(2)",
+  "MAT  = TVMAT * EXP(ETA(1))", # TVMAT really is MAT's typical value
+  "D1   = MAT * (1 - TVD1)", # TVD1 is a fraction, not D1's typical value
+  "$THETA (0,2) (0,0.8)"
+)
+out <- createParamFunction(m, parameters = c("MAT", "D1"), quiet = TRUE)
+out$tvMap
+"D1" %in% names(out$tvMap)
+```
+
+# 3. Where a reference value comes from
+
+A parameter function has to return something when a covariate is inactive, and
+what it returns is the model's own reference. Four rules are tried in order,
+and each records where it got its answer.
+
+```{r}
+m <- mod(
+  "$PROBLEM refs", "$INPUT ID TIME DV AMT WT AGE FOOD SEX",
+  "$DATA d.csv IGNORE=@", "$PK",
+  # rule 1: explicit missing-value handling
+  "IF(AGE.EQ.-99) AGE = 50",
+  # rule 2: the branch PsN's scm marks "; Most common"
+  "IF(FOOD.EQ.1) CLFOOD = 1  ; Most common",
+  "IF(FOOD.EQ.0) CLFOOD = (1 + THETA(3))",
+  # rule 2b: the branch assigning the identity value
+  "IF(SEX.EQ.1) CLSEX = 1",
+  "IF(SEX.EQ.2) CLSEX = (1 + THETA(4))",
+  # rule 3: the normalisation constant
+  "CLWT = (WT/75)**THETA(2)",
+  "CL   = THETA(1)*CLWT*CLFOOD*CLSEX*(1 + THETA(5)*(AGE - 50))",
+  "$THETA (0,7) (0,0.75) (-1,0.2) (-1,0.1) (-1,0.01)"
+)
+out <- createParamFunction(m, parameters = "CL", quiet = TRUE)
+for (cv in names(out$covRef)) {
+  cat(sprintf(
+    "%-5s %-5s confident=%-5s %s\n", cv, format(out$covRef[[cv]]$value),
+    out$covRef[[cv]]$confident, out$covRef[[cv]]$source
+  ))
+}
+```
+
+## 3.1 The fifth rule proposes, and says so
+
+Where no rule fits, a level that no `IF()` tests is proposed and the call warns.
+`confident` is `FALSE`, and that flag is the only signal you get.
+
+```{r}
+m <- mod(
+  "$PROBLEM proposed", "$INPUT ID TIME DV AMT GENO1",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "CLG = 1",
+  "IF(GENO1.EQ.1) CLG = (1 + THETA(2))",
+  "CL  = THETA(1)*CLG",
+  "$THETA (0,7) (-1,0.3)"
+)
+out <- suppressWarnings(createParamFunction(m, parameters = "CL", quiet = TRUE))
+out$covRef$GENO1[c("value", "confident", "source")]
+```
+
+## 3.2 A rule can read a structure backwards
+
+<div class="callout-warning">
+This is the failure mode worth understanding, because nothing downstream
+catches it. A wrong reference displaces every row of a Forest plot, and
+[verifyParamFunction()](../reference/verifyParamFunction.html) takes covariate
+values **from the `$TABLE`**, so the fallback path a reference lives on is never
+exercised by a verification run.
+</div>
+
+Rule 2b reads "the branch assigning a bare `0` or `1`" as the reference
+category. That is right for the SCM shape it was written for — and backwards
+when the variable also has an unconditional default:
+
+```{r}
+m <- mod(
+  "$PROBLEM indicator", "$INPUT ID TIME DV AMT COV",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "IND  = 0", # the reference state
+  "IF(COV.EQ.2) IND = 1", # the departure from it
+  "TVCL = THETA(1) + IND*THETA(2)",
+  "CL   = TVCL",
+  "$THETA (0,7) (-1,0.5)"
+)
+out <- suppressWarnings(createParamFunction(m, parameters = "CL", quiet = TRUE))
+out$covRef$COV[c("value", "confident", "source")]
+```
+
+`IND` is an indicator, so its identity is `0`, and the unconditional assignment
+is the reference state. Reading the `IF` as the reference names the *treated*
+level. The rule is skipped for a variable that is also assigned unconditionally,
+so this falls through to the proposing rule — which is the honest answer, since
+the right value is not recoverable from `$PK` at all.
+
+Read the preamble against the control stream before you trust it. That is the
+check the generator cannot do for you.
+
+# 4. What it refuses, and why
+
+Refusing beats guessing when the guess would look plausible.
+
+```{r}
+base <- c("$PROBLEM refuse", "$INPUT ID TIME DV AMT WT", "$DATA d.csv IGNORE=@")
+
+# a compartment amount is not available to a parameter function
+refusal(createParamFunction(mod(
+  base, "$PK", "CONC = A(2)/THETA(1)", "CL = THETA(1)*CONC", "$THETA (0,7)"
+), quiet = TRUE))
+```
+
+```{r}
+# a symbol read before anything assigns it
+refusal(createParamFunction(mod(
+  base, "$PK", "CL = TVCL*(WT/75)", "TVCL = THETA(1)", "$THETA (0,7)"
+), parameters = "CL", quiet = TRUE))
+```
+
+NONMEM neither initialises `$PK` variables nor clears them between data
+records, so such a model reads whatever the previous subject left behind. A
+parameter function is evaluated one row at a time and cannot reproduce that.
+
+```{r}
+# a $PRED model
+refusal(createParamFunction(mod(
+  base, "$PRED", "CL = THETA(1)", "Y = CL + ERR(1)", "$THETA (0,7)"
+), quiet = TRUE))
+```
+
+```{r}
+# a FREM model
+refusal(createParamFunction(mod(
+  "$PROBLEM frem", "$INPUT ID TIME DV AMT WT FREMTYPE",
+  "$DATA d.csv IGNORE=@", "$PK", "CL = THETA(1)", "$THETA (0,7)"
+), quiet = TRUE))
+```
+
+A FREM model's `$PK` translates faithfully, and that is the trap — its
+covariate effects are in `$OMEGA`, so the function produced describes none of
+the covariates the model was built for.
+
+## 4.1 Verbatim FORTRAN, which you can override
+
+Verbatim code can define variables the rest of `$PK` reads, and nothing here
+can tell that apart from a solver directive that touches no parameter. So it is
+refused by default and the decision is yours:
+
+```{r}
+verb <- mod(
+  base, "$PK",
+  '  "FIRST',
+  '  " USE PRDATA, ONLY: MXSTP01',
+  '  " MXSTP01=2147483647',
+  "CL = THETA(1)*(WT/75)**0.75", "$THETA (0,7)"
+)
+refusal(createParamFunction(verb, parameters = "CL", quiet = TRUE))
+```
+
+```{r}
+out <- createParamFunction(verb, parameters = "CL", ignoreVerbatim = TRUE, quiet = TRUE)
+eval(parse(text = paste(out$code, collapse = "\n")))(thetas = 7, df = data.frame(WT = 75))
+```
+
+# 5. What you have to supply
+
+## 5.1 A symbol NONMEM supplies rather than `$INPUT`
+
+A `$MIX` model reads `MIXNUM`, the subpopulation being computed for, and
+usually `MIXEST`, the one the individual was classified into. `$PK` never
+assigns them and `$INPUT` never declares them, so only you can say what value
+to hold them at.
+
+```{r}
+mix <- mod(
+  "$PROBLEM mixture", "$INPUT ID TIME DV AMT WT",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "TVCL = THETA(1)",
+  "IF(MIXNUM.EQ.2) TVCL = THETA(2)",
+  "IF(MIXEST.EQ.2) TVCL = TVCL*1.1",
+  "CL = TVCL*(WT/75)**0.75",
+  "$THETA (0,7) (0,3)", "$MIX"
+)
+refusal(createParamFunction(mix, parameters = "CL", quiet = TRUE))
+```
+
+Everything it cannot account for is named at once, with a `covRef` call you can
+paste in. Pinned, the symbol becomes an ordinary covariate — so giving `MIXNUM`
+its own column in `dfCovs` plots each subpopulation in turn.
+
+```{r}
+out <- createParamFunction(mix,
+  parameters = "CL",
+  covRef = list(MIXNUM = 1, MIXEST = 1), quiet = TRUE
+)
+f <- eval(parse(text = paste(out$code, collapse = "\n")))
+c(
+  subpop1 = f(thetas = c(7, 3), df = data.frame(WT = 75, MIXNUM = 1, MIXEST = 1))$CL,
+  subpop2 = f(thetas = c(7, 3), df = data.frame(WT = 75, MIXNUM = 2, MIXEST = 1))$CL
+)
+```
+
+`NEWIND` is the case that cannot be pinned meaningfully: it changes within an
+individual, so a single value describes one kind of record rather than a
+subject.
+
+## 5.2 The model's own variance matrix
+
+A model that builds a correlation by hand reads `OMEGA(i,j)`. Those are
+constants once the model is estimated, so they fold to literals — but they live
+in the `.ext` file, not the control stream.
+
+```{r}
+om <- mod(
+  "$PROBLEM omega", "$INPUT ID TIME DV AMT WT",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "SD = SQRT(OMEGA(2,2))",
+  "CL = THETA(1)*(1 + SD)",
+  "$THETA (0,7)"
+)
+refusal(createParamFunction(om, parameters = "CL", quiet = TRUE))
+```
+
+```{r}
+extFile <- system.file("extdata", "SimVal/run7.ext", package = "PMXForest")
+out <- createParamFunction(om, parameters = "CL", extFile = extFile, quiet = TRUE)
+grep("SD <-", out$code, value = TRUE)
+```
+
+The `.ext` holds the lower triangle and the matrix is symmetric, so either
+index order resolves.
+
+# 6. Asking for less
+
+`parameters` prunes the source as well as the return list. Only the statements
+the requested parameters can reach are emitted, and the covariate set narrows
+with them — so a reference never has to be justified for a covariate that
+cannot affect the answer.
+
+```{r}
+modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
+shape <- function(p) {
+  o <- suppressWarnings(createParamFunction(modFile, parameters = p, quiet = TRUE))
+  c(
+    returns = length(o$functionListName),
+    statements = sum(grepl("^  [A-Z]", o$code)),
+    covariates = length(o$covRef)
+  )
+}
+rbind(all = shape(NULL), CL = shape("CL"), V = shape("V"))
+```
+
+A `secondary` block is spliced in afterwards and sees every structural
+parameter by name, so anything it reads is kept even when you did not ask for
+it.
+
+```{r}
+out <- suppressWarnings(createParamFunction(modFile,
+  parameters = c("CL", "V"),
+  secondary = list(AUC = "80 / (CL / FREL)"), quiet = TRUE
+))
+c(
+  returned = paste(out$functionListName, collapse = ", "),
+  FREL_kept = any(grepl("FREL", out$code))
+)
+```
+
+# 7. The gaps
+
+Two, stated rather than hidden.
+
+**Definite assignment is weaker than it looks.** A symbol assigned in *some*
+branch and read afterwards is accepted, even though no branch may have run. The
+strict rule — assigned on every path — rejected the package's own reference
+model, which is ordinary PsN `scm` output:
+
+```
+IF(FORM.EQ.1.0000E+00) FRELFORM = 1  ; Most common
+IF(FORM.EQ.0.0000E+00) FRELFORM = ( 1 + THETA(12))
+```
+
+Two one-line `IF`s with no `ELSE`, exhaustive only because `FORM` is 0 or 1 — a
+fact no static analysis can see, and structurally identical to the genuinely
+non-exhaustive case the check existed to catch. The rule was weakened to accept
+both rather than special-case the example away.
+
+**A reference value cannot be verified by anything here.**
+[verifyParamFunction()](../reference/verifyParamFunction.html) checks the
+algebra against a `$TABLE`, using covariate values from that table — so the
+reference, which only applies when a covariate is *absent*, is never on the
+path it tests. The `confident` flag and the warning are the whole of the
+defence.
+
+<div class="callout-note">
+Which is why the generated source is returned as **text**. Read the preamble
+against the control stream, confirm each reference, and evaluate it when it
+matches. See
+[Preparing Forest plot inputs](Part3-deep-dive-forest-plot-inputs.html) for
+adjusting the result when it is not quite what a particular plot needs.
+</div>

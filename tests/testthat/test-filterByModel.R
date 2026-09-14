@@ -257,10 +257,30 @@ test_that("structural problems are reported clearly", {
   expect_error(filterByModel(d, unknown, quiet = TRUE), "\\$INPUT does not declare")
 })
 
-test_that("a text column used by the filter is refused rather than compared", {
+test_that("a '.' column works under both comparison families", {
+  d <- data.frame(ID = 1:3, DV = 1, WT = c("60", ".", "80"), stringsAsFactors = FALSE)
+
+  ## .EQ. is a text comparison in NONMEM, so the column is compared as written.
   f <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=(WT.EQ.60)")
-  d <- data.frame(ID = 1:3, DV = 1, WT = c("60", ".", "80"))
-  expect_error(filterByModel(d, f, quiet = TRUE), "read as text rather than numbers")
+  expect_equal(filterByModel(d, f, quiet = TRUE)$WT, c(".", "80"))
+
+  ## .EQN. and the ordering comparisons read "." as 0, as NM-TRAN does.
+  g <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=(WT.EQN.60)")
+  expect_equal(nrow(filterByModel(d, g, quiet = TRUE)), 2L)
+
+  h <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=(WT.GT.60)")
+  expect_equal(nrow(filterByModel(d, h, quiet = TRUE)), 2L)
+
+  ## and it says so, since this is a reading of the data rather than a literal
+  expect_message(filterByModel(d, h), "placeholder")
+
+  ## The value has to be 0 specifically. Every comparison above is false at 0
+  ## AND at NA - an unresolvable row is simply not selected - so none of them
+  ## can tell the two apart. A comparison that is TRUE at zero can.
+  k <- tempMod("$INPUT ID DV WT", "$DATA d.csv IGNORE=(WT.LT.1)")
+  kept <- filterByModel(d, k, quiet = TRUE)
+  expect_equal(nrow(kept), 2L)
+  expect_false("." %in% kept$WT)
 })
 
 test_that("extra columns beyond $INPUT are reported but harmless", {
@@ -275,4 +295,190 @@ test_that("quiet = FALSE reports the condition and what it removed", {
   d <- data.frame(ID = 1:3, DV = 1, WT = c(60, 75, 80))
   expect_message(filterByModel(d, f), "Applying IGNORE")
   expect_message(filterByModel(d, f), "Removed 1 of 3 record")
+})
+
+## --- against NONMEM's own account of what it used ------------------------
+##
+## The .lst prints how many records, subjects and observations NONMEM read
+## after applying $DATA. That is an independent oracle - it comes from NONMEM,
+## not from us - and it is the only check here that can catch filterByModel()
+## agreeing with a hand-written subset while both are wrong.
+
+## What NONMEM printed about the data it used.
+lstCounts <- function(lstFile) {
+  L <- readLines(lstFile, warn = FALSE)
+  num <- function(pat) {
+    hit <- grep(pat, L, value = TRUE)
+    if (!length(hit)) {
+      return(NA_integer_)
+    }
+    suppressWarnings(as.integer(sub(".*?:\\s*([0-9]+).*", "\\1", hit[1])))
+  }
+  list(
+    records = num("NO\\. OF DATA RECS IN DATA SET:"),
+    obs = num("TOT\\. NO\\. OF OBS RECS:"),
+    ids = num("TOT\\. NO\\. OF INDIVIDUALS:")
+  )
+}
+
+## NONMEM counts an observation as MDV == 0, or EVID == 0 where the data set
+## carries no MDV column.
+obsCount <- function(d) {
+  if ("MDV" %in% names(d)) sum(d$MDV == 0) else sum(d$EVID == 0)
+}
+
+test_that("filterByModel reproduces the counts NONMEM printed in the .lst", {
+  cases <- list(
+    list(
+      name = "run7", mod = "SimVal/run7.mod", lst = "SimVal/run7.lst",
+      data = "SimVal/DAT-1-MI-PMX-2.csv", sep = ","
+    ),
+    ## A different shape entirely: ADVAN13, no MDV column, so the observation
+    ## count goes through the EVID fallback.
+    list(
+      name = "tte_weibull", mod = "tte/tte_weibull.mod",
+      lst = "tte/tte_weibull.lst", data = "tte/tte_data1.dat", sep = ""
+    )
+  )
+
+  for (cs in cases) {
+    mod <- system.file("extdata", cs$mod, package = "PMXForest")
+    lst <- system.file("extdata", cs$lst, package = "PMXForest")
+    dat <- system.file("extdata", cs$data, package = "PMXForest")
+    skip_if(!all(nzchar(c(mod, lst, dat))), paste(cs$name, "not bundled"))
+
+    want <- lstCounts(lst)
+    expect_false(is.na(want$records), info = cs$name)
+
+    raw <- utils::read.table(dat, sep = cs$sep, header = TRUE, comment.char = "")
+    used <- filterByModel(raw, mod, quiet = TRUE)
+
+    expect_equal(nrow(used), want$records, info = cs$name)
+    expect_equal(length(unique(used$ID)), want$ids, info = cs$name)
+    expect_equal(obsCount(used), want$obs, info = cs$name)
+  }
+})
+
+test_that("the run7 case is an informative test of the filter", {
+  ## A model whose $DATA removes nothing would pass the check above while
+  ## proving nothing about filterByModel(). Assert that this one does remove
+  ## something, so the test cannot quietly become vacuous if the bundled data
+  ## is ever replaced.
+  lst <- system.file("extdata", "SimVal/run7.lst", package = "PMXForest")
+  raw <- simData()
+  expect_gt(nrow(raw), lstCounts(lst)$records)
+})
+
+test_that("a text column is fine where the comparison is textual", {
+  ## A comment column written as "." placeholders with the odd digit is
+  ## ordinary, and NONMEM compares .EQ. as text, so it filters perfectly well.
+  ## Rejecting the column outright contradicted that support and refused the
+  ## model.
+  d <- data.frame(
+    C = c(".", ".", "7", ".", "2"),
+    ID = 1:5, DV = c(1, 2, 3, 4, 5),
+    stringsAsFactors = FALSE
+  )
+  mod <- tempMod("$INPUT C ID DV", "$DATA d.csv IGNORE=@ IGNORE(C.EQ.2)")
+  expect_true(is.character(d$C))
+
+  kept <- filterByModel(d, mod, quiet = TRUE)
+  ## NONMEM compares the text "2", so only that row goes
+  expect_equal(nrow(kept), 4L)
+  expect_false("2" %in% kept$C)
+  expect_true("7" %in% kept$C)
+})
+
+test_that("a '.' column answers a numeric comparison as 0", {
+  d <- data.frame(
+    C = c(".", ".", "7", ".", "2"),
+    ID = 1:5, DV = c(1, 2, 3, 4, 5),
+    stringsAsFactors = FALSE
+  )
+  mod <- tempMod("$INPUT C ID DV", "$DATA d.csv IGNORE=@ IGNORE(C.EQN.2)")
+  kept <- filterByModel(d, mod, quiet = TRUE)
+  expect_equal(nrow(kept), 4L)
+  expect_false("2" %in% kept$C)
+})
+
+test_that("only the columns used numerically are complained about", {
+  d <- data.frame(
+    C = c(".", "2", "."), BLQ = c(".", ".", "1"),
+    ID = 1:3, DV = c(1, 2, 3), stringsAsFactors = FALSE
+  )
+  mod <- tempMod(
+    "$INPUT C BLQ ID DV",
+    "$DATA d.csv IGNORE=@ IGNORE(C.EQ.2) IGNORE(BLQ.EQN.1)"
+  )
+  ## both columns are "." placeholders, so both resolve - C as text, BLQ as 0
+  kept <- filterByModel(d, mod, quiet = TRUE)
+  expect_equal(nrow(kept), 1L)
+})
+
+test_that("a '.' placeholder is read as 0 in a numeric comparison", {
+  ## NONMEM data files carry "." wherever a field does not apply, and NM-TRAN
+  ## reads it as 0 - a data set full of them is ordinary, not broken. Refusing
+  ## the column meant refusing models NONMEM runs.
+  d <- data.frame(
+    DVID = c("1", ".", "7", "2", "."),
+    ID = 1:5, DV = 1, stringsAsFactors = FALSE
+  )
+  mod <- tempMod("$INPUT DVID ID DV", "$DATA d.csv IGNORE=@ IGNORE=(DVID.GT.6)")
+  kept <- filterByModel(d, mod, quiet = TRUE)
+  ## only DVID = 7 exceeds 6; the "." rows are 0 and stay
+  expect_equal(nrow(kept), 4L)
+  expect_false("7" %in% kept$DVID)
+  expect_equal(sum(kept$DVID == "."), 2L)
+
+  ## and 0 rather than NA: IGNORE=(DVID.EQN.0) selects the placeholders only if
+  ## they really became zero. With NA they would not be selected at all, and
+  ## the row count above would be identical - which is why it proves nothing
+  ## on its own.
+  zero <- tempMod("$INPUT DVID ID DV", "$DATA d.csv IGNORE=@ IGNORE=(DVID.EQN.0)")
+  expect_equal(nrow(filterByModel(d, zero, quiet = TRUE)), 3L)
+})
+
+test_that("real text in a numeric comparison is still refused", {
+  ## "." is a convention. "unknown" is a data problem, and coercing it would
+  ## drop rows the model kept without saying so.
+  d <- data.frame(
+    DVID = c("1", "unknown", "7"), ID = 1:3, DV = 1,
+    stringsAsFactors = FALSE
+  )
+  mod <- tempMod("$INPUT DVID ID DV", "$DATA d.csv IGNORE=@ IGNORE=(DVID.GT.6)")
+  expect_error(filterByModel(d, mod, quiet = TRUE), "read as text")
+})
+
+test_that("a column used only textually is left alone", {
+  ## No coercion where none is needed - the text comparison wants the string.
+  d <- data.frame(
+    C = c(".", "2", "."), ID = 1:3, DV = 1,
+    stringsAsFactors = FALSE
+  )
+  mod <- tempMod("$INPUT C ID DV", "$DATA d.csv IGNORE=@ IGNORE(C.EQ.2)")
+  kept <- filterByModel(d, mod, quiet = TRUE)
+  expect_equal(kept$C, c(".", "."))
+})
+
+test_that("coercion for a numeric comparison does not change a textual one", {
+  ## A column used by both families must be read both ways: NONMEM compares
+  ## .EQ. against the characters in the file, so "1.0" does not equal 1 and
+  ## the record is kept. Coercing the whole column for the sake of .GT. made
+  ## as.character(as.numeric("1.0")) == "1" and dropped it - and silenced the
+  ## warning that exists to catch exactly that confusion.
+  d <- data.frame(
+    FLAG = c("1.0", "7.0", ".", "1"), ID = 1:4, DV = 1,
+    stringsAsFactors = FALSE
+  )
+  textOnly <- tempMod("$INPUT FLAG ID DV", "$DATA d.csv IGNORE=(FLAG.EQ.1)")
+  both <- tempMod("$INPUT FLAG ID DV", "$DATA d.csv IGNORE=(FLAG.EQ.1,FLAG.GT.5)")
+
+  keptText <- filterByModel(d, textOnly, quiet = TRUE)
+  keptBoth <- suppressWarnings(filterByModel(d, both, quiet = TRUE))
+
+  ## "1.0" survives the .EQ. either way; only "1" and "7.0" go
+  expect_true("1.0" %in% keptText$FLAG)
+  expect_true("1.0" %in% keptBoth$FLAG)
+  expect_false("1" %in% keptBoth$FLAG)
+  expect_false("7.0" %in% keptBoth$FLAG)
 })

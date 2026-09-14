@@ -354,9 +354,97 @@ test_that("a missVal covariate row is dropped when $PK has no guard for it", {
 
   expect_warning(
     v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
-    "cannot be reconciled"
+    "left out of the comparison"
   )
+  ## and it names only the covariate that actually held missVal
+  w <- tryCatch(verifyParamFunction(out, f, thetas, quiet = TRUE),
+    warning = conditionMessage
+  )
+  expect_match(w, "WT")
+  ## FOOD is a covariate of CL and did *not* hold missVal, so naming it would
+  ## mean the warning had gone back to listing every unguarded covariate.
+  ## (SEX would prove nothing here - pruning removes it from covRef entirely.)
+  expect_false(grepl("FOOD", w))
   ## The remaining rows are consistent, so the check still passes.
   expect_true(as.logical(v))
+  expect_true(all(attr(v, "checks")$N < nrow(df)))
+})
+
+## --- TV<P> is a naming convention, not a fact ------------------------------
+
+test_that("a TV<P> column that is not P's typical value is not used as one", {
+  ## run7's $PK ends:
+  ##   TVMAT = THETA(6)     MAT = TVMAT * EXP(ETA(5))
+  ##   TVD1  = THETA(7)     D1  = MAT * (1 - TVD1)
+  ## so TVMAT really is MAT's typical value, while TVD1 is a dimensionless
+  ## fraction that D1 is computed *from*. Comparing D1 against a TVD1 column
+  ## compares a duration with a fraction and fails whatever the translation.
+  out <- suppressWarnings(
+    createParamFunction(modFile, parameters = c("MAT", "D1"), quiet = TRUE)
+  )
+  expect_equal(unname(out$tvMap[["MAT"]]), "TVMAT")
+  expect_false("D1" %in% names(out$tvMap))
+
+  thetas <- run7Thetas()
+  df <- makeTable(out, thetas)
+  ## The model's own TVD1 - a fraction, nothing like D1.
+  df$TVD1 <- thetas[7]
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(df, f)
+
+  expect_warning(
+    v <- verifyParamFunction(out, f, thetas, quiet = TRUE),
+    "TVD1"
+  )
+  d <- attr(v, "checks")
+  ## MAT verifies through its genuine typical-value column.
+  expect_true(d$PASS[d$PARAMETER == "MAT"])
+  ## D1 is reported as not checkable, not as a failure.
+  expect_true(is.na(d$PASS[d$PARAMETER == "D1"]))
+})
+
+test_that("a comparison-only covariate at missVal does not cost a row", {
+  ## run7 tests GENO1 only as IF(GENO1.EQ.1), and its reference is 0. Neither
+  ## -99 nor 0 is the tested level, so both take the same branch and the row
+  ## reconciles - dropping it would lose coverage for nothing. This is the
+  ## shape of a real model where -99 is simply another level, not a missing
+  ## marker.
+  out <- suppressWarnings(createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE))
+  expect_false(out$covRef$GENO1$inArithmetic)
+  expect_equal(out$covRef$GENO1$testedLevels, 1)
+
+  thetas <- run7Thetas()
+  df <- makeTable(out, thetas)
+  df$GENO1[1] <- out$missVal
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(df, f)
+
+  expect_no_warning(v <- verifyParamFunction(out, f, thetas, quiet = TRUE))
+  expect_true(as.logical(v))
+  expect_equal(attr(v, "checks")$N[1], nrow(df))
+})
+
+test_that("a covariate in arithmetic at missVal is dropped, and flagged as a model problem", {
+  ## WT reaches (WT/75)**THETA, so -99 there is not something the model can
+  ## have meant - NONMEM would raise a negative base to a fractional power.
+  ## The row cannot be reconciled, and the control stream is worth a look.
+  out <- suppressWarnings(createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE))
+  expect_true(out$covRef$WT$inArithmetic)
+
+  thetas <- run7Thetas()
+  df <- makeTable(out, thetas)
+  df$WT[1] <- out$missVal
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(df, f)
+
+  w <- tryCatch(verifyParamFunction(out, f, thetas, quiet = TRUE),
+    warning = conditionMessage
+  )
+  expect_match(w, "WT")
+  expect_match(w, "arithmetic")
+  expect_false(grepl("GENO1", w))
+
+  ## and the row really is left out, not merely complained about
+  v <- suppressWarnings(verifyParamFunction(out, f, thetas, quiet = TRUE))
   expect_true(all(attr(v, "checks")$N < nrow(df)))
 })

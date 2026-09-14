@@ -66,7 +66,9 @@
 #'
 #' @return A data frame containing the rows the model used.
 #'
-#' @seealso [createParamFunction()], [setupDfCovs()], [getCovStats()]
+#' @seealso [verifyFilterByModel()], which checks the result against the
+#'   record, subject and observation counts NONMEM printed in the `.lst`.
+#'   [createParamFunction()], [setupDfCovs()], [getCovStats()]
 #'   `vignette("Part2-walkthrough", package = "PMXForest")` for how this fits the whole workflow.
 #'
 #' @export
@@ -217,11 +219,55 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
       call. = FALSE
     )
   }
-  chr <- used[vapply(used, function(u) is.character(work[[u]]), logical(1))]
+  ## A text column is only a problem where the comparison is numeric. NONMEM
+  ## compares .EQ./.NE. as text, and the generated expression uses
+  ## as.character() to match, so a comment column written as "." placeholders
+  ## filters perfectly well - and that is how such columns are usually written.
+  ## Rejecting every text column contradicted the text-comparison support and
+  ## refused models NONMEM runs happily.
+  numericUse <- unique(unlist(lapply(conds, function(cond) {
+    if (is.null(nmTextComparison(cond))) {
+      nmConditionSymbols(cond, modFile)
+    } else {
+      character(0)
+    }
+  })))
+  chr <- intersect(
+    used[vapply(used, function(u) is.character(work[[u]]), logical(1))],
+    numericUse
+  )
+  ## A NONMEM data file writes "." wherever a field does not apply, and
+  ## NM-TRAN reads that as 0 - a data set full of them is ordinary. Coerce
+  ## those, and only those, so a column of placeholders stops being an
+  ## obstacle to a numeric comparison. Anything else left non-numeric is a
+  ## data problem, and silently coercing it would drop rows the model kept.
+  ## Coerce into a *copy*, used only by the numeric conditions. Rewriting the
+  ## column itself would change the textual ones on the same item: NONMEM
+  ## compares .EQ. against the characters in the file, so "1.0" does not equal
+  ## 1 and the record stays. Coercing first made it "1" and dropped it - and
+  ## silenced the warning below, which exists to catch that very confusion.
+  workNum <- work
+  for (u in chr) {
+    v <- trimws(work[[u]])
+    blank <- v %in% c(".", "")
+    num <- suppressWarnings(as.numeric(v[!blank]))
+    if (anyNA(num)) next
+    v[blank] <- "0"
+    workNum[[u]] <- as.numeric(v)
+    if (!quiet && any(blank)) {
+      message(
+        "Column ", u, " holds ", sum(blank), " \".\" placeholder(s); ",
+        "read as 0 for the numeric comparison, as NM-TRAN does."
+      )
+    }
+  }
+  chr <- chr[vapply(chr, function(u) is.character(workNum[[u]]), logical(1))]
   if (length(chr) > 0) {
-    stop("Column(s) ", paste(chr, collapse = ", "), " used by the $DATA filter ",
-      "read as text rather than numbers. Check the data file for non-numeric ",
-      "placeholders before filtering.",
+    stop("Column(s) ", paste(chr, collapse = ", "), " used by a numeric ",
+      "comparison in the $DATA record of ", basename(modFile),
+      " read as text rather than numbers. Check the data file for non-numeric ",
+      "placeholders. A .EQ. or .NE. comparison would be fine - NONMEM compares ",
+      "those as text - but .EQN., .GT. and the rest need a number.",
       call. = FALSE
     )
   }
@@ -232,6 +278,15 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
       if (length(acceptLists) > 0) "Applying ACCEPT: " else "Applying IGNORE: ",
       full
     )
+  }
+
+  ## Each condition sees the frame its own comparison family needs: the text
+  ## of the file for .EQ./.NE., the coerced numbers for the rest.
+  hitOf <- function(i) {
+    env <- if (is.null(nmTextComparison(conds[i]))) workNum else work
+    h <- eval(parse(text = rExprs[i]), envir = env)
+    h[is.na(h)] <- FALSE
+    h
   }
 
   ## A text comparison that selects nothing, where the numeric reading of the
@@ -245,7 +300,7 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
     if (is.null(txt) || !txt$label %in% names(work)) next
     tHit <- eval(parse(text = nmConditionToR(cond, modFile)), envir = work)
     nHit <- tryCatch(eval(parse(text = nmDeparse(nmParseCondExpr(cond, modFile))),
-      envir = work
+      envir = workNum
     ), error = function(e) NULL)
     tHit[is.na(tHit)] <- FALSE
     if (is.null(nHit)) next
@@ -265,7 +320,7 @@ nmDataFilter <- function(mod, work, modFile, quiet) {
     }
   }
 
-  hit <- eval(parse(text = full), envir = work)
+  hit <- Reduce(`|`, lapply(seq_along(conds), hitOf))
   hit[is.na(hit)] <- FALSE
 
   if (length(acceptLists) > 0) hit else !hit

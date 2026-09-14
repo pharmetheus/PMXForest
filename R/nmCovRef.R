@@ -28,9 +28,63 @@ nmCovRef <- function(stmts, covariates, missVal) {
     if (is.null(r)) r <- nmRefIdentityBranch(flat, cov)
     if (is.null(r)) r <- nmRefNormalisation(flat, cov)
     if (is.null(r)) r <- nmRefUntestedLevel(flat, cov)
-    if (!is.null(r)) out[[cov]] <- r
+    if (!is.null(r)) {
+      ## How the block uses the covariate, for callers that need to know
+      ## whether substituting the reference changes the answer.
+      r$testedLevels <- nmTestedLevels(flat, cov)
+      r$inArithmetic <- nmUsedInArithmetic(flat, cov)
+      out[[cov]] <- r
+    }
   }
   out
+}
+
+#' Levels of `cov` that some `IF()` in the block tests for equality
+#' @noRd
+nmTestedLevels <- function(flat, cov) {
+  lv <- c()
+  for (f in flat) {
+    if (f$kind != "cond-assign") next
+    eq <- nmEqualityTest(f$cond, cov)
+    if (!is.null(eq)) lv <- c(lv, eq)
+  }
+  unique(lv)
+}
+
+#' Does `cov` appear anywhere other than inside an `IF()` condition?
+#'
+#' A covariate read only by comparisons - `IF(SITE.EQ.3)` - behaves the same
+#' for any two values that are both untested, so substituting a reference for
+#' `missVal` changes nothing. One that enters the arithmetic does not: `WT/75`
+#' with a reference is a different number from `WT/75` with `missVal`.
+#'
+#' @noRd
+nmUsedInArithmetic <- function(flat, cov) {
+  uses <- function(node) {
+    if (!is.list(node) || is.null(node$type)) {
+      return(FALSE)
+    }
+    if (identical(node$type, "sym")) {
+      return(identical(node$name, cov))
+    }
+    for (f in c("lhs", "rhs", "arg")) {
+      if (!is.null(node[[f]]) && uses(node[[f]])) {
+        return(TRUE)
+      }
+    }
+    if (!is.null(node$args)) {
+      for (a in node$args) if (uses(a)) {
+        return(TRUE)
+      }
+    }
+    FALSE
+  }
+  for (f in flat) {
+    if (uses(f$stmt$rhs)) {
+      return(TRUE)
+    }
+  }
+  FALSE
 }
 
 #' Numeric value of a literal node, or `NA`
@@ -60,18 +114,22 @@ nmAsNumber <- function(node) {
 #' by a condition.
 #'
 #' @noRd
-nmFlatten <- function(stmts, cond = NULL) {
+nmFlatten <- function(stmts, cond = NULL, inBranch = FALSE) {
   out <- list()
   for (s in stmts) {
     if (s$type == "assign") {
       out[[length(out) + 1L]] <- list(
         kind = if (is.null(cond)) "assign" else "cond-assign",
-        cond = cond, stmt = s, lineno = s$lineno, comment = s$comment
+        cond = cond, stmt = s, lineno = s$lineno, comment = s$comment,
+        ## An ELSE body has no condition of its own, so it lands here as
+        ## `assign` - but it is still a branch, not an unconditional default.
+        ## Callers that care about the difference read this rather than `kind`.
+        inBranch = inBranch || !is.null(cond)
       )
     } else {
-      out <- c(out, nmFlatten(s$then, s$cond))
-      for (e in s$elifs) out <- c(out, nmFlatten(e$stmts, e$cond))
-      if (!is.null(s$else_)) out <- c(out, nmFlatten(s$else_, NULL))
+      out <- c(out, nmFlatten(s$then, s$cond, TRUE))
+      for (e in s$elifs) out <- c(out, nmFlatten(e$stmts, e$cond, TRUE))
+      if (!is.null(s$else_)) out <- c(out, nmFlatten(s$else_, NULL, TRUE))
     }
   }
   out
@@ -115,10 +173,32 @@ nmRefMarkedBranch <- function(flat, cov) {
 #' In an SCM block one branch assigns a bare `1` (multiplicative) or `0`
 #' (additive); that branch is the reference category.
 #'
+#' Only where the branches are the whole story. A variable that is also
+#' assigned unconditionally has its reference state set there, and the branch
+#' is the departure from it - so reading the branch as the reference names the
+#' wrong category. A real model had
+#'
+#'     IND = 0 ; COV=3 or missing (-99)
+#'     IF(COV.EQ.2) IND = 1
+#'
+#' where this rule confidently returned COV = 2, pinning the reference
+#' subject to the treated group with nothing to show for it. The right value is
+#' not recoverable from $PK, so such a covariate is left to the weaker rule
+#' that proposes and warns.
+#'
 #' @noRd
 nmRefIdentityBranch <- function(flat, cov) {
+  ## Only a genuinely unconditional assignment counts as a default. An ELSE
+  ## body reaches here with a NULL condition and would otherwise look like
+  ## one, which disabled this rule for the ordinary IF/THEN/ELSE coding and
+  ## left the reference pointing at the treated category.
+  defaulted <- unique(vapply(
+    Filter(function(f) f$kind == "assign" && !isTRUE(f$inBranch), flat),
+    function(f) f$stmt$lhs, ""
+  ))
   for (f in flat) {
     if (f$kind != "cond-assign") next
+    if (f$stmt$lhs %in% defaulted) next
     val <- nmAsNumber(f$stmt$rhs)
     if (is.na(val) || !(val %in% c(0, 1))) next
     eq <- nmEqualityTest(f$cond, cov)
@@ -194,14 +274,38 @@ nmRefUntestedLevel <- function(flat, cov) {
     return(NULL)
   }
 
+  ## Say which situation this actually is. A block can carry a "; Most common"
+  ## marker on a negated branch - IF(INH.NE.1) ... ; Most common - where the
+  ## rule that reads a level from an .EQ. test has nothing to read. Reporting
+  ## that as "level not tested by any IF()" sends the reader looking for a
+  ## missing branch, when the marker is right there on a condition this cannot
+  ## turn into a single value.
+  negatedMarked <- NULL
+  for (f in flat) {
+    if (f$kind != "cond-assign") next
+    if (!grepl("most\\s*common", f$comment, ignore.case = TRUE)) next
+    if (!is.null(nmEqualityTest(f$cond, cov))) next
+    if (!grepl(paste0("\\b", cov, "\\b"), nmDeparse(f$cond))) next
+    negatedMarked <- f
+    break
+  }
+
   for (candidate in c(0, 1)) {
     if (!any(vapply(tested, function(t) isTRUE(all.equal(t, candidate)), logical(1)))) {
       return(list(
-        value = candidate, line = lineno, confident = FALSE,
-        source = paste0(
-          "level not tested by any IF() on ", cov,
-          " (proposed, please confirm)"
-        )
+        value = candidate, line = if (is.null(negatedMarked)) lineno else negatedMarked$lineno,
+        confident = FALSE,
+        source = if (!is.null(negatedMarked)) {
+          paste0(
+            "complement of the negated \";  Most common\" branch on ", cov,
+            " (proposed, please confirm)"
+          )
+        } else {
+          paste0(
+            "level not tested by any IF() on ", cov,
+            " (proposed, please confirm)"
+          )
+        }
       ))
     }
   }

@@ -12,3 +12,5 @@ RawExampleFiles
 ^_pkgdown\.yml$
 ^docs$
 ^\.claude$
+^TODO\.md$
+^inst/.*README\.html$

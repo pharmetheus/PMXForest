@@ -461,6 +461,23 @@ nmParseAtom <- function(p) {
       if (nm %in% names(nmFunctions)) {
         return(list(type = "call", fn = nmFunctions[[nm]], args = args))
       }
+      ## OMEGA(i,j) and SIGMA(i,j) are NONMEM's own variance matrices. They are
+      ## constants at the final estimates, so they are recorded here and folded
+      ## to literals once the .ext has been read.
+      if (nm %in% c("OMEGA", "SIGMA")) {
+        idx <- vapply(args, function(a) {
+          if (is.list(a) && identical(a$type, "num")) a$value else NA_real_
+        }, numeric(1))
+        if (length(idx) != 2L || anyNA(idx)) {
+          nmFail(p, paste0(
+            nm, "() takes two literal indices, as in ", nm, "(2,2)"
+          ))
+        }
+        return(list(
+          type = "nmmatrix", mat = nm,
+          i = as.integer(idx[1]), j = as.integer(idx[2])
+        ))
+      }
       nmFail(p, paste0("unsupported function '", t$value, "()'"))
     }
 
@@ -480,16 +497,25 @@ nmParseAtom <- function(p) {
 #' elifs, else_, lineno). Blocks nest.
 #'
 #' @noRd
-nmParseStatements <- function(rec, modFile) {
+nmParseStatements <- function(rec, modFile, ignoreVerbatim = FALSE) {
   keep <- nzchar(trimws(rec$code))
   rec <- rec[keep, , drop = FALSE]
 
   verbatim <- grep('^\\s*"', rec$code)
   if (length(verbatim) > 0) {
-    stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
-      rec$lineno[verbatim[1]], " - verbatim FORTRAN code.",
-      call. = FALSE
-    )
+    ## Verbatim FORTRAN can define variables the rest of the block reads, and
+    ## nothing here can tell that apart from a solver directive that touches
+    ## no parameter. Refusing is the default for that reason; a caller who has
+    ## read the block can say it is inert.
+    if (!ignoreVerbatim) {
+      stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+        rec$lineno[verbatim[1]], " - verbatim FORTRAN code.",
+        "\nIf it defines nothing $PK reads - a solver directive, say - pass ",
+        "ignoreVerbatim = TRUE.",
+        call. = FALSE
+      )
+    }
+    rec <- rec[-verbatim, , drop = FALSE]
   }
 
   state <- new.env(parent = emptyenv())
@@ -1021,18 +1047,158 @@ nmFirstUnboundUse <- function(stmts, bound, everAssigned) {
 #' absent from the result and are reported as unverifiable.
 #'
 #' @noRd
+## Which symbol holds each parameter's typical value.
+##
+## "TV" in front of a parameter name is a convention, not a rule: run7 has
+## `TVMAT = THETA(6); MAT = TVMAT * EXP(ETA(5))`, where TVMAT really is MAT's
+## typical value, and immediately afterwards `TVD1 = THETA(7);
+## D1 = MAT*(1-TVD1)`, where TVD1 is a dimensionless fraction that D1 is
+## computed from. Only an assignment of the form `P = <sym> * EXP(ETA(n))` -
+## or a bare `P = <sym>` for a parameter without IIV - tells us that <sym> is
+## P's typical value, so that is what this records. Anything else is left out
+## rather than guessed at.
+##
+## @noRd
+nmTypicalMap <- function(stmts) {
+  map <- character(0)
+
+  tvSym <- function(node) {
+    if (node$type == "sym") {
+      return(node$name)
+    }
+    if (node$type != "binop" || node$op != "*") {
+      return(NA_character_)
+    }
+    isEta <- function(z) {
+      z$type == "call" && z$fn == "exp" && length(z$args) == 1L &&
+        z$args[[1]]$type == "eta"
+    }
+    if (isEta(node$rhs) && node$lhs$type == "sym") {
+      return(node$lhs$name)
+    }
+    if (isEta(node$lhs) && node$rhs$type == "sym") {
+      return(node$rhs$name)
+    }
+    NA_character_
+  }
+
+  for (s in stmts) {
+    if (s$type != "assign") next
+    nm <- tvSym(s$rhs)
+    if (!is.na(nm)) map[s$lhs] <- nm else map <- map[names(map) != s$lhs]
+  }
+  map
+}
+
 nmEtaMap <- function(stmts) {
   map <- integer(0)
 
-  etaInExp <- function(node) {
-    # <expr> * EXP(ETA(n)) or EXP(ETA(n)) * <expr>
-    if (node$type != "binop" || node$op != "*") {
+  ## Count every ETA() in a subtree, so a separable one can be told from an
+  ## eta that is scaled or otherwise entangled.
+  etasIn <- function(n) {
+    if (!is.list(n) || is.null(n$type)) {
+      return(integer(0))
+    }
+    if (identical(n$type, "eta")) {
+      return(n$index)
+    }
+    out <- integer(0)
+    ## `arg` too: the parser builds unary minus as a `unop` node, and an eta
+    ## under it would otherwise be invisible to the count - so the guard would
+    ## pass and a non-separable expression be claimed.
+    for (f in c("lhs", "rhs", "cond", "arg")) {
+      if (!is.null(n[[f]])) out <- c(out, etasIn(n[[f]]))
+    }
+    if (!is.null(n$args)) for (a in n$args) out <- c(out, etasIn(a))
+    out
+  }
+
+  ## Names whose value carries randomness, transitively. An eta can reach an
+  ## exponent through a symbol - the IOV idiom assigns ETA() to a name in an
+  ## occasion block and adds that name inside EXP() - and a syntactic count of
+  ## ETA() nodes cannot see it. Without this, EXP(ETA(1) + IOV) looked like the
+  ## MU-referenced idiom and the entry was claimed separable, after which
+  ## dividing the tabled value by exp(eta1) leaves exp(IOV) behind.
+  etaDerived <- local({
+    binds <- list()
+    walk <- function(ss) {
+      for (st in ss) {
+        if (identical(st$type, "assign")) {
+          binds[[length(binds) + 1L]] <<- list(lhs = st$lhs, rhs = st$rhs)
+        } else {
+          walk(st$then)
+          for (e in st$elifs) walk(e$stmts)
+          if (!is.null(st$else_)) walk(st$else_)
+        }
+      }
+    }
+    walk(stmts)
+    seeds <- character(0)
+    repeat {
+      before <- seeds
+      for (b in binds) {
+        if (b$lhs %in% seeds) next
+        if (length(etasIn(b$rhs)) > 0 ||
+          any(nmExprSyms(b$rhs) %in% seeds)) {
+          seeds <- c(seeds, b$lhs)
+        }
+      }
+      if (identical(seeds, before)) break
+    }
+    seeds
+  })
+
+  ## Top-level additive terms. Only `+`: under `-` the eta enters with the
+  ## wrong sign and dividing by exp(ETA) would not undo it.
+  addTerms <- function(n) {
+    if (is.list(n) && identical(n$type, "binop") && identical(n$op, "+")) {
+      c(addTerms(n$lhs), addTerms(n$rhs))
+    } else {
+      list(n)
+    }
+  }
+
+  ## exp(...) whose argument carries exactly one ETA, as a bare additive term.
+  ## That covers both idioms in use:
+  ##   CL = TVCL * EXP(ETA(3))          classic
+  ##   CL = EXP(MU_6 + ETA(6))          MU-referenced, as IMP and SAEM write it
+  ## and both are separable for the same reason - EXP(a + eta) is
+  ## EXP(a) * EXP(eta) - so the tabled individual value divided by exp(eta)
+  ## gives the typical value either way.
+  fromExp <- function(e) {
+    if (!(is.list(e) && identical(e$type, "call") && identical(e$fn, "exp") &&
+      length(e$args) == 1L)) {
       return(NA_integer_)
     }
-    for (side in list(node$lhs, node$rhs)) {
-      if (side$type == "call" && side$fn == "exp" && length(side$args) == 1L &&
-        side$args[[1]]$type == "eta") {
-        return(side$args[[1]]$index)
+    if (length(etasIn(e$args[[1]])) != 1L) {
+      return(NA_integer_)
+    }
+    terms <- addTerms(e$args[[1]])
+    bare <- Filter(function(t) identical(t$type, "eta"), terms)
+    if (length(bare) != 1L) {
+      return(NA_integer_)
+    }
+    ## No sibling of the bare eta may itself carry randomness.
+    others <- Filter(function(t) !identical(t$type, "eta"), terms)
+    for (t in others) {
+      if (any(nmExprSyms(t) %in% etaDerived)) {
+        return(NA_integer_)
+      }
+    }
+    bare[[1]]$index
+  }
+
+  etaInExp <- function(node) {
+    cands <- list(node)
+    n <- node
+    while (is.list(n) && identical(n$type, "binop") && identical(n$op, "*")) {
+      cands <- c(cands, list(n$lhs, n$rhs))
+      n <- n$lhs
+    }
+    for (c0 in cands) {
+      idx <- fromExp(c0)
+      if (!is.na(idx)) {
+        return(idx)
       }
     }
     NA_integer_
@@ -1080,4 +1246,205 @@ nmMaxTheta <- function(stmts) {
   }
   walkStmts(stmts)
   mx
+}
+
+
+## Fold OMEGA(i,j) / SIGMA(i,j) to the value in the .ext file.
+##
+## They are constants once the model is estimated, so a parameter function can
+## carry the number. Without an .ext there is nothing to resolve them from, and
+## guessing is not on the table.
+##
+## @noRd
+nmResolveMatrixRefs <- function(stmts, ext, modFile) {
+  needed <- list()
+
+  walk <- function(node) {
+    if (!is.list(node) || is.null(node$type)) {
+      return(node)
+    }
+    if (identical(node$type, "nmmatrix")) {
+      needed[[length(needed) + 1L]] <<- node
+      return(node)
+    }
+    for (f in c("lhs", "rhs", "cond")) {
+      if (!is.null(node[[f]])) node[[f]] <- walk(node[[f]])
+    }
+    if (!is.null(node$args)) node$args <- lapply(node$args, walk)
+    node
+  }
+  scan <- function(ss) {
+    for (st in ss) {
+      if (identical(st$type, "assign")) {
+        walk(st$rhs)
+      } else {
+        walk(st$cond)
+        scan(st$then)
+        for (e in st$elifs) {
+          walk(e$cond)
+          scan(e$stmts)
+        }
+        if (!is.null(st$else_)) scan(st$else_)
+      }
+    }
+  }
+  scan(stmts)
+  if (length(needed) == 0L) {
+    return(stmts)
+  }
+
+  if (is.null(ext)) {
+    nm <- unique(vapply(needed, function(n) {
+      sprintf("%s(%d,%d)", n$mat, n$i, n$j)
+    }, ""))
+    stop("The $PK block of ", basename(modFile), " reads ",
+      paste(nm, collapse = ", "),
+      ", whose value is in the model's .ext file. Supply extFile.",
+      call. = FALSE
+    )
+  }
+
+  final <- ext[ext$ITERATION == -1000000000, , drop = FALSE]
+  if (nrow(final) == 0L) {
+    stop("No final estimates in the .ext file, so ",
+      "OMEGA()/SIGMA() cannot be resolved.",
+      call. = FALSE
+    )
+  }
+  lookup <- function(node) {
+    ## The .ext carries the lower triangle, and R mangles "OMEGA(2,2)" to
+    ## "OMEGA.2.2." on read; the matrix is symmetric, so try both orders.
+    cand <- c(
+      sprintf("%s.%d.%d.", node$mat, node$i, node$j),
+      sprintf("%s.%d.%d.", node$mat, node$j, node$i)
+    )
+    hit <- cand[cand %in% names(final)]
+    if (length(hit) == 0L) {
+      stop(sprintf(
+        "%s(%d,%d) is not in the .ext file of %s.",
+        node$mat, node$i, node$j, basename(modFile)
+      ), call. = FALSE)
+    }
+    as.numeric(final[[hit[1]]][1])
+  }
+  subst <- function(node) {
+    if (!is.list(node) || is.null(node$type)) {
+      return(node)
+    }
+    if (identical(node$type, "nmmatrix")) {
+      return(list(type = "num", value = lookup(node)))
+    }
+    for (f in c("lhs", "rhs", "cond")) {
+      if (!is.null(node[[f]])) node[[f]] <- subst(node[[f]])
+    }
+    if (!is.null(node$args)) node$args <- lapply(node$args, subst)
+    node
+  }
+  fix <- function(ss) {
+    lapply(ss, function(st) {
+      if (identical(st$type, "assign")) {
+        st$rhs <- subst(st$rhs)
+      } else {
+        st$cond <- subst(st$cond)
+        st$then <- fix(st$then)
+        st$elifs <- lapply(st$elifs, function(e) {
+          e$cond <- subst(e$cond)
+          e$stmts <- fix(e$stmts)
+          e
+        })
+        if (!is.null(st$else_)) st$else_ <- fix(st$else_)
+      }
+      st
+    })
+  }
+  fix(stmts)
+}
+
+## Keep only the statements the requested parameters depend on.
+##
+## $PK is all parameter definitions, so emitting the whole block is merely
+## verbose - the extra entries are correct, just unwanted. Pruning is still
+## worth doing: it shortens the source the caller has to read against the
+## control stream, and it shrinks the covariate set to those the requested
+## parameters actually use, so no reference has to be justified for a covariate
+## that cannot reach the answer.
+##
+## Dependencies in $PK only ever run backwards: a statement can be affected by
+## earlier statements and never by later ones. One reverse pass therefore
+## suffices. A variable is never taken out of the needed set once it is in it,
+## so a re-assignment chain - `TVCL = THETA(4)*CLCOV1` and then
+## `TVCL = CLCOV*TVCL` - keeps both of its links.
+##
+## An IF block is kept whole when anything inside it is needed. Pruning within
+## a block would leave empty branches for no gain; carrying a few extra
+## assignments is the cheaper mistake.
+##
+## @noRd
+nmPruneToParameters <- function(stmts, parameters) {
+  need <- parameters
+
+  blockAssigns <- function(st) {
+    if (identical(st$type, "assign")) {
+      return(st$lhs)
+    }
+    out <- unlist(lapply(st$then, blockAssigns))
+    for (e in st$elifs) out <- c(out, unlist(lapply(e$stmts, blockAssigns)))
+    if (!is.null(st$else_)) out <- c(out, unlist(lapply(st$else_, blockAssigns)))
+    out
+  }
+  blockSyms <- function(st) {
+    if (identical(st$type, "assign")) {
+      return(nmExprSyms(st$rhs))
+    }
+    out <- c(nmExprSyms(st$cond), unlist(lapply(st$then, blockSyms)))
+    for (e in st$elifs) {
+      out <- c(out, nmExprSyms(e$cond), unlist(lapply(e$stmts, blockSyms)))
+    }
+    if (!is.null(st$else_)) out <- c(out, unlist(lapply(st$else_, blockSyms)))
+    out
+  }
+
+  keptRev <- list()
+  for (i in rev(seq_along(stmts))) {
+    st <- stmts[[i]]
+    if (!any(blockAssigns(st) %in% need)) next
+    need <- unique(c(need, blockSyms(st)))
+    keptRev[[length(keptRev) + 1L]] <- st
+  }
+  rev(keptRev)
+}
+
+## Every name assigned anywhere in a statement tree.
+## @noRd
+nmAssignedNames <- function(stmts) {
+  out <- character(0)
+  walk <- function(ss) {
+    for (st in ss) {
+      if (identical(st$type, "assign")) {
+        out <<- c(out, st$lhs)
+      } else {
+        walk(st$then)
+        for (e in st$elifs) walk(e$stmts)
+        if (!is.null(st$else_)) walk(st$else_)
+      }
+    }
+  }
+  walk(stmts)
+  unique(out)
+}
+
+## Every symbol read anywhere in a statement (conditions included).
+## @noRd
+nmStmtSyms <- function(st) {
+  if (identical(st$type, "assign")) {
+    return(nmExprSyms(st$rhs))
+  }
+  out <- nmExprSyms(st$cond)
+  for (x in st$then) out <- c(out, nmStmtSyms(x))
+  for (e in st$elifs) {
+    out <- c(out, nmExprSyms(e$cond))
+    for (x in e$stmts) out <- c(out, nmStmtSyms(x))
+  }
+  if (!is.null(st$else_)) for (x in st$else_) out <- c(out, nmStmtSyms(x))
+  unique(out)
 }

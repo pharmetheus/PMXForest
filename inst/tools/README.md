@@ -107,3 +107,28 @@ without you having to send the model.
 
 Please do **not** send control streams or data without checking what is in
 them first.
+
+## A second script: checking `filterByModel()` against the `.lst`
+
+`checkFilterByModel.R` runs `verifyFilterByModel()` over the models you name on
+the command line and writes one report you can paste back. It compares what the
+filter keeps against the record, subject and observation counts NONMEM printed
+in that run's `.lst` — an oracle that comes from NONMEM rather than from a
+reading of `$DATA`.
+
+```sh
+Rscript checkFilterByModel.R path/to/run1.mod path/to/run2.mod
+Rscript checkFilterByModel.R --models mymodels.txt   # one path per line
+Rscript checkFilterByModel.R --models mymodels.txt --max-mb 200
+```
+
+Paths are not stored in the script — it ships with the package, so it carries
+nobody's project layout.
+
+It needs the `.lst` and the `$DATA` file beside each model. Data files are
+size-gated rather than truncated, because a partial read makes the counts
+meaningless.
+
+Unlike `verifyPMXForest.R` there is no redacted/local split here: the report
+names each model by its file name and quotes any error or warning verbatim, so
+read it before you paste it. Nothing else about the model or the data goes in.

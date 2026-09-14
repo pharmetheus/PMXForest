@@ -64,11 +64,25 @@
 #' @param covRef An optional named list of covariate reference values, e.g.
 #'   `list(WT = 75)`. Overrides the values derived from the control stream, and
 #'   supplies them for covariates where no rule fires.
+#'
+#'   It also pins a symbol NONMEM supplies rather than `$INPUT`. A `$MIX` model
+#'   reads `MIXNUM`, the subpopulation index, which `$PK` never assigns and
+#'   `$INPUT` never declares; `covRef = list(MIXNUM = 1)` says which
+#'   subpopulation to generate for, and giving `MIXNUM` its own column in
+#'   `dfCovs` then plots each subpopulation in turn. Pinning is always
+#'   deliberate - the generator refuses rather than choose for you - and some
+#'   symbols cannot be pinned meaningfully at all: `NEWIND` changes within an
+#'   individual, so no single value represents it.
 #' @param functionName The name given to the generated function. Defaults to
 #'   `"paramFunction"`.
 #' @param extFile An optional path to the model's `.ext` file. When supplied, the
 #'   THETA count is read from its header, which is authoritative, instead of
 #'   being counted from the `$THETA` records.
+#' @param ignoreVerbatim Skip verbatim FORTRAN lines in `$PK` instead of
+#'   refusing the model. Default `FALSE`. Verbatim code can define variables
+#'   the rest of the block reads, and nothing in the parser can tell that apart
+#'   from a solver directive that touches no parameter - so the decision is the
+#'   caller's, after reading the block.
 #' @param file An optional path to write the generated source to. The source is
 #'   returned either way.
 #' @param missVal The value marking an inactive covariate in `dfCovs`. Defaults
@@ -98,13 +112,27 @@
 #'     \item `noBaseThetas` - the number of THETAs in the model.
 #'     \item `covRef` - the reference value used for each covariate, with the
 #'       rule and control-stream line it came from.
-#'     \item `etaMap` - for each returned parameter written as
-#'       `P = <expr> * EXP(ETA(n))`, the ETA index `n`. Used by
+#'     \item `etaMap` - for each returned parameter whose between-subject
+#'       variability separates out as a factor, the ETA index `n`. Used by
 #'       [verifyParamFunction()] to recover typical values from a NONMEM table.
-#'       Only that one idiom is recognised: a MU-referenced parameter, written
-#'       `MU_4 = LOG(TVCL)` / `CL = EXP(MU_4 + ETA(4))` as SAEM and IMP models
-#'       normally are, yields an empty map, and [verifyParamFunction()] then has
-#'       no typical values to compare against.
+#'       Two idioms qualify, because `EXP(a + eta)` is `EXP(a) * EXP(eta)`
+#'       either way: the classic `P = <expr> * EXP(ETA(n))`, and the
+#'       MU-referenced `MU_4 = LOG(TVCL)` / `CL = EXP(MU_4 + ETA(4))` that SAEM
+#'       and IMP models are normally written with. An eta that is scaled inside
+#'       the exponent does not separate and gets no entry, nor does one that
+#'       shares the exponent with a second source of randomness - the IOV
+#'       idiom, `EXP(ETA(1) + IOV)` where `IOV` is itself assigned from an
+#'       `ETA()`. A parameter with no entry simply has no typical value for
+#'       [verifyParamFunction()] to compare against.
+#'     \item `tvMap` - for each returned parameter assigned as
+#'       `P = <sym> * EXP(ETA(n))`, or plainly `P = <sym>`, the name of `<sym>`
+#'       - the symbol the control stream itself treats as `P`'s typical value.
+#'       A parameter assigned any other way has no entry. `"TV"` in front of a
+#'       parameter name is only a convention: `run7` has
+#'       `MAT = TVMAT * EXP(ETA(5))`, where `TVMAT` is genuinely `MAT`'s
+#'       typical value, and then `D1 = MAT*(1-TVD1)`, where `TVD1` is a
+#'       dimensionless fraction `D1` is computed from. [verifyParamFunction()]
+#'       uses this rather than guessing at a `TV`-prefixed column name.
 #'     \item `modFile`, `missVal` - as supplied.
 #'   }
 #'
@@ -147,14 +175,37 @@
 createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
                                 functionName = "paramFunction", extFile = NULL,
                                 file = NULL, missVal = -99, quiet = FALSE,
-                                secondary = NULL) {
-  p <- nmParsePK(modFile,
-    parameters = parameters, covRef = covRef,
-    extFile = extFile, missVal = missVal
-  )
-
+                                secondary = NULL, ignoreVerbatim = FALSE) {
+  ## Resolve `secondary` first: a secondary block is spliced in after the $PK
+  ## translation and sees every structural parameter by name, including
+  ## intermediates the caller did not ask for - `80 / (CL / FREL)` when only
+  ## CL was requested. Pruning has to know about them or the generated function
+  ## fails at call time with "object 'FREL' not found".
   sec <- nmResolveSecondary(secondary, quiet = quiet)
   secNames <- unname(vapply(sec, `[[`, "", "name"))
+  secReads <- unique(unlist(lapply(sec, function(e) {
+    tryCatch(all.vars(parse(text = e$lines)), error = function(err) character(0))
+  })))
+
+  p <- nmParsePK(modFile,
+    parameters = parameters, covRef = covRef,
+    extFile = extFile, missVal = missVal, ignoreVerbatim = ignoreVerbatim,
+    keep = secReads
+  )
+
+  ## A FREM model's $PK translates faithfully and answers the wrong question:
+  ## the covariates it was built to describe are not in there, so the result
+  ## looks right and is not a parameter function anybody wants. Refusing beats
+  ## warning - a warning is easy to miss, and what follows it is a plausible
+  ## looking function. PsN marks these with a FREMTYPE data item.
+  if ("FREMTYPE" %in% toupper(p$inputNames)) {
+    stop(basename(modFile), " is a FREM model (FREMTYPE is in $INPUT). ",
+      "A FREM model is never the subject of a parameter function; use ",
+      "PMXFrem::createFREMParamFunction().",
+      call. = FALSE
+    )
+  }
+
 
   # Setting ETA() to 0 leaves artefacts such as `TVCL * exp(0)`; fold them away
   # so the emitted source stays diffable against the control stream.
@@ -196,6 +247,7 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
     secondaryNames = secNames,
     noBaseThetas = p$noBaseThetas, covRef = p$covRef,
     etaMap = p$etaMap[intersect(names(p$etaMap), p$parameters)],
+    tvMap = p$tvMap[intersect(names(p$tvMap), p$parameters)],
     modFile = modFile, missVal = missVal
   )
 }
@@ -215,6 +267,12 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
 #'   emitter can decide what to do with them.
 #'
 #' @inheritParams createParamFunction
+#' @param keep A character vector of `$PK` symbols to retain when `parameters`
+#'   is given. Pruning drops every statement the requested parameters cannot
+#'   reach, which is what makes a narrowed `parameters` narrow the covariates
+#'   too; a caller that will splice in its own code afterwards - a secondary
+#'   parameter computed from `$PK` intermediates, say - names here the symbols
+#'   that code reads, so they survive. Names not assigned in `$PK` are ignored.
 #'
 #' @return A list:
 #'   \itemize{
@@ -234,8 +292,14 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
 #'       or every assigned variable when `NULL`.
 #'     \item `noBaseThetas` - the THETA count (from the `.ext` header when
 #'       `extFile` is supplied, otherwise the `$THETA` records).
-#'     \item `etaMap` - a named integer vector: for each parameter written
-#'       `P = <expr> * EXP(ETA(n))`, the ETA index `n`.
+#'     \item `etaMap` - a named integer vector: for each parameter whose
+#'       between-subject variability separates out as a factor, the ETA index
+#'       `n`. Both `P = <expr> * EXP(ETA(n))` and the MU-referenced
+#'       `P = EXP(MU_n + ETA(n))` qualify; an eta scaled inside the exponent,
+#'       or sharing it with a second source of randomness, does not.
+#'     \item `tvMap` - a named character vector: for each parameter assigned
+#'       `P = <sym> * EXP(ETA(n))` or plainly `P = <sym>`, the name of `<sym>`
+#'       - the symbol the control stream itself treats as `P`'s typical value.
 #'     \item `inputNames` - the `$INPUT` column names.
 #'     \item `modFile`, `missVal` - as supplied.
 #'   }
@@ -251,7 +315,8 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
 #' p$noBaseThetas
 #' p$etaMap
 nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
-                      extFile = NULL, missVal = -99) {
+                      extFile = NULL, missVal = -99,
+                      ignoreVerbatim = FALSE, keep = character(0)) {
   mod <- nmReadModel(modFile)
   pk <- nmRecord(mod, "\\$PK\\b")
   if (nrow(pk) == 0) {
@@ -262,14 +327,34 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
     )
   }
 
-  stmts <- nmParseStatements(pk, modFile)
+  stmts <- nmParseStatements(pk, modFile, ignoreVerbatim = ignoreVerbatim)
+  stmts <- nmResolveMatrixRefs(
+    stmts,
+    if (is.null(extFile)) NULL else getExt(extFile),
+    modFile
+  )
   if (length(stmts) == 0) {
     stop("The $PK record in ", basename(modFile), " contains no statements.",
       call. = FALSE
     )
   }
+
+  ## Prune before anything else looks at the block, so that covariate
+  ## discovery and the reference rules see only what the requested parameters
+  ## can reach. Validating `parameters` has to move up here with it.
+  if (!is.null(parameters)) {
+    assigned <- nmAssignedNames(stmts)
+    unknown <- setdiff(parameters, assigned)
+    if (length(unknown) > 0) {
+      stop("Not assigned in the $PK block of ", basename(modFile), ": ",
+        paste(unknown, collapse = ", "), ".",
+        call. = FALSE
+      )
+    }
+  }
   # Recorded while the ETA() references are still in the tree.
   etaMap <- nmEtaMap(stmts)
+  tvMap <- nmTypicalMap(stmts)
   # A folded copy (ETA() -> 0, constants collapsed) for the analyses below; the
   # raw tree is what we return so a downstream emitter keeps the ETA()s.
   folded <- nmSimplifyStmts(stmts)
@@ -283,37 +368,76 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   syms <- nmSymbols(folded)
   inputNames <- nmInputNames(mod)
   covariates <- character(0)
+  ## Collect every symbol we cannot account for before reporting, rather than
+  ## stopping at the first. A $MIX model reads both MIXNUM and MIXEST, and
+  ## reporting them one at a time makes the caller pin one, re-run, be told
+  ## about the next, pin that, re-run.
+  pinnable <- list()
+  blocked <- list()
   repeat {
-    unbound <- nmFirstUnboundUse(folded, covariates, syms$assigned)
+    seen <- c(covariates, names(pinnable), names(blocked))
+    unbound <- nmFirstUnboundUse(folded, seen, syms$assigned)
     if (is.null(unbound)) break
-    if (unbound$name %in% inputNames) {
+    if (unbound$name %in% inputNames || unbound$name %in% names(covRef)) {
       covariates <- c(covariates, unbound$name)
       next
     }
-    at <- if (is.na(unbound$lineno)) "" else paste0(" on line ", unbound$lineno)
+    ## Two different problems. A symbol read before its own assignment cannot
+    ## be pinned - NONMEM carries the previous record's value into it, which a
+    ## row-at-a-time function cannot reproduce. One never assigned at all is
+    ## something NONMEM supplies, and a fixed value may be exactly right.
+    if (isTRUE(unbound$everAssigned)) {
+      blocked[[unbound$name]] <- unbound
+    } else {
+      pinnable[[unbound$name]] <- unbound
+    }
+  }
+
+  if (length(blocked) > 0) {
+    nm <- names(blocked)
+    at <- vapply(blocked, function(u) {
+      if (is.na(u$lineno)) "" else paste0(" on line ", u$lineno)
+    }, "")
     stop(
-      "The $PK block of ", basename(modFile), " reads ", unbound$name, at,
-      if (unbound$everAssigned) {
-        paste0(
-          " before assigning it.\nNONMEM does not initialise $PK variables and",
-          " does not clear them between data records, so the model reads",
-          " whatever the previous record left there. A parameter function is",
-          " evaluated one row at a time and cannot reproduce that.",
-          "\nMove the assignment of ", unbound$name, " above the line that",
-          " reads it."
-        )
-      } else {
-        paste0(
-          ", but never assigns it and it is not in $INPUT.\nIf it is a NONMEM",
-          " reserved variable such as NEWIND, it has no value a parameter",
-          " function could supply."
-        )
-      },
+      "The $PK block of ", basename(modFile), " reads ",
+      paste0(nm, at, collapse = ", "),
+      " before assigning it.\nNONMEM does not initialise $PK variables and does",
+      " not clear them between data records, so the model reads whatever the",
+      " previous record left there. A parameter function is evaluated one row",
+      " at a time and cannot reproduce that.",
+      "\nMove the assignment of ", paste(nm, collapse = ", "),
+      " above the line that reads it.",
       call. = FALSE
     )
   }
 
+  ## A symbol NONMEM supplies must never reach the reference rules. Rule 5
+  ## proposes the level no IF() tests, which on `IF(MIXNUM.EQ.2)` would quietly
+  ## pick a subpopulation - a guess the caller would never see. They are held
+  ## back here and reported below alongside the covariates whose reference
+  ## could not be derived, because both are fixed by the same covRef call.
+  supplied <- names(pinnable)
+
   ## References, control stream first, then user overrides.
+  ## Now that the whole block has been walked - so a symbol read before it is
+  ## assigned is still reported as that, wherever in $PK it happens - drop the
+  ## statements the requested parameters cannot reach. The covariate set
+  ## narrows with them: a reference nobody needs should not have to be
+  ## justified, or warned about.
+  covariatesAll <- covariates
+  if (!is.null(parameters)) {
+    ## `keep` names symbols something downstream will read - a secondary
+    ## expression, so far - which are not parameters in their own right. They
+    ## are kept if $PK assigns them and ignored if it does not.
+    stmts <- nmPruneToParameters(
+      stmts, unique(c(parameters, intersect(keep, nmAssignedNames(stmts))))
+    )
+    folded <- nmSimplifyStmts(stmts)
+    keptSyms <- nmAssignedNames(stmts)
+    for (st in stmts) keptSyms <- c(keptSyms, nmStmtSyms(st))
+    covariates <- intersect(covariates, unique(keptSyms))
+  }
+
   derived <- nmCovRef(folded, covariates, missVal)
   if (length(covRef) > 0) {
     if (is.null(names(covRef)) || any(!nzchar(names(covRef)))) {
@@ -322,7 +446,7 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
     ## A typo here used to be silently ignored, leaving the derived reference
     ## in place, and a non-numeric value emitted source that parsed but failed
     ## when called.
-    stray <- setdiff(names(covRef), covariates)
+    stray <- setdiff(names(covRef), covariatesAll)
     if (length(stray) > 0) {
       stop("covRef names a covariate that ", basename(modFile),
         " does not use: ", paste(stray, collapse = ", "),
@@ -342,19 +466,55 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
       )
     }
   }
-  for (cov in names(covRef)) {
+  ## A covRef entry for a covariate pruning removed is not a mistake: the
+  ## caller pinned what the model needs and then asked for a subset of the
+  ## parameters. It is validated above against everything $PK reads, and simply
+  ## not spliced here.
+  for (cov in intersect(names(covRef), covariates)) {
     derived[[cov]] <- list(
       value = covRef[[cov]], line = NA_integer_,
       confident = TRUE, source = "supplied through covRef"
     )
   }
 
-  missingRef <- setdiff(covariates, names(derived))
-  if (length(missingRef) > 0) {
+  needPin <- c(supplied, setdiff(covariates, names(derived)))
+  if (length(needPin) > 0) {
+    fromNm <- intersect(supplied, needPin)
     stop("No reference value could be derived from ", basename(modFile),
-      " for: ", paste(missingRef, collapse = ", "),
+      " for: ", paste(needPin, collapse = ", "),
       ".\nSupply them through covRef, e.g. covRef = list(",
-      paste(paste0(missingRef, " = <value>"), collapse = ", "), ").",
+      paste(paste0(needPin, " = <value>"), collapse = ", "), ").",
+      if (length(fromNm) > 0) {
+        paste0(
+          "\n", paste(fromNm, collapse = ", "),
+          if (length(fromNm) > 1) " are" else " is",
+          " supplied by NONMEM rather than declared in $INPUT, so no rule in",
+          " the control stream can give a reference - only you can say what",
+          " value to hold it at.",
+          if (any(c("MIXNUM", "MIXEST") %in% fromNm)) {
+            paste0(
+              " In a $MIX model MIXNUM selects the subpopulation to compute",
+              " for and MIXEST the one the individual was classified into, so",
+              " pinning both to the same value describes a subject in that",
+              " subpopulation."
+            )
+          } else {
+            ""
+          },
+          if ("NEWIND" %in% fromNm) {
+            paste0(
+              " NEWIND changes within an individual - it marks the first",
+              " record of a subject - so pinning it describes one kind of",
+              " record rather than a subject, which is rarely what a Forest",
+              " plot wants."
+            )
+          } else {
+            ""
+          }
+        )
+      } else {
+        ""
+      },
       call. = FALSE
     )
   }
@@ -401,7 +561,8 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   list(
     statements = stmts, covariates = covariates, covRef = derived,
     parameters = parameters, noBaseThetas = noBaseThetas, etaMap = etaMap,
-    inputNames = inputNames, modFile = modFile, missVal = missVal
+    tvMap = tvMap, inputNames = inputNames, modFile = modFile,
+    missVal = missVal
   )
 }
 

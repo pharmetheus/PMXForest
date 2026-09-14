@@ -13,7 +13,8 @@ createParamFunction(
   file = NULL,
   missVal = -99,
   quiet = FALSE,
-  secondary = NULL
+  secondary = NULL,
+  ignoreVerbatim = FALSE
 )
 }
 \arguments{
@@ -25,7 +26,16 @@ it to the parameters you actually want to plot.}
 
 \item{covRef}{An optional named list of covariate reference values, e.g.
 \code{list(WT = 75)}. Overrides the values derived from the control stream, and
-supplies them for covariates where no rule fires.}
+supplies them for covariates where no rule fires.
+
+It also pins a symbol NONMEM supplies rather than \verb{$INPUT}. A \verb{$MIX} model
+reads \code{MIXNUM}, the subpopulation index, which \verb{$PK} never assigns and
+\verb{$INPUT} never declares; \code{covRef = list(MIXNUM = 1)} says which
+subpopulation to generate for, and giving \code{MIXNUM} its own column in
+\code{dfCovs} then plots each subpopulation in turn. Pinning is always
+deliberate - the generator refuses rather than choose for you - and some
+symbols cannot be pinned meaningfully at all: \code{NEWIND} changes within an
+individual, so no single value represents it.}
 
 \item{functionName}{The name given to the generated function. Defaults to
 \code{"paramFunction"}.}
@@ -51,6 +61,12 @@ simulation, \code{list(CMAX = "cmax.R")}), or a list \verb{list(source = <string
 (\code{list(CMAX = list(source = "cmax.R", dose = 100, tau = 12))}). A file's
 text is inlined into the generated source, so the result stays
 self-contained. See Details.}
+
+\item{ignoreVerbatim}{Skip verbatim FORTRAN lines in \verb{$PK} instead of
+refusing the model. Default \code{FALSE}. Verbatim code can define variables
+the rest of the block reads, and nothing in the parser can tell that apart
+from a solver directive that touches no parameter - so the decision is the
+caller's, after reading the block.}
 }
 \value{
 A list of:
@@ -66,13 +82,27 @@ when none). \code{\link[=verifyParamFunction]{verifyParamFunction()}} skips thes
 \item \code{noBaseThetas} - the number of THETAs in the model.
 \item \code{covRef} - the reference value used for each covariate, with the
 rule and control-stream line it came from.
-\item \code{etaMap} - for each returned parameter written as
-\verb{P = <expr> * EXP(ETA(n))}, the ETA index \code{n}. Used by
+\item \code{etaMap} - for each returned parameter whose between-subject
+variability separates out as a factor, the ETA index \code{n}. Used by
 \code{\link[=verifyParamFunction]{verifyParamFunction()}} to recover typical values from a NONMEM table.
-Only that one idiom is recognised: a MU-referenced parameter, written
-\code{MU_4 = LOG(TVCL)} / \code{CL = EXP(MU_4 + ETA(4))} as SAEM and IMP models
-normally are, yields an empty map, and \code{\link[=verifyParamFunction]{verifyParamFunction()}} then has
-no typical values to compare against.
+Two idioms qualify, because \code{EXP(a + eta)} is \code{EXP(a) * EXP(eta)}
+either way: the classic \verb{P = <expr> * EXP(ETA(n))}, and the
+MU-referenced \code{MU_4 = LOG(TVCL)} / \code{CL = EXP(MU_4 + ETA(4))} that SAEM
+and IMP models are normally written with. An eta that is scaled inside
+the exponent does not separate and gets no entry, nor does one that
+shares the exponent with a second source of randomness - the IOV
+idiom, \code{EXP(ETA(1) + IOV)} where \code{IOV} is itself assigned from an
+\code{ETA()}. A parameter with no entry simply has no typical value for
+\code{\link[=verifyParamFunction]{verifyParamFunction()}} to compare against.
+\item \code{tvMap} - for each returned parameter assigned as
+\verb{P = <sym> * EXP(ETA(n))}, or plainly \verb{P = <sym>}, the name of \verb{<sym>}
+- the symbol the control stream itself treats as \code{P}'s typical value.
+A parameter assigned any other way has no entry. \code{"TV"} in front of a
+parameter name is only a convention: \code{run7} has
+\code{MAT = TVMAT * EXP(ETA(5))}, where \code{TVMAT} is genuinely \code{MAT}'s
+typical value, and then \code{D1 = MAT*(1-TVD1)}, where \code{TVD1} is a
+dimensionless fraction \code{D1} is computed from. \code{\link[=verifyParamFunction]{verifyParamFunction()}}
+uses this rather than guessing at a \code{TV}-prefixed column name.
 \item \code{modFile}, \code{missVal} - as supplied.
 }
 }

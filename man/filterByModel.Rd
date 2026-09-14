@@ -103,6 +103,8 @@ getCovStats(dfUsed, "CRCL", idVar = "ID")
 head(names(filterByModel(dfData, modFile, useInputNames = TRUE, quiet = TRUE)), 10)
 }
 \seealso{
+\code{\link[=verifyFilterByModel]{verifyFilterByModel()}}, which checks the result against the
+record, subject and observation counts NONMEM printed in the \code{.lst}.
 \code{\link[=createParamFunction]{createParamFunction()}}, \code{\link[=setupDfCovs]{setupDfCovs()}}, \code{\link[=getCovStats]{getCovStats()}}
 \code{vignette("Part2-walkthrough", package = "PMXForest")} for how this fits the whole workflow.
 }

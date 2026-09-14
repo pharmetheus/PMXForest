@@ -9,7 +9,9 @@ nmParsePK(
   parameters = NULL,
   covRef = NULL,
   extFile = NULL,
-  missVal = -99
+  missVal = -99,
+  ignoreVerbatim = FALSE,
+  keep = character(0)
 )
 }
 \arguments{
@@ -21,7 +23,16 @@ it to the parameters you actually want to plot.}
 
 \item{covRef}{An optional named list of covariate reference values, e.g.
 \code{list(WT = 75)}. Overrides the values derived from the control stream, and
-supplies them for covariates where no rule fires.}
+supplies them for covariates where no rule fires.
+
+It also pins a symbol NONMEM supplies rather than \verb{$INPUT}. A \verb{$MIX} model
+reads \code{MIXNUM}, the subpopulation index, which \verb{$PK} never assigns and
+\verb{$INPUT} never declares; \code{covRef = list(MIXNUM = 1)} says which
+subpopulation to generate for, and giving \code{MIXNUM} its own column in
+\code{dfCovs} then plots each subpopulation in turn. Pinning is always
+deliberate - the generator refuses rather than choose for you - and some
+symbols cannot be pinned meaningfully at all: \code{NEWIND} changes within an
+individual, so no single value represents it.}
 
 \item{extFile}{An optional path to the model's \code{.ext} file. When supplied, the
 THETA count is read from its header, which is authoritative, instead of
@@ -29,6 +40,19 @@ being counted from the \verb{$THETA} records.}
 
 \item{missVal}{The value marking an inactive covariate in \code{dfCovs}. Defaults
 to -99, matching \code{getForestDFSCM()}.}
+
+\item{ignoreVerbatim}{Skip verbatim FORTRAN lines in \verb{$PK} instead of
+refusing the model. Default \code{FALSE}. Verbatim code can define variables
+the rest of the block reads, and nothing in the parser can tell that apart
+from a solver directive that touches no parameter - so the decision is the
+caller's, after reading the block.}
+
+\item{keep}{A character vector of \verb{$PK} symbols to retain when \code{parameters}
+is given. Pruning drops every statement the requested parameters cannot
+reach, which is what makes a narrowed \code{parameters} narrow the covariates
+too; a caller that will splice in its own code afterwards - a secondary
+parameter computed from \verb{$PK} intermediates, say - names here the symbols
+that code reads, so they survive. Names not assigned in \verb{$PK} are ignored.}
 }
 \value{
 A list:
@@ -49,8 +73,14 @@ was found). \code{covRef} overrides and user-supplied entries are merged in.
 or every assigned variable when \code{NULL}.
 \item \code{noBaseThetas} - the THETA count (from the \code{.ext} header when
 \code{extFile} is supplied, otherwise the \verb{$THETA} records).
-\item \code{etaMap} - a named integer vector: for each parameter written
-\verb{P = <expr> * EXP(ETA(n))}, the ETA index \code{n}.
+\item \code{etaMap} - a named integer vector: for each parameter whose
+between-subject variability separates out as a factor, the ETA index
+\code{n}. Both \verb{P = <expr> * EXP(ETA(n))} and the MU-referenced
+\code{P = EXP(MU_n + ETA(n))} qualify; an eta scaled inside the exponent,
+or sharing it with a second source of randomness, does not.
+\item \code{tvMap} - a named character vector: for each parameter assigned
+\verb{P = <sym> * EXP(ETA(n))} or plainly \verb{P = <sym>}, the name of \verb{<sym>}
+- the symbol the control stream itself treats as \code{P}'s typical value.
 \item \code{inputNames} - the \verb{$INPUT} column names.
 \item \code{modFile}, \code{missVal} - as supplied.
 }

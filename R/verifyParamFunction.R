@@ -121,20 +121,56 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
   guarded <- vapply(x$covRef, function(r) {
     isTRUE(grepl("explicit missing-value handling", r$source, fixed = TRUE))
   }, logical(1))
+  ## Which covariates make a missVal row unreconcilable.
+  ##
+  ## Substituting the reference only changes the answer when the covariate
+  ## reaches the arithmetic, or when the reference and missVal fall in
+  ## different IF() branches. A covariate read only by comparisons, where
+  ## neither value is a level any IF() tests - SITE against IF(.NE.3),
+  ## where -99 is simply not 3 - takes the same branch either way and the row
+  ## is fine. Dropping those costs coverage for nothing.
+  unreconcilable <- function(cv) {
+    r <- x$covRef[[cv]]
+    if (is.null(r) || is.null(r$testedLevels)) {
+      return(TRUE)
+    }
+    if (isTRUE(r$inArithmetic)) {
+      return(TRUE)
+    }
+    any(r$testedLevels == x$missVal) || any(r$testedLevels == r$value)
+  }
+
   unguarded <- intersect(names(guarded)[!guarded], names(tab))
+  unguarded <- unguarded[vapply(unguarded, unreconcilable, logical(1))]
   if (length(unguarded) > 0 && !is.null(x$missVal)) {
-    bad <- Reduce(`|`, lapply(unguarded, function(cv) {
-      isMiss <- tab[[cv]] == x$missVal
-      isMiss[is.na(isMiss)] <- FALSE
-      isMiss
-    }))
+    isMiss <- lapply(stats::setNames(unguarded, unguarded), function(cv) {
+      m <- tab[[cv]] == x$missVal
+      m[is.na(m)] <- FALSE
+      m
+    })
+    bad <- Reduce(`|`, isMiss)
     if (any(bad)) {
+      hit <- names(isMiss)[vapply(isMiss, any, logical(1))]
+      arith <- hit[vapply(hit, function(cv) isTRUE(x$covRef[[cv]]$inArithmetic), logical(1))]
       warning(
-        sum(bad), " row(s) of ", basename(tabFile), " cannot be reconciled and ",
-        "were dropped: a covariate is ", x$missVal, " there, but the $PK block ",
-        "has no missing-value handling for it, so NONMEM computed the tabled ",
-        "value from the real covariate value rather than from a reference. ",
-        "Affected covariate(s): ", paste(unguarded, collapse = ", "), ".",
+        sum(bad), " of ", nrow(tab), " covariate rows in ", basename(tabFile),
+        " were left out of the comparison: ", paste(hit, collapse = ", "),
+        if (length(hit) > 1) " are " else " is ", x$missVal,
+        " in them, and $PK has no branch handling that value, so the generated",
+        " function falls back to its reference while whatever produced the",
+        " tabled value did not.",
+        if (length(arith) > 0) {
+          paste0(
+            " Note that ", paste(arith, collapse = ", "),
+            if (length(arith) > 1) " reach " else " reaches ",
+            "the arithmetic of $PK, so ", x$missVal,
+            " there is not a value the model can have meant - it would have",
+            " gone into the formula as a number. That is worth checking in the",
+            " control stream; it is not a translation problem."
+          )
+        } else {
+          " A difference there would be about the table, not the translation."
+        },
         call. = FALSE
       )
       tab <- tab[!bad, , drop = FALSE]
@@ -191,8 +227,22 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
 
     got <- vapply(vals, function(v) as.numeric(v[[p]]), numeric(1))
 
-    tvCol <- paste0("TV", p)
-    if (tvCol %in% names(rows)) {
+    ## "TV" in front of a parameter name is a convention, not a rule. run7 has
+    ## `MAT = TVMAT * EXP(ETA(5))`, where TVMAT is genuinely MAT's typical
+    ## value, and then `D1 = MAT*(1-TVD1)`, where TVD1 is a dimensionless
+    ## fraction D1 is computed from. Taking a TVD1 column as D1's typical value
+    ## compares a duration with a fraction, and fails whatever the translation
+    ## does. `tvMap` records the symbol the model actually assigns as each
+    ## parameter's typical value, so use that and fall through when there is
+    ## none. Objects from before `tvMap` existed keep the old behaviour.
+    tvName <- if (!is.null(x$tvMap) && p %in% names(x$tvMap)) {
+      unname(x$tvMap[[p]])
+    } else {
+      NULL
+    }
+    tvCol <- if (!is.null(tvName)) tvName else paste0("TV", p)
+    tvUsable <- is.null(x$tvMap) || !is.null(tvName)
+    if (tvUsable && tvCol %in% names(rows)) {
       ref <- rows[[tvCol]]
       colUse <- tvCol
     } else if (p %in% names(rows)) {
@@ -204,7 +254,16 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
         colUse <- paste0(p, " / exp(", etaCol, ")")
       } else {
         warning("Cannot recover typical values of '", p, "' from ",
-          basename(tabFile), ": neither a '", tvCol, "' column nor the ",
+          basename(tabFile), ": ",
+          if (!tvUsable && paste0("TV", p) %in% names(rows)) {
+            paste0(
+              "the '", paste0("TV", p), "' column is not ", p,
+              "'s typical value - $PK assigns it as a separate quantity - and "
+            )
+          } else {
+            ""
+          },
+          "neither a '", tvCol, "' column nor the ",
           if (is.null(etaIdx)) {
             "exponential-IIV pattern in $PK"
           } else {
