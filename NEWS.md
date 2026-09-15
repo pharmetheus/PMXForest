@@ -18,8 +18,9 @@ The package had no vignettes and patchy help pages. It now has both.
 * **A three-tier vignette set.** [Quick start](https://rpkgs-docs.pmx.one/PMXForest/articles/Part1-quick-start.html)
   gets a plot out of a NONMEM model in five steps;
   [Walkthrough](https://rpkgs-docs.pmx.one/PMXForest/articles/Part2-walkthrough.html) builds a publication figure
-  end to end; and four deep dives go under the surface -
+  end to end; and five deep dives go under the surface -
   [Preparing Forest plot inputs](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-forest-plot-inputs.html),
+  [How the NONMEM model is parsed](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-nonmem-parsing.html),
   [Secondary parameters](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html),
   [R-coded models](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-r-coded-models.html) and
   [Time-to-event models](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-tte-models.html). Quick start opens
@@ -112,41 +113,66 @@ values onto the `dfCovs` geometry. `singleRef = TRUE` gives one row;
 
 ### `createParamFunction()`
 
-`createParamFunction()` translates a `$PK` block into R source for a
-`function(thetas, df, ...)`,
-instead of retyping the model's algebra - the easiest place in the workflow to
-introduce an error no test would catch.
+Writing a `paramFunction` by hand means retyping the model's algebra - the
+easiest place in the whole workflow to introduce an error no test would catch.
+`createParamFunction()` reads the control stream and writes it for you, as
+**source text you read, check and evaluate yourself**. Nothing is evaluated on
+your behalf.
 
-* **`parameters` now prunes the generated source**, not just the return list.
-  Asking for `CL` emitted the whole `$PK` block; it now emits only the
-  statements `CL` can reach. The covariate set narrows with them, so a
-  reference no longer has to be derived - or warned about - for a covariate
-  that cannot affect the answer. On the bundled `run7`, asking for `V` goes
-  from 27 returned parameters, 32 statements and 7 covariates to 1, 5 and 1.
+It reads the block the model defines its parameters in: `$PK` for a PREDPP
+model, `$PRED` for one that codes the prediction by hand. What it accepts is
+assignments, `IF`/`ELSE IF`/`ELSE`/`END IF`, the `.EQ.`/`.AND.` operator family
+and the usual intrinsics.
 
-  Worth knowing: the reference rules read the statements that survive pruning,
-  so a covariate that both `CL` and `V` use can get a *different* derived
-  reference from `parameters = "V"` than from the whole block - the branch the
-  rule read may have been `CL`'s. Where that happens the reference is the one
-  right for the parameters you asked for; supply it through `covRef` if you
-  want one value across separate calls.
+* **Typical values.** Every `ETA(n)` is set to 0, and in `$PRED` every
+  `EPS(n)`/`ERR(n)` with it, so the function returns typical values - what a
+  Forest plot needs.
 
-  Dependencies in `$PK` only run backwards, so this cannot change a number: a
-  statement is dropped only when nothing the caller asked for can reach it,
-  and a re-assignment chain such as `TVCL = THETA(4)*CLCOV1` followed by
-  `TVCL = CLCOV*TVCL` keeps both links. A `covRef` entry for a covariate that
-  pruning removed is quietly retired rather than rejected - the caller pinned
-  what the model needs and then asked for a subset.
+* **Covariate references, with their provenance.** All missing-covariate
+  handling is hoisted into one annotated preamble, each reference taken from
+  the control stream by four rules in decreasing order of confidence: explicit
+  `IF(WT.EQ.-99)` handling; the branch PsN's `scm` marks `; Most common`; the
+  branch assigning the identity value; the normalisation constant in `(WT/75)`
+  or `(AGE-50)`. A weaker fifth rule proposes the level no `IF()` tests, and
+  says so. A covariate matching no rule is an error you fix with `covRef`.
 
-* **It returns text, not a function.** Nothing is evaluated on your behalf; you
-  read it against the control stream and evaluate it when it matches.
-* All missing-covariate handling is hoisted into one annotated preamble, each
-  reference value taken from the control stream by four rules in decreasing
-  order of confidence: explicit `IF(WT.EQ.-99)` handling; the branch PsN's scm
-  marks `; Most common`; the branch assigning the identity value; the
-  normalisation constant in `(WT/75)` or `(AGE-50)`. A weaker fifth rule
-  proposes the level no `IF()` tests, and warns. A covariate matching no rule is
-  an error, and can be supplied through `covRef`.
+  A wrong reference displaces every row of a plot and nothing downstream can
+  detect it, so each preamble line records which rule produced it and from
+  which control-stream line.
+
+* **`parameters` prunes the source, not just the return list.** Only the
+  statements the requested parameters can reach are emitted, and the covariate
+  set narrows with them - so no reference has to be derived, or justified, for
+  a covariate that cannot affect the answer.
+
+  One consequence worth knowing: the reference rules read the statements that
+  survive pruning, so a covariate both `CL` and `V` use can get a different
+  derived reference from `parameters = "V"` than from the whole block. Supply
+  it through `covRef` if you need one value across separate calls.
+
+* **`$PRED` models are supported, and require `parameters`.** A `$PK` block
+  assigns parameters and stops; a `$PRED` block computes the prediction and the
+  residual error in the same lines, so there is no structural way to tell which
+  of its assignments you want. Name them. `Y` is an assignment like any other -
+  ask for it and you get the typical prediction.
+
+* **What separates, and what does not.** Both exponential-IIV idioms are
+  recognised - `P = <expr> * EXP(ETA(n))` and the MU-referenced
+  `P = EXP(MU_n + ETA(n))` that IMP and SAEM models use - because
+  `EXP(a + eta)` is `EXP(a) * EXP(eta)`. An eta scaled inside the exponent, a
+  Box-Cox transformed one, and inter-occasion variability in either of its
+  codings do **not** separate, and get no `etaMap` entry rather than a claimed
+  one. `tvMap` records each parameter's typical value as the control stream
+  itself names it, so `verifyParamFunction()` never has to guess at a
+  `TV`-prefixed column - `run7` has `MAT = TVMAT*EXP(ETA(5))`, where `TVMAT`
+  really is `MAT`'s typical value, and then `D1 = MAT*(1-TVD1)`, where `TVD1`
+  is a dimensionless fraction.
+
+* **Arithmetic is translated faithfully rather than obviously.** `MOD(a, b)`
+  emits `a - b * trunc(a / b)`: `%%` binds tighter than `*` and `/` in R while
+  `MOD()` is a call, and Fortran truncates towards zero where R's `%%` floors,
+  so the obvious translation is wrong twice over for a negative argument.
+
 * **`OMEGA(i,j)` and `SIGMA(i,j)` resolve from the `.ext` file.** A model that
   builds a correlation by hand reads its own variance matrix -
   `SD_FREL = SQRT(OMEGA(2,2))`. These are constants once the model is
@@ -156,54 +182,34 @@ introduce an error no test would catch.
 
   They fold to the *final estimates*, so the generated function holds them
   fixed. Across bootstrap or SIR samples, where the THETAs vary, these do not -
-  each sample's own variance estimate is not used. For a parameter that only
-  reads `OMEGA` to build a correlation this is usually what you want; where the
-  variance genuinely drives the parameter, the uncertainty in it is not
-  represented.
-
-* **`ignoreVerbatim = TRUE` skips verbatim FORTRAN** instead of refusing the
-  model. Verbatim code can define variables the rest of `$PK` reads, and
-  nothing in the parser can tell that apart from a solver directive that
-  touches no parameter, so refusing stays the default and the decision is the
-  caller's. On a real model it turned a refusal at the `"FIRST` line into a
-  refusal at the compartment amount below it - the obstacle that actually
-  matters.
-
-* **A proposed reference says which situation it came from.** Where a block
-  marks its reference branch with `; Most common` but writes it as a negation -
-  `IF(INH.NE.1) INHCOV = 1  ; Most common` - the rule that reads a level
-  from an `.EQ.` test has nothing to read. That used to be reported as "level
-  not tested by any IF()", sending the reader to look for a missing branch. It
-  now says it is the complement of a negated `; Most common` branch.
+  each sample's own variance estimate is not used. For a parameter that reads
+  `OMEGA` only to build a correlation this is usually what you want; where the
+  variance genuinely drives the parameter, its uncertainty is not represented.
 
 * **It refuses what it cannot translate faithfully** - `$DES`, compartment
   amounts `A(n)`, `DO`, `CALL`, and verbatim FORTRAN unless
   `ignoreVerbatim = TRUE` - naming the file and line rather than guessing. It
   also refuses a symbol read before anything assigns it: NONMEM neither
-  initialises `$PK` variables nor clears them between data records, so such a
-  model reads whatever the previous subject left behind.
+  initialises these variables nor clears them between data records, so such a
+  model reads whatever the previous subject left behind, which a function
+  evaluated one row at a time cannot reproduce.
+
+  A **FREM** model is refused too, and that one is a trap rather than a
+  limitation: its `$PK` translates perfectly, but its covariate effects live in
+  `$OMEGA`, so the result would describe none of the covariates the model was
+  built for. Use `PMXFrem::createFREMParamFunction()`.
 
 * **`covRef` also pins a symbol NONMEM supplies rather than `$INPUT`.** A
-  `$MIX` model's `$PK` reads `MIXNUM`, the subpopulation index, which `$PK`
-  never assigns and `$INPUT` never declares - so every mixture model was
-  refused outright. `covRef = list(MIXNUM = 1)` now says which subpopulation to
-  generate for, and giving `MIXNUM` its own column in `dfCovs` plots each
-  subpopulation in turn. Pinning stays deliberate: the generator still refuses
-  rather than choose for you, and it says in the error which symbol to pin.
-  Some cannot be pinned meaningfully - `NEWIND` changes within an individual,
-  so no single value represents it.
+  `$MIX` model reads `MIXNUM`, the subpopulation index, which the block never
+  assigns and `$INPUT` never declares; `covRef = list(MIXNUM = 1)` says which
+  subpopulation to generate for, and giving `MIXNUM` its own column in `dfCovs`
+  plots each in turn. Pinning is always deliberate - the generator refuses
+  rather than choose for you - and some symbols cannot be pinned meaningfully
+  at all: `NEWIND` changes within an individual. Everything that needs pinning
+  is reported in **one** error with a call you can paste straight in.
 
-  A `$MIX` model usually reads `MIXEST` as well as `MIXNUM` - which
-  subpopulation the individual was classified into, against which one is being
-  evaluated - and a model may also use an `$INPUT` item like `TIME` that no
-  reference rule fits. All of them are fixed by the same `covRef` call, so all
-  of them are now named in **one** error with a call you can paste straight in,
-  rather than one error per symbol per run. A symbol NONMEM supplies is never
-  passed to the reference rules, so the generator cannot quietly propose a
-  subpopulation for you.
-
-* **`secondary`** attaches quantities `$PK` does not contain - AUC, `Cmax`, an
-  event probability. Each entry is a line of R code
+* **`secondary`** attaches quantities the block does not contain - AUC, `Cmax`,
+  an event probability. Each entry is a line of R code
   (`secondary = list(AUC = "500 / CL")`) or the path to an `.R` file of
   arbitrary code, including a `deSolve` or `mrgsolve` simulation, whose text is
   **inlined** so the result stays self-contained. Entries are spliced inside
@@ -213,33 +219,26 @@ introduce an error no test would catch.
   constants immediately before the code, so a reusable secondary file can be
   parametrised at the call site. Secondary names are appended to
   `functionListName` and recorded in `secondaryNames`, with `primaryNames`
-  holding the `$PK` parameters alone.
-* **A FREM model is refused.** Translating the `$PK` of a FREM model succeeds
-  and is faithful, which is the trap: its covariate effects are in `$OMEGA`, so
-  the function produced describes none of the covariates the model was built
-  for. A FREM model is never the subject of a parameter function, so
-  `createParamFunction()` now stops rather than returning something plausible,
-  and points at `PMXFrem::createFREMParamFunction()`. PsN marks these with a
-  `FREMTYPE` data item.
+  holding the structural parameters alone.
 
 * **`verifyParamFunction()`** turns "do I trust this translation?" into a pass
   or a fail: it evaluates the generated function over a NONMEM `$TABLE` and
   compares it with the values NONMEM wrote. Table output is written after
   `IGNORE`/`ACCEPT`, so taking both parameters and covariates from the table
-  removes any need to reproduce the `$DATA` filtering. Where `$PK` shows
-  exponential IIV the tabled value is divided by `exp(ETA(n))` to recover the
-  typical value. It returns a single `TRUE`/`FALSE`, usable directly in an `if`,
-  with the per-parameter table in `attr(., "checks")`.
-* Every `ETA(n)` is set to 0, so the function returns typical values. Both
-  exponential-IIV idioms are recognised - `P = <expr> * EXP(ETA(n))` and the
-  MU-referenced `P = EXP(MU_n + ETA(n))` that IMP and SAEM models normally use
-  - because `EXP(a + eta)` is `EXP(a) * EXP(eta)` and both separate the same
-  way. An `ETA` that is scaled inside the exponent, as in a hand-built
-  correlation `EXP(c*ETA(3) + ETA(2))`, does not separate and is left out
-  rather than claimed.
+  removes any need to reproduce the `$DATA` filtering. It returns a single
+  `TRUE`/`FALSE`, usable directly in an `if`, with the per-parameter table in
+  `attr(., "checks")`.
 
-The [Secondary parameters](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html)
-vignette walks through the secondary-parameter workflow end to end.
+  What it cannot check is a reference value: it takes covariate values from the
+  table, so the reference - which applies only when a covariate is *absent* -
+  is never on the path it tests. Read the preamble.
+
+[How the NONMEM model is parsed](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-nonmem-parsing.html) is the full account: the grammar, both
+`ETA` idioms and the ones that do not separate, the reference rules in order
+with a worked example of one reading a structure backwards, every refusal and
+why it is the honest answer, and the gaps stated rather than hidden. The
+[Secondary parameters](https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html) vignette walks through the secondary-parameter
+workflow end to end.
 
 ### `setupCovExpressionsList()`
 
@@ -294,9 +293,26 @@ record, returning the analysis data - the rows the model actually used.
   would silently read the wrong column. Columns beyond `$INPUT` are ignored,
   `DROP` columns still occupy a position, and either half of a `SYNONYM=REAL`
   pair may be used.
-* `.EQ.`/`.NE.` compare as text and `.EQN.`/`.NEN.` numerically, matching NONMEM.
-  Where a text comparison selects nothing but the numeric reading would, the
-  call warns rather than silently returning an empty result.
+* `.EQ.`/`.NE.` compare as text and `.EQN.`/`.NEN.` numerically, matching
+  NONMEM. Where a text comparison selects nothing but the numeric reading
+  would, the call warns rather than silently returning an empty result - that
+  is almost always a value written in a different form from the data, such as
+  `IGNORE=(OCC.EQ.1)` against a column holding `1.0`.
+
+  For the numeric family, a `"."` placeholder is read as `0`, which is what
+  NM-TRAN does with it: a NONMEM data file writes `.` wherever a field does not
+  apply, and a data set full of them is ordinary rather than broken. The
+  coercion is reported unless `quiet = TRUE`, because it is a reading of the
+  data rather than something the file says literally, and it is applied only to
+  the numeric comparisons - a column used by both families is still compared as
+  text where the model compares it as text. Any other non-numeric value is
+  refused: `.` is a convention, `"unknown"` is a data problem, and coercing it
+  would drop rows the model kept.
+
+  That reading is confirmed against NONMEM rather than assumed. On a model
+  filtering 400,000 records down to 232,911 through twenty `IGNORE` conditions,
+  one of them a numeric comparison on a column full of placeholders, the
+  record, subject and observation counts reproduce the `.lst` exactly.
 * `useInputNames = TRUE` returns the data renamed as NONMEM sees it.
 * The single-character form (`IGNORE=C`) is a rule about the raw record rather
   than the data and cannot be applied; it is skipped with a warning, silently
@@ -367,15 +383,30 @@ code that made it.
   the annotated plot" behaviour is reproduced - saving and printing are left to
   the caller.
 
-### The `$PK` parser is reusable
+### The parser is reusable
 
-`nmParsePK()` returns the parsed `$PK` tree with `ETA()` intact, the covariates
-and their references, the THETA count and the `etaMap`, without emitting source.
-`nmDeparse()`, `nmFormatNum()` and `nmResolveSecondary()` are exported alongside
-it, so other packages can build their own emitters on the same tested parser.
-PMXFrem uses it for FREM parameter functions.
+`nmParsePK()` returns the parsed tree - `$PK` or `$PRED` - with `ETA()` and
+`EPS()` intact, together with the covariates and their references, the THETA
+count, the `etaMap` and the `tvMap`, without emitting source. `nmDeparse()`,
+`nmFormatNum()` and `nmResolveSecondary()` are exported alongside it, so other
+packages can build their own emitters on the same tested parser; `nmDeparse()`
+takes `etaValue` and `epsValue` so an emitter decides what the random effects
+become. PMXFrem uses it for FREM parameter functions.
 
 ## Changes to existing behaviour
+
+* **A folded random effect now collapses the term it multiplies.** Setting
+  `ETA(n)` to 0 leaves a literal `0` behind, and the constant folding now
+  applies `0 * x -> 0`. In practice this is what makes inter-occasion
+  variability disappear cleanly: `EXP(ETA(1) + ETA(2)*(1-OCC) + ETA(3)*OCC)`
+  emits `CL <- TVCL` rather than `CL <- TVCL * exp(0 * (1 - OCC) + 0 * OCC)`,
+  the occasion variable stops being a covariate that needs a reference value,
+  and `tvMap` can record `TVCL` as the typical value so
+  `verifyParamFunction()` can check the parameter after all.
+
+  The one behavioural edge: `0 * NA` folds to `0` instead of propagating `NA`.
+  For a typical-value function that is the right answer - the term contributes
+  nothing whatever the occasion is.
 
 * **Forest plots built from SIR files will change.** `getSamples()`'s
   SIR-detection check looked for a `samples_order` column that PsN does not
@@ -451,67 +482,6 @@ PMXFrem uses it for FREM parameter functions.
   from the ratio directly rather than by dividing the absolute quantiles by a
   possibly negative reference.
 
-* **A text column was refused even where NONMEM compares it as text.**
-  `filterByModel()` rejected any filter column that read as character, which
-  contradicted the `.EQ.`/`.NE.` support added in this same release: those are
-  text comparisons in NONMEM, the generated expression uses `as.character()`,
-  and a comment column written as `"."` placeholders filters perfectly well.
-  On real models this refused control streams NONMEM runs happily. The check
-  now applies only to the numeric comparisons - `.EQN.`, `.GT.` and the rest -
-  and the message says which family the column is in.
-
-  For those, a `"."` placeholder is read as `0`, which is what NM-TRAN does
-  with it: a NONMEM data file writes `.` wherever a field does not apply, and
-  a data set full of them is ordinary rather than broken. The coercion is
-  reported unless `quiet = TRUE`, because it is a reading of the data rather
-  than something the file says literally. Any other non-numeric value is still
-  refused - `.` is a convention, `"unknown"` is a data problem, and coercing
-  that would drop rows the model kept.
-
-  Confirmed against NONMEM rather than assumed: on a model filtering 400,000
-  records down to 232,911 through twenty `IGNORE` conditions, one of them a
-  numeric comparison on a column full of placeholders, the record, subject and
-  observation counts reproduce the `.lst` exactly.
-
-* **`verifyParamFunction()` could not read half the tables in the wild.** It
-  assumed NONMEM's own layout - a `TABLE NO.` banner, then a header, then
-  whitespace-separated rows. Tables are routinely post-processed on the way to
-  a plotting tool, and what reaches disk is as often comma-separated with the
-  header on the first line and no banner. Those were mis-parsed silently: the
-  header became a data row and every column came back as text. The layout is
-  now detected.
-
-* **`verifyParamFunction()` could match a parameter to the wrong table
-  column.** It treated a `TV<P>` column as `P`'s typical value on the strength
-  of the name alone, but `TV` is a convention rather than a rule. The bundled
-  `run7` has both: `MAT = TVMAT * EXP(ETA(5))`, where `TVMAT` genuinely is
-  `MAT`'s typical value, and then `D1 = MAT*(1-TVD1)`, where `TVD1` is a
-  dimensionless fraction that `D1` is computed from. Verifying `D1` against a
-  `TVD1` column compares a duration with a fraction and fails whatever the
-  translation does. `createParamFunction()` now returns `tvMap`, recording the
-  symbol the control stream itself assigns as each parameter's typical value,
-  and `verifyParamFunction()` uses that instead of guessing from the name. A
-  parameter with no such symbol is reported as not checkable rather than as a
-  failure.
-
-* **`verifyParamFunction()` reported a failure it was not possible to pass.**
-  Where a table row carries `missVal` in a covariate column but the `$PK` block
-  has no missing-value handling for that covariate, NONMEM computed the tabled
-  value some other way - which the table no longer shows - while the generated
-  function substitutes the model's reference. The row cannot be reconciled by
-  any correct translation. Such rows are now dropped, with a warning naming the
-  covariates that actually hold `missVal` there.
-
-  Only where substituting the reference actually changes the answer. A
-  covariate read only by comparisons, where neither `missVal` nor the reference
-  is a level any `IF()` tests - `SITE` against `IF(SITE.NE.3)`, where
-  `-99` is simply not 3 - takes the same branch either way, and its rows are
-  kept. Where the covariate reaches the arithmetic instead, the warning says
-  so: `missVal` in `(WT/75)**THETA` is not a value the model can have meant, so
-  the control stream is worth a look rather than the translation. Rows whose
-  `$PK` does handle `missVal` explicitly are still compared, because those are
-  reconcilable.
-
 * **`getCovStats()` leaked `NA` into level counting and quantiles.**
   `x != missVal` is `NA` where `x` is `NA`, and indexing rows by a logical `NA`
   keeps an all-`NA` row rather than dropping it. A binary covariate with a
@@ -563,86 +533,6 @@ PMXFrem uses it for FREM parameter functions.
   inverts: the two rows then cover every subject instead of leaving those
   between them in neither. `minSubjects` cannot catch it, because both rows are
   non-empty. It now warns.
-
-### Fixes inside the new generator
-
-These concern `createParamFunction()` and its parser, new in this release.
-
-* **A reference value could be confidently wrong.** One of the rules reads "a
-  branch assigning the identity value 0 or 1" as the reference category, which
-  is right for the SCM shape it was written for and backwards when the variable
-  also has an unconditional default:
-
-  ```
-  IND = 0
-  IF(COV.EQ.2) IND = 1
-  ```
-
-  `IND` is an indicator, so its identity is `0` and the unconditional
-  assignment is the reference state - the `IF` is the departure from it. The
-  rule returned `COV = 2` and marked it confident, pinning the reference
-  subject to the treated group with no warning. A variable that is also
-  assigned unconditionally is now left to the weaker rule, which proposes a
-  value and says so. Found by running the generator over control streams from
-  a range of real projects.
-
-  The same failure reappeared for the ordinary `IF`/`ELSE` coding of the same
-  thing, because an `ELSE` body has no condition of its own and so looked like
-  an unconditional assignment - which switched the guard off again. Branch
-  membership is now recorded explicitly rather than inferred from the presence
-  of a condition.
-
-* **An eta reaching the exponent through a symbol was read as separable.** A
-  parameter written `EXP(ETA(1) + IOV)`, with `IOV` assigned from an `ETA()` in
-  an occasion block, carries two sources of randomness, but only one of them is
-  a syntactic `ETA()` node in that expression - so the entry was claimed and
-  dividing the tabled individual value by `exp(eta1)` left `exp(IOV)` behind.
-  `verifyParamFunction()` then reported a failure on arithmetic that was never
-  comparable. The same blind spot hid an eta under a unary minus. Such
-  parameters now get no `etaMap` entry, which is the honest answer: there is no
-  typical value to compare against.
-
-* **A covariate could be read from the wrong column.** The missing-value
-  preamble of a generated parameter function used `df$WT`, and `$`
-  partial-matches on a data frame - so a data set carrying `WTKG` but no `WT`
-  silently used `WTKG` as the covariate instead of falling back to the
-  reference. Name families like this are ordinary; `run7`'s own `$INPUT` has
-  `NCI`/`NCIL` and `RACEL`/`RACEL1`. The generated code now uses `df[["WT"]]`.
-
-* **`MOD()` translated to the wrong arithmetic**, in two independent ways. `%%`
-  binds tighter than `*` and `/` in R while `MOD()` is a call, so `MOD(A*B, C)`
-  emitted `A * B %% C`; and Fortran `MOD()` truncates towards zero where R's
-  `%%` floors, so they disagree for a negative first argument. `MOD(a, b)` now
-  emits `a - b * trunc(a / b)`, which is correct for either sign and needs no
-  special parenthesisation.
-
-* **The documented reference rule 1 could never fire.** Covariates were taken to
-  be `$INPUT` columns *never assigned* in `$PK`, but the primary reference rule
-  reads `IF(WT.EQ.-99) WT = 75`, which assigns `WT` - so such a covariate was
-  excluded before the rule was consulted, no preamble was emitted, and the
-  generated function referred to an unbound variable. Covariates are now those
-  `$PK` reads before assigning, which is what NONMEM does: data items are
-  populated before `$PK` runs.
-
-* **`covRef` was spliced in unchecked.** A misspelled name was silently ignored
-  and left the derived reference in place, a non-numeric value produced source
-  that parsed but failed when called, and a length-2 value died inside a
-  formatting helper naming neither the argument nor the covariate. Names must
-  now be covariates of the model and values a single finite number.
-
-* **`verifyParamFunction()` with an explicitly named parameter** crashed with
-  "subscript out of bounds" instead of warning that it could not be reconciled
-  against the table; naming a parameter the function does not return at all
-  likewise crashed. Both now warn and report `PASS = NA`. Found through
-  `covr::package_coverage()`, which exercises the path; the routine test suite
-  did not, because the test helper had the same bug and masked it.
-
-* **`nmResolveSecondary()` missed an unnamed constant.** An entry such as
-  `list(source = "x", 100)` should have been rejected as unnamed, but the extra
-  elements were selected with `v[setdiff(names(v), "source")]`, and indexing a
-  list by `""` never matches in R - so the constant vanished before the name
-  check ran and a confusing error surfaced further down. Rewritten as boolean
-  indexing.
 
 ## Quality
 

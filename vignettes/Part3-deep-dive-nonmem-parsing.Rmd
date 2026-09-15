@@ -212,6 +212,42 @@ comparable in the first place. The generator resolves each name in the exponent
 back to what assigned it, so a symbol that carries randomness disqualifies the
 term just as a visible `ETA()` would.
 
+The older way of coding the same thing puts the occasion etas in the exponent
+directly, switched by an indicator. Three `ETA()`s, so the one-eta rule declines
+it for the same reason:
+
+```{r}
+m <- mod(
+  "$PROBLEM iov classic", "$INPUT ID TIME DV AMT WT OCCOBS",
+  "$DATA d.csv IGNORE=@", "$PK",
+  "TVCL = THETA(1)", "TVV = THETA(2)",
+  "OCC = 0",
+  "IF(OCCOBS.EQ.2) OCC = 1",
+  "CL = TVCL*EXP(ETA(1) + ETA(2)*(1-OCC) + ETA(3)*OCC)",
+  "V  = TVV*EXP(ETA(4))",
+  "$THETA (0,7) (0,3)"
+)
+out <- createParamFunction(m, parameters = c("CL", "V"), quiet = TRUE)
+out$etaMap
+```
+
+`CL` has no typical value recoverable *by division*, but it does still have a
+typical value: with every eta at 0 the whole IOV term vanishes and `CL` is
+`TVCL`. That is what `tvMap` records, so `verifyParamFunction()` can compare
+`CL` against a `TVCL` column in a `$TABLE` even though `etaMap` is empty for it:
+
+```{r}
+out$tvMap
+grep("^  CL <-", out$code, value = TRUE)
+```
+
+Because the term folds away entirely, the occasion variable is not a covariate
+of the typical value and needs no reference:
+
+```{r}
+"OCC" %in% names(out$covRef)
+```
+
 <div class="callout-note">
 `TV` in front of a parameter name is a convention, not a rule. `tvMap` records
 the symbol the control stream itself treats as each parameter's typical value,
@@ -344,13 +380,6 @@ refusal(createParamFunction(mod(
 NONMEM neither initialises `$PK` variables nor clears them between data
 records, so such a model reads whatever the previous subject left behind. A
 parameter function is evaluated one row at a time and cannot reproduce that.
-
-```{r}
-# a $PRED model
-refusal(createParamFunction(mod(
-  base, "$PRED", "CL = THETA(1)", "Y = CL + ERR(1)", "$THETA (0,7)"
-), quiet = TRUE))
-```
 
 ```{r}
 # a FREM model
@@ -489,9 +518,67 @@ c(
 )
 ```
 
-# 7. The gaps
+# 7. `$PRED` models
 
-Two, stated rather than hidden.
+Everything above is written against `$PK`, but `$PRED` is the same abbreviated
+code and is read the same way. What differs is what else is in the block.
+
+A `$PK` block assigns parameters and stops. A `$PRED` block computes the
+prediction *and* the residual error in the same lines, so it also contains `Y`
+and `EPS()`. There is no structural signal separating "these are parameters"
+from "this is the prediction machinery" — which is why `parameters` is required
+rather than optional here:
+
+```{r}
+pred <- mod(
+  "$PROBLEM hand-coded one-compartment",
+  "$INPUT ID TIME DV AMT WT",
+  "$DATA d.csv IGNORE=@", "$PRED",
+  "TVCL = THETA(1)*(WT/70)**THETA(3)",
+  "TVV  = THETA(2)",
+  "CL   = TVCL*EXP(ETA(1))",
+  "V    = TVV*EXP(ETA(2))",
+  "F    = AMT/V*EXP(-CL/V*TIME)",
+  "Y    = F + F*EPS(1)",
+  "$THETA (0,7) (0,30) (0,0.75)"
+)
+refusal(createParamFunction(pred, quiet = TRUE))
+```
+
+Name them and it behaves exactly as the `$PK` equivalent would:
+
+```{r}
+out <- createParamFunction(pred, parameters = c("CL", "V"), quiet = TRUE)
+out$etaMap
+out$tvMap
+eval(parse(text = paste(out$code, collapse = "\n")))(
+  thetas = c(7, 30, 0.75), df = data.frame(WT = 70)
+)
+```
+
+`EPS(n)` folds to 0 exactly as `ETA(n)` does, so `Y` is an assignment like any
+other — ask for it and you get the typical prediction, with the residual error
+gone:
+
+```{r}
+y <- createParamFunction(pred,
+  parameters = "Y", covRef = list(AMT = 100, TIME = 0), quiet = TRUE
+)
+grep("^  Y <-", y$code, value = TRUE)
+```
+
+<div class="callout-warning">
+`ERR(n)` is ambiguous in NM-TRAN's own definition: it means `EPS(n)` for
+population data and `ETA(n)` for single-subject data. Both fold to 0, so the
+typical value is right either way — but the generator cannot tell which it is,
+so a parameter whose variability is written `ERR(n)` never gets an `etaMap`
+entry, and `verifyParamFunction()` will decline to check it. Write `ETA(n)` if
+you want it checked.
+</div>
+
+# 8. The gaps
+
+Three, stated rather than hidden.
 
 **Definite assignment is weaker than it looks.** A symbol assigned in *some*
 branch and read afterwards is accepted, even though no branch may have run. The
@@ -507,6 +594,12 @@ Two one-line `IF`s with no `ELSE`, exhaustive only because `FORM` is 0 or 1 — 
 fact no static analysis can see, and structurally identical to the genuinely
 non-exhaustive case the check existed to catch. The rule was weakened to accept
 both rather than special-case the example away.
+
+**A single-subject `$PRED` model loses its `etaMap`.** As above: `ERR(n)` could
+be either an eta or an eps, and guessing would make
+[verifyParamFunction()](../reference/verifyParamFunction.html) divide by
+something that is not there. The cost is that such a model is translated but not
+checkable.
 
 **A reference value cannot be verified by anything here.**
 [verifyParamFunction()](../reference/verifyParamFunction.html) checks the

@@ -3,21 +3,29 @@
 Items parked for future consideration. Not a substitute for GitHub issues; move an
 item there when it becomes active work.
 
-## `$PRED` models
+## `refModelValues()` uses a weaker covariate rule than the generator
 
-`createParamFunction()` refuses a `$PRED` model: `nmParsePK()` looks for a `$PK`
-record and stops when there is none. The refusal is honest rather than
-principled — most of the parser would work unchanged, since `$PRED` is the same
-statement language.
+`createParamFunction()` discovers covariates as "read before assigned, therefore
+a data item", which is what NONMEM does — data items are populated before the
+block runs. That is what makes `IF(WT.EQ.-99) WT = 75` a covariate carrying its
+own reference value rather than a local.
 
-What makes it more than a record-name change is that `$PRED` has no separation
-between structure and residual error. A `$PK` block assigns parameters and
-stops; a `$PRED` block computes the prediction and the `Y` in the same lines, so
-"which assignments are parameters" stops being answerable from the block alone.
-`parameters` would have to be mandatory, and the covariate discovery — which
-rests on "read before assigned, therefore a data item" — needs re-examining
-against a block that reads `DV` and `EPS()`.
+`refModelValues()` (`R/refValues.R`), reached through
+`setupDfRefRow(contRef = "model")`, instead uses "used anywhere **and** never
+assigned anywhere":
 
-Worth doing when someone asks for it with a real model in hand. Until then the
-refusal names `$PRED` and says it must be handled by hand, which is the right
-answer for a user who would otherwise get plausible-looking wrong source.
+```r
+covs <- intersect(syms$used, setdiff(nmInputNames(mod), syms$assigned))
+```
+
+So a covariate the model guards — the exact idiom the primary reference rule
+exists to read — is excluded before the rules are consulted, and
+`setupDfRefRow()` silently falls back to the data median. Confirmed while adding
+`$PRED` support: a model with `IF(WT.EQ.-99) WT = 75` and `CL = THETA(1)*(WT/75)`
+gives `contRef = "model"` the median (69 on the test data) rather than 75.
+
+The fix is to use `nmFirstUnboundUse()` as the main path does. It is not a
+one-liner: `refModelValues()` parses the block itself and does not build the
+`seen`/`assigned` sets that walk needs, and changing which covariates it returns
+changes `setupDfRefRow()` output for existing users. Worth doing deliberately,
+with the before/after on a real model.
