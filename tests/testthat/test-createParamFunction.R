@@ -360,9 +360,15 @@ test_that("a THETA index beyond the declared count is refused", {
   )
 })
 
-test_that("a model without $PK is refused", {
-  f <- tempMod(c("$INPUT ID DV", "$PRED", "Y = THETA(1) + ETA(1) + EPS(1)"))
-  expect_error(createParamFunction(f, quiet = TRUE), "No \\$PK record")
+test_that("a model with neither $PK nor $PRED is refused, naming both", {
+  ## $PRED is handled now (see test-predModels.R); what is left to refuse is a
+  ## model that defines its parameters in neither block.
+  f <- tempMod(c("$PROBLEM x", "$INPUT ID DV", "$DATA d.csv IGNORE=@", "$THETA 1"))
+  e <- tryCatch(createParamFunction(f, quiet = TRUE), error = conditionMessage)
+  expect_match(e, "\\$PK")
+  expect_match(e, "\\$PRED")
+  ## and it no longer tells the reader to handle a $PRED model by hand
+  expect_false(grepl("by hand", e))
 })
 
 test_that("$ERROR is never read, so a model needing an ODE still converts", {

@@ -271,7 +271,11 @@ test_that("model reference errors surface clearly", {
   expect_error(refModelValues(list(a = 1), -99), "createParamFunction")
   f <- withr::local_tempfile(fileext = ".mod")
   writeLines(c("$PROBLEM x", "$INPUT ID DV"), f)
-  expect_error(refModelValues(f, -99), "No \\$PK record")
+  ## Neither $PK nor $PRED: the refusal names both, so the reader knows which
+  ## blocks are looked for rather than only the one that happened to be first.
+  e <- tryCatch(refModelValues(f, -99), error = conditionMessage)
+  expect_match(e, "\\$PK")
+  expect_match(e, "\\$PRED")
 })
 
 test_that("\"lowest\" is rejected for a continuous covariate", {

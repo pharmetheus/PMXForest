@@ -200,13 +200,13 @@ nmFunctions <- c(
 #' Tokenise one line of NONMEM abbreviated code
 #'
 #' @noRd
-nmLex <- function(text, lineno, modFile) {
+nmLex <- function(text, lineno, modFile, block = "$PK") {
   toks <- list()
   i <- 1L
   n <- nchar(text)
 
   bad <- function(ch) {
-    stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":", lineno,
+    stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":", lineno,
       " - unrecognised character '", ch, "' in:\n  ", trimws(text),
       "\ncreateParamFunction() handles assignments, IF statements and ",
       "closed-form arithmetic only.",
@@ -314,12 +314,13 @@ nmBinPrec <- c(
 
 #' Parser state: a token list plus a cursor
 #' @noRd
-nmParser <- function(toks, lineno, modFile) {
+nmParser <- function(toks, lineno, modFile, block = "$PK") {
   env <- new.env(parent = emptyenv())
   env$toks <- toks
   env$pos <- 1L
   env$lineno <- lineno
   env$modFile <- modFile
+  env$block <- block
   env
 }
 
@@ -335,7 +336,7 @@ nmNext <- function(p) {
 
 #' @noRd
 nmFail <- function(p, msg) {
-  stop("Unsupported NONMEM construct in $PK at ", basename(p$modFile), ":",
+  stop("Unsupported NONMEM construct in ", p$block, " at ", basename(p$modFile), ":",
     p$lineno, " - ", msg,
     "\ncreateParamFunction() handles assignments, IF statements and ",
     "closed-form arithmetic only.",
@@ -425,7 +426,21 @@ nmParseAtom <- function(p) {
         return(list(type = "eta", index = as.integer(args[[1]]$value)))
       }
       if (nm %in% c("EPS", "ERR")) {
-        nmFail(p, paste0(nm, "() cannot appear in $PK"))
+        ## $PRED builds Y from the residual error in the same block as the
+        ## parameters, so the block cannot parse without these. $PK has no
+        ## business containing one - NM-TRAN does not allow it either - so
+        ## there the refusal stands.
+        ##
+        ## ERR() is ambiguous by NM-TRAN's own definition: EPS(n) for
+        ## population data, ETA(n) for single-subject. Both fold to 0, so
+        ## folding is safe either way, but it can never earn an etaMap entry.
+        if (!identical(p$block, "$PRED")) {
+          nmFail(p, paste0(nm, "() cannot appear in ", p$block))
+        }
+        if (length(args) != 1 || args[[1]]$type != "num") {
+          nmFail(p, paste0(nm, "() index must be a literal integer"))
+        }
+        return(list(type = "eps", index = as.integer(args[[1]]$value)))
       }
       if (nm == "A") {
         nmFail(p, "A() refers to a compartment amount and needs an ODE solution")
@@ -491,13 +506,36 @@ nmParseAtom <- function(p) {
 ## Statement parser
 ## ---------------------------------------------------------------------------
 
+## The record a model defines its parameters in.
+##
+## $PK for a PREDPP model, $PRED for one that codes the prediction by hand.
+## They are the same abbreviated-code language; what differs is that $PRED
+## computes the prediction and the residual error in the same block, so it also
+## contains Y and EPS()/ERR().
+##
+## @noRd
+nmParamBlock <- function(mod, modFile) {
+  for (b in c("$PK", "$PRED")) {
+    rec <- nmRecord(mod, paste0("\\", b, "\\b"))
+    if (nrow(rec) > 0) {
+      return(list(rec = rec, block = b))
+    }
+  }
+  stop("No $PK or $PRED record found in ", basename(modFile),
+    ". createParamFunction() reads the block a model defines its parameters ",
+    "in, and this model has neither.",
+    call. = FALSE
+  )
+}
+
 #' Parse the code lines of a record into a statement list
 #'
 #' Statements are `assign` (lhs, rhs, lineno, comment) and `if` (cond, then,
 #' elifs, else_, lineno). Blocks nest.
 #'
 #' @noRd
-nmParseStatements <- function(rec, modFile, ignoreVerbatim = FALSE) {
+nmParseStatements <- function(rec, modFile, ignoreVerbatim = FALSE,
+                              block = "$PK") {
   keep <- nzchar(trimws(rec$code))
   rec <- rec[keep, , drop = FALSE]
 
@@ -508,9 +546,9 @@ nmParseStatements <- function(rec, modFile, ignoreVerbatim = FALSE) {
     ## no parameter. Refusing is the default for that reason; a caller who has
     ## read the block can say it is inert.
     if (!ignoreVerbatim) {
-      stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+      stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
         rec$lineno[verbatim[1]], " - verbatim FORTRAN code.",
-        "\nIf it defines nothing $PK reads - a solver directive, say - pass ",
+        "\nIf it defines nothing ", block, " reads - a solver directive, say - pass ",
         "ignoreVerbatim = TRUE.",
         call. = FALSE
       )
@@ -520,9 +558,11 @@ nmParseStatements <- function(rec, modFile, ignoreVerbatim = FALSE) {
 
   state <- new.env(parent = emptyenv())
   state$i <- 1L
-  res <- nmParseBlock(rec, state, modFile, terminators = character(0))
+  res <- nmParseBlock(rec, state, modFile,
+    terminators = character(0), block = block
+  )
   if (state$i <= nrow(rec)) {
-    stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+    stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
       rec$lineno[state$i], " - unexpected '", trimws(rec$code[state$i]), "'.",
       call. = FALSE
     )
@@ -531,7 +571,7 @@ nmParseStatements <- function(rec, modFile, ignoreVerbatim = FALSE) {
 }
 
 #' @noRd
-nmParseBlock <- function(rec, state, modFile, terminators) {
+nmParseBlock <- function(rec, state, modFile, terminators, block = "$PK") {
   stmts <- list()
   while (state$i <= nrow(rec)) {
     line <- rec$code[state$i]
@@ -543,15 +583,15 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
     # Block IF: "IF (cond) THEN"
     if (grepl("^IF\\s*\\(.*\\)\\s*THEN$", up)) {
       state$i <- state$i + 1L
-      cond <- nmParseCondition(line, lineno, modFile)
+      cond <- nmParseCondition(line, lineno, modFile, block)
       terms <- c("^ELSE\\s+IF\\b", "^ELSE$", "^END\\s*IF$")
-      thenStmts <- nmParseBlock(rec, state, modFile, terms)
+      thenStmts <- nmParseBlock(rec, state, modFile, terms, block)
 
       elifs <- list()
       elseStmts <- NULL
       repeat {
         if (state$i > nrow(rec)) {
-          stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+          stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
             lineno, " - IF block is never closed by END IF.",
             call. = FALSE
           )
@@ -563,22 +603,22 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
           elifs[[length(elifs) + 1L]] <- list(
             cond = nmParseCondition(
               sub("(?i)^\\s*ELSE\\s+", "", cur, perl = TRUE),
-              rec$lineno[state$i - 1L], modFile
+              rec$lineno[state$i - 1L], modFile, block
             ),
-            stmts = nmParseBlock(rec, state, modFile, terms)
+            stmts = nmParseBlock(rec, state, modFile, terms, block)
           )
           next
         }
         if (grepl("^ELSE$", curUp)) {
           state$i <- state$i + 1L
-          elseStmts <- nmParseBlock(rec, state, modFile, terms)
+          elseStmts <- nmParseBlock(rec, state, modFile, terms, block)
           next
         }
         if (grepl("^END\\s*IF$", curUp)) {
           state$i <- state$i + 1L
           break
         }
-        stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+        stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
           rec$lineno[state$i], " - '", trimws(cur), "' inside an IF block.",
           call. = FALSE
         )
@@ -593,16 +633,19 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
 
     # One-line IF: "IF (cond) VAR = expr"
     if (grepl("^IF\\s*\\(", up)) {
-      close <- nmMatchParen(line, modFile, lineno)
-      cond <- nmParseCondition(substr(line, 1, close), lineno, modFile)
+      close <- nmMatchParen(line, modFile, lineno, block)
+      cond <- nmParseCondition(substr(line, 1, close), lineno, modFile, block)
       body <- trimws(substr(line, close + 1L, nchar(line)))
       if (!nzchar(body)) {
-        stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+        stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
           lineno, " - IF without THEN and without a statement.",
           call. = FALSE
         )
       }
-      inner <- nmParseAssign(body, lineno, rec$comment[state$i], modFile)
+      inner <- nmParseAssign(
+        body, lineno, rec$comment[state$i], modFile,
+        block
+      )
       stmts[[length(stmts) + 1L]] <- list(
         type = "if", cond = cond, then = list(inner), elifs = list(),
         else_ = NULL, lineno = lineno, oneline = TRUE
@@ -612,14 +655,14 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
     }
 
     if (grepl("^(DO|WHILE|CALL|EXIT|GOTO|GO\\s+TO|RETURN)\\b", up)) {
-      stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+      stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
         lineno, " - '", trimws(line), "'.",
         call. = FALSE
       )
     }
 
     stmts[[length(stmts) + 1L]] <-
-      nmParseAssign(line, lineno, rec$comment[state$i], modFile)
+      nmParseAssign(line, lineno, rec$comment[state$i], modFile, block)
     state$i <- state$i + 1L
   }
   stmts
@@ -627,7 +670,7 @@ nmParseBlock <- function(rec, state, modFile, terminators) {
 
 #' Position of the parenthesis closing the one opened after IF
 #' @noRd
-nmMatchParen <- function(line, modFile, lineno) {
+nmMatchParen <- function(line, modFile, lineno, block = "$PK") {
   chars <- strsplit(line, "")[[1]]
   depth <- 0L
   for (k in seq_along(chars)) {
@@ -639,41 +682,41 @@ nmMatchParen <- function(line, modFile, lineno) {
       }
     }
   }
-  stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":", lineno,
+  stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":", lineno,
     " - unbalanced parentheses in '", trimws(line), "'.",
     call. = FALSE
   )
 }
 
 #' @noRd
-nmParseCondition <- function(line, lineno, modFile) {
+nmParseCondition <- function(line, lineno, modFile, block = "$PK") {
   txt <- sub("(?i)^\\s*IF\\s*", "", line, perl = TRUE)
   txt <- sub("(?i)\\s*THEN\\s*$", "", txt, perl = TRUE)
-  p <- nmParser(nmLex(txt, lineno, modFile), lineno, modFile)
+  p <- nmParser(nmLex(txt, lineno, modFile, block), lineno, modFile, block)
   e <- nmParseExpr(p)
   if (p$pos <= length(p$toks)) nmFail(p, "trailing tokens in IF condition")
   e
 }
 
 #' @noRd
-nmParseAssign <- function(line, lineno, comment, modFile) {
-  toks <- nmLex(line, lineno, modFile)
+nmParseAssign <- function(line, lineno, comment, modFile, block = "$PK") {
+  toks <- nmLex(line, lineno, modFile, block)
   eq <- which(vapply(toks, function(t) t$type == "assign", logical(1)))
   if (length(eq) == 0) {
-    stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+    stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
       lineno, " - '", trimws(line), "' is not an assignment.",
       call. = FALSE
     )
   }
   eq <- eq[1]
   if (eq != 2L || toks[[1]]$type != "sym") {
-    stop("Unsupported NONMEM construct in $PK at ", basename(modFile), ":",
+    stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
       lineno, " - only assignment to a plain variable is supported, got '",
       trimws(line), "'.",
       call. = FALSE
     )
   }
-  p <- nmParser(toks[(eq + 1L):length(toks)], lineno, modFile)
+  p <- nmParser(toks[(eq + 1L):length(toks)], lineno, modFile, block)
   rhs <- nmParseExpr(p)
   if (p$pos <= length(p$toks)) nmFail(p, "trailing tokens after the assignment")
 
@@ -716,6 +759,9 @@ nmPrecOf <- function(node) {
 #'   statement, or a sub-node of one.
 #' @param thetaVar Name of the vector that `THETA(n)` indexes into. Default
 #'   `"thetas"`.
+#' @param epsValue Text substituted for every `EPS(n)`/`ERR(n)`, which only a
+#'   `$PRED` block can contain. Default `"0"`, so the residual error drops out
+#'   of a typical-value function exactly as `ETA(n)` does.
 #' @param etaValue Text substituted for every `ETA(n)`. Default `"0"`. Pass, for
 #'   example, `"eta[3]"` to keep the random effect.
 #'
@@ -731,10 +777,11 @@ nmPrecOf <- function(node) {
 #' # render the right-hand side of the first assignment
 #' first <- Find(function(s) s$type == "assign", p$statements)
 #' nmDeparse(first$rhs, thetaVar = "thetas")
-nmDeparse <- function(node, thetaVar = "thetas", etaValue = "0") {
+nmDeparse <- function(node, thetaVar = "thetas", etaValue = "0",
+                      epsValue = "0") {
   wrap <- function(child, parentPrec, side = c("left", "right")) {
     side <- match.arg(side)
-    txt <- nmDeparse(child, thetaVar, etaValue)
+    txt <- nmDeparse(child, thetaVar, etaValue, epsValue)
     cp <- nmPrecOf(child)
     need <- cp < parentPrec
     # Left-associative operators need parentheses on the right at equal
@@ -750,11 +797,12 @@ nmDeparse <- function(node, thetaVar = "thetas", etaValue = "0") {
     sym = node$name,
     theta = paste0(thetaVar, "[", node$index, "]"),
     eta = etaValue,
+    eps = epsValue,
     call = paste0(
       node$fn, "(",
       paste(vapply(
         node$args, nmDeparse, character(1),
-        thetaVar, etaValue
+        thetaVar, etaValue, epsValue
       ), collapse = ", "), ")"
     ),
     unop = paste0(node$op, wrap(node$arg, nmPrecOf(node), "right")),
@@ -783,7 +831,7 @@ nmSimplify <- function(node) {
 
   # Typical values: substitute ETA() in the tree rather than at deparse time, so
   # the folding below can see the resulting constants.
-  if (node$type == "eta") {
+  if (node$type == "eta" || node$type == "eps") {
     return(list(type = "num", value = 0))
   }
 
@@ -817,6 +865,17 @@ nmSimplify <- function(node) {
       }
       if (isNum(node$rhs, 1)) {
         return(node$lhs)
+      }
+      ## A folded ETA()/EPS() leaves a literal 0, and the IOV idiom multiplies
+      ## it by an occasion indicator: EXP(ETA(1) + ETA(2)*(1-OCC) + ETA(3)*OCC)
+      ## would otherwise emit exp(0 * (1 - OCC) + 0 * OCC) instead of
+      ## collapsing, and nmTypicalMap() would not see that TVCL is the typical
+      ## value. The term is structurally zero whatever the occasion is.
+      ##
+      ## This makes 0 * NA fold to 0 rather than propagate NA. For a typical
+      ## value that is the right answer: the term contributes nothing.
+      if (isNum(node$lhs, 0) || isNum(node$rhs, 0)) {
+        return(list(type = "num", value = 0))
       }
     }
     if (op == "+") {
@@ -1062,22 +1121,17 @@ nmFirstUnboundUse <- function(stmts, bound, everAssigned) {
 nmTypicalMap <- function(stmts) {
   map <- character(0)
 
+  ## Called on the *folded* tree, where every ETA()/EPS() is already 0 and the
+  ## constants around them have collapsed. That reduces the question to "does
+  ## this parameter reduce to a single symbol?", which is exactly what a
+  ## typical value is - and it covers idioms an exp(ETA(n)) pattern match
+  ## cannot, notably IOV: TVCL*EXP(ETA(1) + ETA(2)*(1-OCC) + ETA(3)*OCC) folds
+  ## to TVCL, so TVCL is recorded and verifyParamFunction() can compare against
+  ## a TVCL column. A parameter computed from others - D1 = MAT*(1-TVD1) -
+  ## folds to a binop and gets no entry, which is the right answer.
   tvSym <- function(node) {
     if (node$type == "sym") {
       return(node$name)
-    }
-    if (node$type != "binop" || node$op != "*") {
-      return(NA_character_)
-    }
-    isEta <- function(z) {
-      z$type == "call" && z$fn == "exp" && length(z$args) == 1L &&
-        z$args[[1]]$type == "eta"
-    }
-    if (isEta(node$rhs) && node$lhs$type == "sym") {
-      return(node$lhs$name)
-    }
-    if (isEta(node$lhs) && node$rhs$type == "sym") {
-      return(node$rhs$name)
     }
     NA_character_
   }
@@ -1111,6 +1165,29 @@ nmEtaMap <- function(stmts) {
     }
     if (!is.null(n$args)) for (a in n$args) out <- c(out, etasIn(a))
     out
+  }
+
+  ## Is there an EPS()/ERR() anywhere in this subtree?
+  epsIn <- function(n) {
+    if (!is.list(n) || is.null(n$type)) {
+      return(FALSE)
+    }
+    if (identical(n$type, "eps")) {
+      return(TRUE)
+    }
+    for (f in c("lhs", "rhs", "cond", "arg")) {
+      if (!is.null(n[[f]]) && epsIn(n[[f]])) {
+        return(TRUE)
+      }
+    }
+    if (!is.null(n$args)) {
+      for (a in n$args) {
+        if (epsIn(a)) {
+          return(TRUE)
+        }
+      }
+    }
+    FALSE
   }
 
   ## Names whose value carries randomness, transitively. An eta can reach an
@@ -1171,6 +1248,14 @@ nmEtaMap <- function(stmts) {
       return(NA_integer_)
     }
     if (length(etasIn(e$args[[1]])) != 1L) {
+      return(NA_integer_)
+    }
+    ## An EPS() in the exponent is a second source of randomness, and unlike
+    ## the IOV-through-a-symbol case it is not a symbol, so the sibling check
+    ## below cannot see it. EXP(ETA(1) + EPS(1)) counts one ETA() and would
+    ## otherwise be claimed - after which dividing by exp(eta1) leaves
+    ## exp(EPS(1)) behind.
+    if (epsIn(e$args[[1]])) {
       return(NA_integer_)
     }
     terms <- addTerms(e$args[[1]])
@@ -1256,7 +1341,7 @@ nmMaxTheta <- function(stmts) {
 ## guessing is not on the table.
 ##
 ## @noRd
-nmResolveMatrixRefs <- function(stmts, ext, modFile) {
+nmResolveMatrixRefs <- function(stmts, ext, modFile, block = "$PK") {
   needed <- list()
 
   walk <- function(node) {
@@ -1297,7 +1382,7 @@ nmResolveMatrixRefs <- function(stmts, ext, modFile) {
     nm <- unique(vapply(needed, function(n) {
       sprintf("%s(%d,%d)", n$mat, n$i, n$j)
     }, ""))
-    stop("The $PK block of ", basename(modFile), " reads ",
+    stop("The ", block, " block of ", basename(modFile), " reads ",
       paste(nm, collapse = ", "),
       ", whose value is in the model's .ext file. Supply extFile.",
       call. = FALSE

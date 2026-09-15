@@ -17,9 +17,11 @@ nmParsePK(
 \arguments{
 \item{modFile}{Path to the NONMEM control stream (\code{.mod} or \code{.ctl}).}
 
-\item{parameters}{A character vector of \verb{$PK} variables the function should
-return. Defaults to \code{NULL}, meaning every variable assigned in \verb{$PK}; trim
-it to the parameters you actually want to plot.}
+\item{parameters}{A character vector of variables the function should
+return. Defaults to \code{NULL}, meaning every variable assigned in the block;
+trim it to the parameters you actually want to plot. \strong{Required for a
+\verb{$PRED} model}, which assigns the prediction and the residual error
+alongside the parameters.}
 
 \item{covRef}{An optional named list of covariate reference values, e.g.
 \code{list(WT = 75)}. Overrides the values derived from the control stream, and
