@@ -4,7 +4,7 @@
 \alias{nmDeparse}
 \title{Render a parsed \verb{$PK} expression node as R source}
 \usage{
-nmDeparse(node, thetaVar = "thetas", etaValue = "0")
+nmDeparse(node, thetaVar = "thetas", etaValue = "0", epsValue = "0")
 }
 \arguments{
 \item{node}{An expression node - a \code{rhs} or \code{cond} from an \code{\link[=nmParsePK]{nmParsePK()}}
@@ -15,6 +15,10 @@ statement, or a sub-node of one.}
 
 \item{etaValue}{Text substituted for every \code{ETA(n)}. Default \code{"0"}. Pass, for
 example, \code{"eta[3]"} to keep the random effect.}
+
+\item{epsValue}{Text substituted for every \code{EPS(n)}/\code{ERR(n)}, which only a
+\verb{$PRED} block can contain. Default \code{"0"}, so the residual error drops out
+of a typical-value function exactly as \code{ETA(n)} does.}
 }
 \value{
 A length-one character string of R source.

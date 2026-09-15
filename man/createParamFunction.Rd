@@ -20,9 +20,11 @@ createParamFunction(
 \arguments{
 \item{modFile}{Path to the NONMEM control stream (\code{.mod} or \code{.ctl}).}
 
-\item{parameters}{A character vector of \verb{$PK} variables the function should
-return. Defaults to \code{NULL}, meaning every variable assigned in \verb{$PK}; trim
-it to the parameters you actually want to plot.}
+\item{parameters}{A character vector of variables the function should
+return. Defaults to \code{NULL}, meaning every variable assigned in the block;
+trim it to the parameters you actually want to plot. \strong{Required for a
+\verb{$PRED} model}, which assigns the prediction and the residual error
+alongside the parameters.}
 
 \item{covRef}{An optional named list of covariate reference values, e.g.
 \code{list(WT = 75)}. Overrides the values derived from the control stream, and
@@ -107,8 +109,9 @@ uses this rather than guessing at a \code{TV}-prefixed column name.
 }
 }
 \description{
-Translates the \verb{$PK} block of a NONMEM control stream into R
-source code for a \code{paramFunction} of the form
+Translates the block a NONMEM control stream defines its
+parameters in - \verb{$PK} for a PREDPP model, \verb{$PRED} for one that codes the
+prediction by hand - into R source code for a \code{paramFunction} of the form
 \verb{function(thetas, df, ...)}, the shape required by \code{getForestDFSCM()} and
 \code{getForestDFemp()}. The result is \strong{source text for you to read, check and
 edit} - nothing is evaluated. Writing this function by hand duplicates code
@@ -116,8 +119,17 @@ that already exists in the control stream and is an easy place to introduce
 a silent error.
 }
 \details{
-\strong{Typical values.} Every \code{ETA(n)} in \verb{$PK} is set to 0, so the generated
-function returns typical values, which is what a Forest plot needs.
+\strong{Typical values.} Every \code{ETA(n)} is set to 0, so the generated function
+returns typical values, which is what a Forest plot needs. In a \verb{$PRED}
+block every \code{EPS(n)}/\code{ERR(n)} goes to 0 for the same reason, so the
+residual error drops out of the prediction.
+
+\strong{\verb{$PRED} models.} \verb{$PRED} is the same abbreviated-code language as
+\verb{$PK}, with one difference that matters here: it computes the prediction
+and the residual error in the same block as the parameters, so there is no
+structural way to tell which of its assignments you want. \code{parameters} is
+therefore required for a \verb{$PRED} model. \code{Y} is an assignment like any
+other - ask for it and you get the typical prediction.
 
 \strong{Covariate references.} \code{getForestDFSCM()} evaluates the parameter
 function on a row where every covariate equals \code{missVal} whenever it is
@@ -162,7 +174,9 @@ hand instead.
 \verb{IF/ELSE IF/ELSE/END IF} blocks, arithmetic (\verb{**} becomes \code{^}), the
 \code{.EQ.}/\code{.AND.} operator family, and the usual intrinsic functions.
 Anything else - \verb{$DES}, compartment amounts \code{A(n)}, verbatim FORTRAN, \code{DO}
-loops, \code{CALL} - raises an error naming the file and line.
+loops, \code{CALL} - raises an error naming the file and line. \code{EPS(n)}/\code{ERR(n)}
+are accepted in \verb{$PRED}, where they belong, and refused in \verb{$PK}, where
+NM-TRAN does not allow them either.
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")

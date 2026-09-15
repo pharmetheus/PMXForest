@@ -1,7 +1,8 @@
 #' Generate a Parameter Function from a NONMEM Control Stream
 #'
-#' @description Translates the `$PK` block of a NONMEM control stream into R
-#'   source code for a `paramFunction` of the form
+#' @description Translates the block a NONMEM control stream defines its
+#'   parameters in - `$PK` for a PREDPP model, `$PRED` for one that codes the
+#'   prediction by hand - into R source code for a `paramFunction` of the form
 #'   `function(thetas, df, ...)`, the shape required by `getForestDFSCM()` and
 #'   `getForestDFemp()`. The result is **source text for you to read, check and
 #'   edit** - nothing is evaluated. Writing this function by hand duplicates code
@@ -9,8 +10,17 @@
 #'   a silent error.
 #'
 #' @details
-#'   **Typical values.** Every `ETA(n)` in `$PK` is set to 0, so the generated
-#'   function returns typical values, which is what a Forest plot needs.
+#'   **Typical values.** Every `ETA(n)` is set to 0, so the generated function
+#'   returns typical values, which is what a Forest plot needs. In a `$PRED`
+#'   block every `EPS(n)`/`ERR(n)` goes to 0 for the same reason, so the
+#'   residual error drops out of the prediction.
+#'
+#'   **`$PRED` models.** `$PRED` is the same abbreviated-code language as
+#'   `$PK`, with one difference that matters here: it computes the prediction
+#'   and the residual error in the same block as the parameters, so there is no
+#'   structural way to tell which of its assignments you want. `parameters` is
+#'   therefore required for a `$PRED` model. `Y` is an assignment like any
+#'   other - ask for it and you get the typical prediction.
 #'
 #'   **Covariate references.** `getForestDFSCM()` evaluates the parameter
 #'   function on a row where every covariate equals `missVal` whenever it is
@@ -55,12 +65,16 @@
 #'   `IF/ELSE IF/ELSE/END IF` blocks, arithmetic (`**` becomes `^`), the
 #'   `.EQ.`/`.AND.` operator family, and the usual intrinsic functions.
 #'   Anything else - `$DES`, compartment amounts `A(n)`, verbatim FORTRAN, `DO`
-#'   loops, `CALL` - raises an error naming the file and line.
+#'   loops, `CALL` - raises an error naming the file and line. `EPS(n)`/`ERR(n)`
+#'   are accepted in `$PRED`, where they belong, and refused in `$PK`, where
+#'   NM-TRAN does not allow them either.
 #'
 #' @param modFile Path to the NONMEM control stream (`.mod` or `.ctl`).
-#' @param parameters A character vector of `$PK` variables the function should
-#'   return. Defaults to `NULL`, meaning every variable assigned in `$PK`; trim
-#'   it to the parameters you actually want to plot.
+#' @param parameters A character vector of variables the function should
+#'   return. Defaults to `NULL`, meaning every variable assigned in the block;
+#'   trim it to the parameters you actually want to plot. **Required for a
+#'   `$PRED` model**, which assigns the prediction and the residual error
+#'   alongside the parameters.
 #' @param covRef An optional named list of covariate reference values, e.g.
 #'   `list(WT = 75)`. Overrides the values derived from the control stream, and
 #'   supplies them for covariates where no rule fires.
@@ -318,23 +332,35 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
                       extFile = NULL, missVal = -99,
                       ignoreVerbatim = FALSE, keep = character(0)) {
   mod <- nmReadModel(modFile)
-  pk <- nmRecord(mod, "\\$PK\\b")
-  if (nrow(pk) == 0) {
-    stop("No $PK record found in ", basename(modFile),
-      ". nmParsePK() parses $PK blocks; a $PRED model must be ",
-      "handled by hand.",
+  found <- nmParamBlock(mod, modFile)
+  pk <- found$rec
+  block <- found$block
+
+  ## A $PK block assigns parameters and stops. A $PRED block computes the
+  ## prediction and the residual error in the same lines - Y, and whatever
+  ## intermediates the prediction needs - so "which of these assignments are
+  ## parameters" is not answerable from the block. The caller has to say.
+  if (identical(block, "$PRED") && is.null(parameters)) {
+    stop("A $PRED model needs `parameters`. ", basename(modFile),
+      " has no $PK, and a $PRED block computes the prediction and the ",
+      "residual error alongside the parameters, so there is no way to tell ",
+      "from the block which of its assignments you want.",
+      "\nName them, e.g. parameters = c(\"CL\", \"V\").",
       call. = FALSE
     )
   }
 
-  stmts <- nmParseStatements(pk, modFile, ignoreVerbatim = ignoreVerbatim)
+  stmts <- nmParseStatements(pk, modFile,
+    ignoreVerbatim = ignoreVerbatim, block = block
+  )
   stmts <- nmResolveMatrixRefs(
     stmts,
     if (is.null(extFile)) NULL else getExt(extFile),
-    modFile
+    modFile, block
   )
   if (length(stmts) == 0) {
-    stop("The $PK record in ", basename(modFile), " contains no statements.",
+    stop("The ", block, " record in ", basename(modFile),
+      " contains no statements.",
       call. = FALSE
     )
   }
@@ -346,7 +372,7 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
     assigned <- nmAssignedNames(stmts)
     unknown <- setdiff(parameters, assigned)
     if (length(unknown) > 0) {
-      stop("Not assigned in the $PK block of ", basename(modFile), ": ",
+      stop("Not assigned in the ", block, " block of ", basename(modFile), ": ",
         paste(unknown, collapse = ", "), ".",
         call. = FALSE
       )
@@ -354,10 +380,12 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   }
   # Recorded while the ETA() references are still in the tree.
   etaMap <- nmEtaMap(stmts)
-  tvMap <- nmTypicalMap(stmts)
-  # A folded copy (ETA() -> 0, constants collapsed) for the analyses below; the
-  # raw tree is what we return so a downstream emitter keeps the ETA()s.
+  # A folded copy (ETA()/EPS() -> 0, constants collapsed) for the analyses
+  # below; the raw tree is what we return so a downstream emitter keeps them.
   folded <- nmSimplifyStmts(stmts)
+  # Read off the folded tree: a typical value is whatever a parameter reduces
+  # to once the random effects are gone.
+  tvMap <- nmTypicalMap(folded)
 
   ## Covariates are discovered, not filtered: a $PK that reads a name before
   ## binding it is reading a data item, which is exactly what NONMEM does. Each
@@ -399,9 +427,10 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
       if (is.na(u$lineno)) "" else paste0(" on line ", u$lineno)
     }, "")
     stop(
-      "The $PK block of ", basename(modFile), " reads ",
+      "The ", block, " block of ", basename(modFile), " reads ",
       paste0(nm, at, collapse = ", "),
-      " before assigning it.\nNONMEM does not initialise $PK variables and does",
+      " before assigning it.\nNONMEM does not initialise ", block,
+      " variables and does",
       " not clear them between data records, so the model reads whatever the",
       " previous record left there. A parameter function is evaluated one row",
       " at a time and cannot reproduce that.",
@@ -450,7 +479,7 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
     if (length(stray) > 0) {
       stop("covRef names a covariate that ", basename(modFile),
         " does not use: ", paste(stray, collapse = ", "),
-        ".\nCovariates in this $PK: ",
+        ".\nCovariates in this ", block, ": ",
         if (length(covariates) == 0) "none" else paste(covariates, collapse = ", "),
         ".",
         call. = FALSE
@@ -535,7 +564,7 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   } else {
     unknown <- setdiff(parameters, syms$assigned)
     if (length(unknown) > 0) {
-      stop("Not assigned in the $PK block of ", basename(modFile), ": ",
+      stop("Not assigned in the ", block, " block of ", basename(modFile), ": ",
         paste(unknown, collapse = ", "), ".",
         call. = FALSE
       )
@@ -551,7 +580,8 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   }
   maxTheta <- nmMaxTheta(folded)
   if (noBaseThetas < maxTheta) {
-    stop("The model declares ", noBaseThetas, " THETA(s) but $PK references ",
+    stop("The model declares ", noBaseThetas, " THETA(s) but ", block,
+      " references ",
       "THETA(", maxTheta, ") in ", basename(modFile),
       ". Refusing to continue: the theta indices would be wrong.",
       call. = FALSE

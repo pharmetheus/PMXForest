@@ -131,14 +131,12 @@ refModelValues <- function(model, missVal) {
   }
 
   mod <- nmReadModel(model)
-  pk <- nmRecord(mod, "\\$PK\\b")
-  if (nrow(pk) == 0) {
-    stop("No $PK record found in ", basename(model),
-      ", so no reference values can be read from it.",
-      call. = FALSE
-    )
-  }
-  stmts <- nmSimplifyStmts(nmParseStatements(pk, model))
+  ## $PK or $PRED, whichever the model defines its parameters in - the
+  ## reference rules read the same statement language either way.
+  found <- nmParamBlock(mod, model)
+  stmts <- nmSimplifyStmts(
+    nmParseStatements(found$rec, model, block = found$block)
+  )
   syms <- nmSymbols(stmts)
   covs <- intersect(syms$used, setdiff(nmInputNames(mod), syms$assigned))
   nmCovRef(stmts, covs, missVal)
