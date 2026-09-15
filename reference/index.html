@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.15</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,9 +24,15 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_NONMEM_models.html">Creating Forest plots for NONMEM models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_R_coded_glm_models.html">Creating Forest plots for R coded logistic regression models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_tte_models.html">Creating Forest plots for tte models</a>
+    <a class="dropdown-item" href="../articles/Part1-quick-start.html">1. Quick-Start: Forest Plots for NONMEM Models</a>
+    <a class="dropdown-item" href="../articles/Part2-walkthrough.html">2. Walkthrough: End-to-End Forest Plots for NONMEM Models</a>
+    <div class="dropdown-divider"></div>
+    <h6 class="dropdown-header" data-toc-skip>Deep dives</h6>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-forest-plot-inputs.html">3. Deep Dive: Preparing Forest Plot Inputs</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-nonmem-parsing.html">3. Deep Dive: How the NONMEM Model is Parsed</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-r-coded-models.html">3. Deep Dive: Forest Plots for R-Coded Models</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-secondary-parameters.html">3. Deep Dive: Secondary Parameters</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-tte-models.html">3. Deep Dive: Forest Plots for Time-to-Event Models</a>
   </div>
 </li>
 <li class="nav-item">
@@ -35,7 +41,14 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="nav-link" href="../../">
+    <span class="fa fa-arrow-left"></span>
+     
+    All Versions
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -58,14 +71,24 @@
 
       <dl><dt>
           
-          <code><a href="addMissingColumns.html">addMissingColumns()</a></code> 
+          <code><a href="addStamp.html">addStamp()</a></code> 
         </dt>
-        <dd>addMissingColumns</dd>
+        <dd>Add a source and time stamp to a plot</dd>
       </dl><dl><dt>
           
           <code><a href="createInputForestData.html">createInputForestData()</a></code> 
         </dt>
         <dd>Create Input Data Frame for a Forest Plot</dd>
+      </dl><dl><dt>
+          
+          <code><a href="createParamFunction.html">createParamFunction()</a></code> 
+        </dt>
+        <dd>Generate a Parameter Function from a NONMEM Control Stream</dd>
+      </dl><dl><dt>
+          
+          <code><a href="filterByModel.html">filterByModel()</a></code> 
+        </dt>
+        <dd>Apply a Model's $DATA IGNORE and ACCEPT Statements to a Data Frame</dd>
       </dl><dl><dt>
           
           <code><a href="forestPlot.html">forestPlot()</a></code> 
@@ -93,29 +116,74 @@
         <dd>getForestDFemp</dd>
       </dl><dl><dt>
           
-          <code><a href="getParamPositions.html">getParamPositions()</a></code> 
-        </dt>
-        <dd>getParamPositions</dd>
-      </dl><dl><dt>
-          
           <code><a href="getSamples.html">getSamples()</a></code> 
         </dt>
         <dd>getSamples</dd>
       </dl><dl><dt>
           
-          <code><a href="mvrnorm_vector.html">mvrnorm_vector()</a></code> 
+          <code><a href="nmDeparse.html">nmDeparse()</a></code> 
         </dt>
-        <dd>mvrnorm_vector</dd>
+        <dd>Render a parsed <code>$PK</code> expression node as R source</dd>
       </dl><dl><dt>
           
-          <code><a href="setCOVEFF.html">setCOVEFF()</a></code> 
+          <code><a href="nmFormatNum.html">nmFormatNum()</a></code> 
         </dt>
-        <dd>setCOVEFF</dd>
+        <dd>Format a numeric literal as the shortest string that reads back exactly</dd>
       </dl><dl><dt>
           
-          <code><a href="setupForestPlotData.html">setupForestPlotData()</a></code> 
+          <code><a href="nmParsePK.html">nmParsePK()</a></code> 
         </dt>
-        <dd>Set up the data.frame for <code>forestPlot</code> to use</dd>
+        <dd>Parse a NONMEM <code>$PK</code> block into a reusable structure</dd>
+      </dl><dl><dt>
+          
+          <code><a href="nmResolveSecondary.html">nmResolveSecondary()</a></code> 
+        </dt>
+        <dd>Resolve a <code>secondary</code> specification for the parameter-function emitters</dd>
+      </dl><dl><dt>
+          
+          <code><a href="oneHotEncode.html">oneHotEncode()</a></code> 
+        </dt>
+        <dd>One-Hot Encode Categorical Covariates</dd>
+      </dl><dl><dt>
+          
+          <code><a href="print.pmxFilterVerify.html">print(<i>&lt;pmxFilterVerify&gt;</i>)</a></code> 
+        </dt>
+        <dd>Print a filter verification</dd>
+      </dl><dl><dt>
+          
+          <code><a href="print.pmxParamFunction.html">print(<i>&lt;pmxParamFunction&gt;</i>)</a></code> 
+        </dt>
+        <dd>Print generated parameter-function source</dd>
+      </dl><dl><dt>
+          
+          <code><a href="print.pmxParamVerify.html">print(<i>&lt;pmxParamVerify&gt;</i>)</a></code> 
+        </dt>
+        <dd>Print a parameter-function verification result</dd>
+      </dl><dl><dt>
+          
+          <code><a href="setupCovExpressionsList.html">setupCovExpressionsList()</a></code> 
+        </dt>
+        <dd>Setup the Expression List for Empirical Forest Plots</dd>
+      </dl><dl><dt>
+          
+          <code><a href="setupDfCovs.html">setupDfCovs()</a></code> 
+        </dt>
+        <dd>Setup Covariate Data Frame for Forest Plots</dd>
+      </dl><dl><dt>
+          
+          <code><a href="setupDfRefRow.html">setupDfRefRow()</a></code> 
+        </dt>
+        <dd>Setup Reference Row(s) for Forest Plots</dd>
+      </dl><dl><dt>
+          
+          <code><a href="verifyFilterByModel.html">verifyFilterByModel()</a></code> 
+        </dt>
+        <dd>Check <code><a href="../reference/filterByModel.html">filterByModel()</a></code> against NONMEM's own account of the data</dd>
+      </dl><dl><dt>
+          
+          <code><a href="verifyParamFunction.html">verifyParamFunction()</a></code> 
+        </dt>
+        <dd>Check a Generated Parameter Function Against a NONMEM Table</dd>
       </dl></div>
   </main></div>
 

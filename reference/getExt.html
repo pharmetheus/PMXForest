@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.15</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,9 +24,15 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_NONMEM_models.html">Creating Forest plots for NONMEM models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_R_coded_glm_models.html">Creating Forest plots for R coded logistic regression models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_tte_models.html">Creating Forest plots for tte models</a>
+    <a class="dropdown-item" href="../articles/Part1-quick-start.html">1. Quick-Start: Forest Plots for NONMEM Models</a>
+    <a class="dropdown-item" href="../articles/Part2-walkthrough.html">2. Walkthrough: End-to-End Forest Plots for NONMEM Models</a>
+    <div class="dropdown-divider"></div>
+    <h6 class="dropdown-header" data-toc-skip>Deep dives</h6>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-forest-plot-inputs.html">3. Deep Dive: Preparing Forest Plot Inputs</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-nonmem-parsing.html">3. Deep Dive: How the NONMEM Model is Parsed</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-r-coded-models.html">3. Deep Dive: Forest Plots for R-Coded Models</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-secondary-parameters.html">3. Deep Dive: Secondary Parameters</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-tte-models.html">3. Deep Dive: Forest Plots for Time-to-Event Models</a>
   </div>
 </li>
 <li class="nav-item">
@@ -35,7 +41,14 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="nav-link" href="../../">
+    <span class="fa fa-arrow-left"></span>
+     
+    All Versions
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -63,7 +76,8 @@
 
 
 <dt>set</dt>
-<dd><p>The $ESTIMATION the iteration information should be extracted from. Will use the last $ESTIMATION if set to <code>NULL</code>.</p></dd>
+<dd><p>The $ESTIMATION the iteration information should be extracted from. Will use the
+last $ESTIMATION if set to <code>NULL</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -75,10 +89,58 @@
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span><span class="co">## To extract the final parameter estimates</span></span></span>
-<span class="r-in"><span><span class="va">dfext</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="fu">getExt</span><span class="op">(</span>extFile <span class="op">=</span> <span class="st">"myExtFile.ext"</span><span class="op">)</span>,<span class="va">ITERATION</span><span class="op">==</span><span class="st">"-1000000000"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">extFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/run7.ext"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">dfExt</span> <span class="op">&lt;-</span> <span class="fu">getExt</span><span class="op">(</span>extFile <span class="op">=</span> <span class="va">extFile</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dfExt</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   ITERATION THETA1 THETA2 THETA3  THETA4  THETA5  THETA6   THETA7  THETA8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1         0      1   0.75      1 11.9000 191.000 6.47000 0.616000 1.24000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2         1      1   0.75      1 11.8911 190.946 6.46714 0.616017 1.23995</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3         2      1   0.75      1 11.8911 190.946 6.46714 0.616017 1.23995</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4         3      1   0.75      1 11.8995 190.980 6.46449 0.616135 1.24019</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5         4      1   0.75      1 11.9018 191.214 6.46407 0.616375 1.24064</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6         5      1   0.75      1 11.9064 191.216 6.46438 0.616419 1.24092</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      THETA9   THETA10  THETA11   THETA12 THETA13   THETA14 SIGMA.1.1.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 -0.335000 -0.515000 0.252000 -0.145000    2.64 -0.139000  0.0444000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 -0.335051 -0.515013 0.251850 -0.144929    2.64 -0.139085  0.0443933</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 -0.335051 -0.515013 0.251850 -0.144929    2.64 -0.139085  0.0443933</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 -0.335034 -0.515008 0.252326 -0.144425    2.64 -0.139277  0.0443871</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 -0.335100 -0.515029 0.252471 -0.144439    2.64 -0.139539  0.0443950</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -0.335110 -0.515038 0.252387 -0.144624    2.64 -0.139541  0.0443928</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   OMEGA.1.1. OMEGA.2.1. OMEGA.2.2. OMEGA.3.1. OMEGA.3.2. OMEGA.3.3. OMEGA.4.1.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  0.0257000          0   0.256000          0          0  0.0476000          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  0.0257001          0   0.255977          0          0  0.0475990          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  0.0257001          0   0.255977          0          0  0.0475990          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  0.0257014          0   0.255872          0          0  0.0475917          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  0.0257057          0   0.255666          0          0  0.0475757          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  0.0257080          0   0.255633          0          0  0.0475736          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   OMEGA.4.2. OMEGA.4.3. OMEGA.4.4. OMEGA.5.1. OMEGA.5.2. OMEGA.5.3. OMEGA.5.4.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1          0          0   0.159000          0          0          0          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2          0          0   0.158991          0          0          0          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3          0          0   0.158991          0          0          0          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4          0          0   0.158926          0          0          0          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5          0          0   0.158770          0          0          0          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6          0          0   0.158737          0          0          0          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   OMEGA.5.5.       OBJ</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.144000 -7299.686</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   0.143980 -7299.687</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   0.143980 -7299.687</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   0.143856 -7299.693</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   0.143605 -7299.698</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   0.143537 -7299.698</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## The final parameter estimates</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">dfExt</span>, <span class="va">ITERATION</span> <span class="op">==</span> <span class="st">"-1000000000"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      ITERATION THETA1 THETA2 THETA3  THETA4  THETA5  THETA6   THETA7  THETA8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22 -1000000000      1   0.75      1 11.9074 191.231 6.46559 0.616457 1.24406</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       THETA9   THETA10  THETA11   THETA12 THETA13   THETA14 SIGMA.1.1.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22 -0.335273 -0.515362 0.252274 -0.144548 2.63899 -0.138915  0.0443912</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    OMEGA.1.1. OMEGA.2.1. OMEGA.2.2. OMEGA.3.1. OMEGA.3.2. OMEGA.3.3. OMEGA.4.1.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22  0.0257292          0   0.255608          0          0  0.0476135          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    OMEGA.4.2. OMEGA.4.3. OMEGA.4.4. OMEGA.5.1. OMEGA.5.2. OMEGA.5.3. OMEGA.5.4.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22          0          0   0.158695          0          0          0          0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    OMEGA.5.5.       OBJ</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22    0.14351 -7299.699</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

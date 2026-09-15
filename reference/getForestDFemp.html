@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.15</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,9 +24,15 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_NONMEM_models.html">Creating Forest plots for NONMEM models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_R_coded_glm_models.html">Creating Forest plots for R coded logistic regression models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_tte_models.html">Creating Forest plots for tte models</a>
+    <a class="dropdown-item" href="../articles/Part1-quick-start.html">1. Quick-Start: Forest Plots for NONMEM Models</a>
+    <a class="dropdown-item" href="../articles/Part2-walkthrough.html">2. Walkthrough: End-to-End Forest Plots for NONMEM Models</a>
+    <div class="dropdown-divider"></div>
+    <h6 class="dropdown-header" data-toc-skip>Deep dives</h6>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-forest-plot-inputs.html">3. Deep Dive: Preparing Forest Plot Inputs</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-nonmem-parsing.html">3. Deep Dive: How the NONMEM Model is Parsed</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-r-coded-models.html">3. Deep Dive: Forest Plots for R-Coded Models</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-secondary-parameters.html">3. Deep Dive: Secondary Parameters</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-tte-models.html">3. Deep Dive: Forest Plots for Time-to-Event Models</a>
   </div>
 </li>
 <li class="nav-item">
@@ -35,7 +41,14 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="nav-link" href="../../">
+    <span class="fa fa-arrow-left"></span>
+     
+    All Versions
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -74,6 +87,8 @@
 <span>  cstrPackages <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cstrExports <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  iMiss <span class="op">=</span> <span class="op">-</span><span class="fl">99</span>,</span>
+<span>  oneHot <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  oneHotSep <span class="op">=</span> <span class="st">"_"</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -89,13 +104,14 @@
 
 
 <dt>noBaseThetas</dt>
-<dd><p>the number of parameters from `dfParameters` to pass to the functions in `functionList`.</p></dd>
+<dd><p>the number of parameters from <code>dfParameters</code> to pass to the functions in <code>functionList</code>.</p></dd>
 
 
 <dt>dfParameters</dt>
 <dd><p>A data frame with parameter samples from the uncertainty distribution.
 The vector of final parameter estimates is assumed to be in the first row.
-The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ columns whichshould not be included.</p></dd>
+The column order is assumed the same as in the NONMEM ext file except the ITERATION and OBJ
+columns whichshould not be included.</p></dd>
 
 
 <dt>cdfCovsNames</dt>
@@ -118,29 +134,36 @@ but functionListName must contain the names with a length of all return for all 
 
 
 <dt>quiet</dt>
-<dd><p>If output should be allowed during the function call, default= TRUE. (This option is mainly for debugging purposes.)</p></dd>
+<dd><p>If output should be allowed during the function call, default= TRUE. (This option
+is mainly for debugging purposes.)</p></dd>
 
 
 <dt>metricFunction</dt>
-<dd><p>The function to use to summarize the parameter values in each covariate category. Default is mean.</p></dd>
+<dd><p>The function to use to summarize the parameter values in each covariate
+category. Default is mean.</p></dd>
 
 
 <dt>probs</dt>
-<dd><p>A vector of probabilities that should be computed for each of the parameters from functionList. These will be used as the
-as the uncertainties in the Forest plots. The probs vector position one and two will be used for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).</p></dd>
+<dd><p>A vector of probabilities that should be computed for each of the parameters from
+functionList. These will be used as the
+as the uncertainties in the Forest plots. The probs vector position one and two will be used
+for plotting the uncertanties (i.e. columns q1 and q2). Default is c(0.05, 0.95).</p></dd>
 
 
 <dt>pointFunction</dt>
-<dd><p>The function used to calculate the point for each covariate in the forest plot. default=median
+<dd><p>The function used to calculate the point for each covariate in the forest
+plot. default=median
 This function is also used for the reference covariate combination</p></dd>
 
 
 <dt>dfRefRow</dt>
-<dd><p>A data frame  (one row or equal number of rows as dfCovs) with the covariate values that will be used as the reference, if NULL the typical subject is used as reference.</p></dd>
+<dd><p>A data frame  (one row or equal number of rows as dfCovs) with the covariate
+values that will be used as the reference, if NULL the typical subject is used as reference.</p></dd>
 
 
 <dt>cGrouping</dt>
-<dd><p>A vector of the same length as covExpressionList to indicate groupings of covariates. Default is no grouping. See example.</p></dd>
+<dd><p>A vector of the same length as covExpressionList to indicate groupings of
+covariates. Default is no grouping. See example.</p></dd>
 
 
 <dt>ncores</dt>
@@ -159,6 +182,22 @@ This function is also used for the reference covariate combination</p></dd>
 <dd><p>The missing value number. -99 by default.</p></dd>
 
 
+<dt>oneHot</dt>
+<dd><p>An optional one-hot encoding specification (see
+<code><a href="oneHotEncode.html">oneHotEncode</a></code>). When supplied, raw multi-level categorical columns
+are one-hot encoded before the parameter functions are evaluated - in <code>dfCovs</code>
+and <code>dfRefRow</code> for <code><a href="getForestDFSCM.html">getForestDFSCM()</a></code>, in <code>dfData</code> for <code>getForestDFemp()</code> - so
+a single parameter function written against the dummy columns can serve both
+the parametric and empirical workflows. Default <code>NULL</code> (no encoding). For
+<code><a href="getForestDFSCM.html">getForestDFSCM()</a></code> the raw column is dropped after encoding.</p></dd>
+
+
+<dt>oneHotSep</dt>
+<dd><p>The separator between the covariate name and the level in the
+dummy column names created when <code>oneHot</code> is used. Defaults to <code>"_"</code>. Set to
+<code>""</code> to match dummy columns named like <code>GENO1</code>, <code>GENO2</code>.</p></dd>
+
+
 <dt>...</dt>
 <dd><p>additional variables to be forwarded to the the functionList functions</p></dd>
 
@@ -169,53 +208,57 @@ This function is also used for the reference covariate combination</p></dd>
 
 <p>A data frame</p>
     </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="../articles/Part2-walkthrough.html">vignette("Part2-walkthrough", package = "PMXForest")</a></code> for how this fits the whole workflow.</p></div>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span><span class="va">lsExpr</span><span class="op">&lt;-</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"NCI"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">NCIL</span><span class="op">==</span><span class="fl">0</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"NCI"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">NCIL</span><span class="op">==</span><span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"FORM"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">FORM</span><span class="op">==</span><span class="fl">0</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"FORM"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">FORM</span><span class="op">==</span><span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"FOOD"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">FOOD</span><span class="op">==</span><span class="fl">0</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"FOOD"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">FOOD</span><span class="op">==</span><span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"GENO"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">GENO</span><span class="op">==</span><span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"GENO"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">GENO</span><span class="op">==</span><span class="fl">2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"GENO"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">GENO</span><span class="op">==</span><span class="fl">3</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"GENO"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">GENO</span><span class="op">==</span><span class="fl">4</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"RACE"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">RACEL2</span><span class="op">==</span><span class="fl">0</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"RACE"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">RACEL2</span><span class="op">==</span><span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"WT"</span>  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">WT</span><span class="op">&lt;</span><span class="fl">70</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"WT"</span>  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">WT</span><span class="op">&gt;</span><span class="fl">104</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"AGE"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">AGE</span><span class="op">&lt;</span><span class="fl">35</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"AGE"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">AGE</span><span class="op">&gt;=</span><span class="fl">57</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"CRCL"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">CRCL</span><span class="op">&lt;</span><span class="fl">94</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"CRCL"</span><span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">CRCL</span><span class="op">&gt;=</span><span class="fl">146</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"SEX"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">SEX</span><span class="op">==</span><span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>            <span class="st">"SEX"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">SEX</span><span class="op">==</span><span class="fl">2</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dfData</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/DAT-1-MI-PMX-2.csv"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">extFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/run7.ext"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">covFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/run7.cov"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># One record per subject, a subset to keep the example quick</span></span></span>
+<span class="r-in"><span><span class="va">dfDataEmp</span> <span class="op">&lt;-</span> <span class="va">dfData</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/duplicated.html" class="external-link">duplicated</a></span><span class="op">(</span><span class="va">dfData</span><span class="op">$</span><span class="va">ID</span><span class="op">)</span>, <span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">dfSamples</span> <span class="op">&lt;-</span> <span class="fu"><a href="getSamples.html">getSamples</a></span><span class="op">(</span><span class="va">covFile</span>, <span class="va">extFile</span>, n <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Each expression selects the subjects that make up one Forest plot row</span></span></span>
+<span class="r-in"><span><span class="va">lsExpr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"WT"</span>   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">WT</span> <span class="op">&lt;</span> <span class="fl">70</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="st">"WT"</span>   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">WT</span> <span class="op">&gt;</span> <span class="fl">100</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="st">"FOOD"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">FOOD</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="st">"FOOD"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">FOOD</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co">## The names associated with the entries in lsExpr</span></span></span>
-<span class="r-in"><span><span class="va">covnamesEmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"NCI=0"</span>,<span class="st">"NCI&gt;0"</span>,<span class="st">"Oral tablets"</span>,<span class="st">"FDC"</span>,<span class="st">"Fasted"</span>,<span class="st">"Fed"</span>,</span></span>
-<span class="r-in"><span>                 <span class="st">"2D6 UM"</span>,<span class="st">"2D6 EM"</span>,<span class="st">"2D6 IM"</span>,<span class="st">"2D6 PM"</span>,</span></span>
-<span class="r-in"><span>                <span class="st">"Caucasian"</span>,<span class="st">"Other"</span>,<span class="st">"WT&lt;70 kg"</span>,<span class="st">"WT&gt;104 kg"</span>,</span></span>
-<span class="r-in"><span>                <span class="st">"Age&lt;35 y"</span>,<span class="st">"Age&gt;57 y"</span>,<span class="st">"CRCL&lt;94 mL/min"</span>,<span class="st">"CRCL&gt;146 mL/min"</span>,</span></span>
-<span class="r-in"><span>                <span class="st">"Male"</span>,<span class="st">"Female"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">paramFunction</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">thetas</span>, <span class="va">df</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">TVCL</span> <span class="op">&lt;-</span> <span class="va">thetas</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span></span></span>
+<span class="r-in"><span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">df</span><span class="op">)</span> <span class="op">==</span> <span class="st">"WT"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="va">df</span><span class="op">$</span><span class="va">WT</span> <span class="op">!=</span> <span class="op">-</span><span class="fl">99</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">TVCL</span> <span class="op">&lt;-</span> <span class="va">thetas</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span> <span class="op">*</span> <span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">WT</span> <span class="op">/</span> <span class="fl">75</span><span class="op">)</span><span class="op">^</span><span class="va">thetas</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span></span></span>
+<span class="r-in"><span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">df</span><span class="op">)</span> <span class="op">==</span> <span class="st">"FOOD"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="va">df</span><span class="op">$</span><span class="va">FOOD</span> <span class="op">!=</span> <span class="op">-</span><span class="fl">99</span> <span class="op">&amp;&amp;</span> <span class="va">df</span><span class="op">$</span><span class="va">FOOD</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">TVCL</span> <span class="op">&lt;-</span> <span class="va">TVCL</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="va">thetas</span><span class="op">[</span><span class="fl">11</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>CL <span class="op">=</span> <span class="va">TVCL</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">dfresEmp</span> <span class="op">&lt;-</span> <span class="fu">getForestDFemp</span><span class="op">(</span></span></span>
-<span class="r-in"><span> dfData             <span class="op">=</span> <span class="va">dfData</span>,</span></span>
-<span class="r-in"><span> covExpressionsList <span class="op">=</span> <span class="va">lsExpr</span>,</span></span>
-<span class="r-in"><span> cdfCovsNames       <span class="op">=</span> <span class="va">covnamesEmp</span>,</span></span>
-<span class="r-in"><span> functionList       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">paramFunction</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span> functionListName   <span class="op">=</span> <span class="va">functionListName</span>,</span></span>
-<span class="r-in"><span> metricFunction     <span class="op">=</span> <span class="va">median</span>,</span></span>
-<span class="r-in"><span> noBaseThetas       <span class="op">=</span> <span class="fl">14</span>,</span></span>
-<span class="r-in"><span> dfParameters       <span class="op">=</span> <span class="va">dfSamplesCOV</span>,</span></span>
-<span class="r-in"><span> dfRefRow           <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
-<span class="r-in"><span> ncores             <span class="op">=</span> <span class="fl">6</span>,</span></span>
-<span class="r-in"><span> cstrPackages       <span class="op">=</span> <span class="st">"dplyr"</span></span></span>
+<span class="r-in"><span>  dfData             <span class="op">=</span> <span class="va">dfDataEmp</span>,</span></span>
+<span class="r-in"><span>  covExpressionsList <span class="op">=</span> <span class="va">lsExpr</span>,</span></span>
+<span class="r-in"><span>  functionList       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">paramFunction</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  functionListName   <span class="op">=</span> <span class="st">"CL"</span>,</span></span>
+<span class="r-in"><span>  noBaseThetas       <span class="op">=</span> <span class="fl">14</span>,</span></span>
+<span class="r-in"><span>  dfParameters       <span class="op">=</span> <span class="va">dfSamples</span>,</span></span>
+<span class="r-in"><span>  ncores             <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dfresEmp</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"COVNAME"</span>, <span class="st">"GROUPNAME"</span>, <span class="st">"PARAMETER"</span>, <span class="st">"POINT"</span>, <span class="st">"Q1"</span>, <span class="st">"Q2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     COVNAME GROUPNAME PARAMETER    POINT       Q1       Q2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   WT &lt; 70        WT        CL 12.15914 11.77476 12.92319</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  WT &gt; 100        WT        CL 21.10838 20.42808 22.46992</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 FOOD == 0      FOOD        CL 15.47015 14.96299 16.49112</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 FOOD == 1      FOOD        CL 11.25577 10.86801 11.81798</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.15</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,9 +24,15 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_NONMEM_models.html">Creating Forest plots for NONMEM models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_R_coded_glm_models.html">Creating Forest plots for R coded logistic regression models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_tte_models.html">Creating Forest plots for tte models</a>
+    <a class="dropdown-item" href="../articles/Part1-quick-start.html">1. Quick-Start: Forest Plots for NONMEM Models</a>
+    <a class="dropdown-item" href="../articles/Part2-walkthrough.html">2. Walkthrough: End-to-End Forest Plots for NONMEM Models</a>
+    <div class="dropdown-divider"></div>
+    <h6 class="dropdown-header" data-toc-skip>Deep dives</h6>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-forest-plot-inputs.html">3. Deep Dive: Preparing Forest Plot Inputs</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-nonmem-parsing.html">3. Deep Dive: How the NONMEM Model is Parsed</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-r-coded-models.html">3. Deep Dive: Forest Plots for R-Coded Models</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-secondary-parameters.html">3. Deep Dive: Secondary Parameters</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-tte-models.html">3. Deep Dive: Forest Plots for Time-to-Event Models</a>
   </div>
 </li>
 <li class="nav-item">
@@ -35,7 +41,14 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="nav-link" href="../../">
+    <span class="fa fa-arrow-left"></span>
+     
+    All Versions
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -67,7 +80,8 @@
 
 
 <dt>reference</dt>
-<dd><p>Which reference should be used, the final parameter estimates (final) or the parameter function (func)</p></dd>
+<dd><p>Which reference should be used, the final parameter estimates (final) or the
+parameter function (func)</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -79,17 +93,19 @@
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Get the relative variables with uncertainty in the reference:</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Relative variables, with uncertainty in the reference:</span></span></span>
 <span class="r-in"><span><span class="co"># "POINT_REL_REFFUNC" "Q1_REL_REFFUNC" "Q2_REL_REFFUNC" "REFFUNC"</span></span></span>
+<span class="r-in"><span><span class="fu">PMXForest</span><span class="fu">:::</span><span class="fu">getPlotVars</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 REF               point                  q1                  q2 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           "REFFUNC" "POINT_REL_REFFUNC"    "Q1_REL_REFFUNC"    "Q2_REL_REFFUNC" </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">getPlotVars</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in getPlotVars():</span> could not find function "getPlotVars"</span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Get the relative variables without uncertainty in the reference:</span></span></span>
+<span class="r-in"><span><span class="co"># Relative variables, without uncertainty in the reference:</span></span></span>
 <span class="r-in"><span><span class="co"># "POINT_NOVAR_REL_REFFUNC" "Q1_NOVAR_REL_REFFUNC" "Q2_NOVAR_REL_REFFUNC" "REFFUNC"</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">getPlotVars</span><span class="op">(</span>noVar<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in getPlotVars(noVar = TRUE):</span> could not find function "getPlotVars"</span>
+<span class="r-in"><span><span class="fu">PMXForest</span><span class="fu">:::</span><span class="fu">getPlotVars</span><span class="op">(</span>noVar <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                       REF                     point                        q1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 "REFFUNC" "POINT_NOVAR_REL_REFFUNC"    "Q1_NOVAR_REL_REFFUNC" </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                        q2 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    "Q2_NOVAR_REL_REFFUNC" </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.15</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,9 +24,15 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_NONMEM_models.html">Creating Forest plots for NONMEM models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_R_coded_glm_models.html">Creating Forest plots for R coded logistic regression models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_tte_models.html">Creating Forest plots for tte models</a>
+    <a class="dropdown-item" href="../articles/Part1-quick-start.html">1. Quick-Start: Forest Plots for NONMEM Models</a>
+    <a class="dropdown-item" href="../articles/Part2-walkthrough.html">2. Walkthrough: End-to-End Forest Plots for NONMEM Models</a>
+    <div class="dropdown-divider"></div>
+    <h6 class="dropdown-header" data-toc-skip>Deep dives</h6>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-forest-plot-inputs.html">3. Deep Dive: Preparing Forest Plot Inputs</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-nonmem-parsing.html">3. Deep Dive: How the NONMEM Model is Parsed</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-r-coded-models.html">3. Deep Dive: Forest Plots for R-Coded Models</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-secondary-parameters.html">3. Deep Dive: Secondary Parameters</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-tte-models.html">3. Deep Dive: Forest Plots for Time-to-Event Models</a>
   </div>
 </li>
 <li class="nav-item">
@@ -35,7 +41,14 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="nav-link" href="../../">
+    <span class="fa fa-arrow-left"></span>
+     
+    All Versions
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -89,22 +102,21 @@ which might otherwise return samples in the magnitude of &lt;1E-16 instead of ex
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span><span class="co">## Read the ext-file</span></span></span>
-<span class="r-in"><span><span class="va">extFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="getExt.html">getExt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>,<span class="st">"run1.ext"</span>,package<span class="op">=</span><span class="st">"PMXForest"</span><span class="op">)</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co">## Final parameter estimates from the SimVal run7 .ext file</span></span></span>
+<span class="r-in"><span><span class="va">extFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="getExt.html">getExt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/run7.ext"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">finPar</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">extFile</span>, <span class="va">ITERATION</span> <span class="op">==</span> <span class="st">"-1000000000"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">mu</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">finPar</span><span class="op">[</span>, <span class="op">-</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">finPar</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co">## Read the cov-file and extract the covmatrix</span></span></span>
-<span class="r-in"><span><span class="va">dfcov</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>,<span class="st">"run1.cov"</span>,package<span class="op">=</span><span class="st">"PMXForest"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                        fill <span class="op">=</span> <span class="cn">TRUE</span>, header <span class="op">=</span> <span class="cn">TRUE</span>, sep <span class="op">=</span> <span class="st">""</span>,</span></span>
-<span class="r-in"><span>                                                skip <span class="op">=</span> <span class="fl">1</span>, stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">sigma</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.matrix.html" class="external-link">data.matrix</a></span><span class="op">(</span><span class="va">dfcov</span><span class="op">[</span>, <span class="fl">2</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">dfcov</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co">## Covariance matrix from the run7 .cov file</span></span></span>
+<span class="r-in"><span><span class="va">dfcov</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/run7.cov"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  fill <span class="op">=</span> <span class="cn">TRUE</span>, header <span class="op">=</span> <span class="cn">TRUE</span>, sep <span class="op">=</span> <span class="st">""</span>, skip <span class="op">=</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">sigma</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.matrix.html" class="external-link">data.matrix</a></span><span class="op">(</span><span class="va">dfcov</span><span class="op">[</span>, <span class="fl">2</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">dfcov</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co">## Get the final parameter estimates</span></span></span>
-<span class="r-in"><span><span class="va">finPar</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">extFile</span>, <span class="va">ITERATION</span> <span class="op">==</span> <span class="st">"-1000000000"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">mu</span>      <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">finPar</span><span class="op">[</span>, <span class="op">-</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">finPar</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">dfParameters</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu">mvrnorm_vector</span><span class="op">(</span>mu <span class="op">=</span> <span class="va">mu</span>, sigma <span class="op">=</span> <span class="va">sigma</span>, iSampleIndex <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="fu">PMXForest</span><span class="fu">:::</span><span class="fu">mvrnorm_vector</span><span class="op">(</span>mu <span class="op">=</span> <span class="va">mu</span>, sigma <span class="op">=</span> <span class="va">sigma</span>, iSampleIndex <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">samples</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 10 30</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

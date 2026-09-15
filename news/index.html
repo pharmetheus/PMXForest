@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.15</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,9 +24,15 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_NONMEM_models.html">Creating Forest plots for NONMEM models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_R_coded_glm_models.html">Creating Forest plots for R coded logistic regression models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_tte_models.html">Creating Forest plots for tte models</a>
+    <a class="dropdown-item" href="../articles/Part1-quick-start.html">1. Quick-Start: Forest Plots for NONMEM Models</a>
+    <a class="dropdown-item" href="../articles/Part2-walkthrough.html">2. Walkthrough: End-to-End Forest Plots for NONMEM Models</a>
+    <div class="dropdown-divider"></div>
+    <h6 class="dropdown-header" data-toc-skip>Deep dives</h6>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-forest-plot-inputs.html">3. Deep Dive: Preparing Forest Plot Inputs</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-nonmem-parsing.html">3. Deep Dive: How the NONMEM Model is Parsed</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-r-coded-models.html">3. Deep Dive: Forest Plots for R-Coded Models</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-secondary-parameters.html">3. Deep Dive: Secondary Parameters</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-tte-models.html">3. Deep Dive: Forest Plots for Time-to-Event Models</a>
   </div>
 </li>
 <li class="active nav-item">
@@ -35,7 +41,14 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="nav-link" href="../../">
+    <span class="fa fa-arrow-left"></span>
+     
+    All Versions
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -46,6 +59,106 @@
       
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.3.0" id="pmxforest-1-3-0">PMXForest 1.3.0<a class="anchor" aria-label="anchor" href="#pmxforest-1-3-0"></a></h2>
+<p>Every bug and issue reported against PMXForest has been addressed in this release. Beyond that, 1.3.0 is about removing the hand-written steps from the Forest plot workflow:</p>
+<ul><li>the parameter function can now be generated from the control stream</li>
+<li>the covariate table and the reference row can be built from the data</li>
+</ul><p>The other big user facing change is that the whole package is documented with runnable examples and a three-tier set of vignettes.</p>
+<p>Two fixes change numbers in plots you have already made - SIR-based uncertainty and the statistics table. Both are described under <strong>Changes to existing behaviour</strong>; read that section before regenerating a figure you have shipped.</p>
+<div class="section level3">
+<h3 id="full-documentation-1-3-0">Full documentation<a class="anchor" aria-label="anchor" href="#full-documentation-1-3-0"></a></h3>
+<p>The package now has a completely reworked set of vignettes:</p>
+<ul><li>
+<p><strong>A three-tier vignette set.</strong></p>
+<ul><li>
+<a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part1-quick-start.html">Quick start</a> gets a plot out of a NONMEM model in five steps</li>
+<li>
+<a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part2-walkthrough.html">Walkthrough</a> builds a publication figure end to end</li>
+<li>Deep Dives go into more details<ul><li><a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-forest-plot-inputs.html">Preparing Forest plot inputs</a></li>
+<li><a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-nonmem-parsing.html">How the NONMEM model is parsed</a></li>
+<li><a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html">Secondary parameters</a></li>
+<li><a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-r-coded-models.html">R-coded models</a></li>
+<li><a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-tte-models.html">Time-to-event models</a></li>
+</ul></li>
+</ul></li>
+<li><p><strong>Runnable examples everywhere.</strong> Every user-facing exported function has an <code>@examples</code> section that runs against the bundled <code>SimVal</code> output, so the help page is something you can execute rather than only read.</p></li>
+<li><p><strong>Cross-references and links work.</strong> Help pages render their code references as working links to the functions they name, instead of showing the markup.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="convenience-functions-1-3-0">Convenience functions<a class="anchor" aria-label="anchor" href="#convenience-functions-1-3-0"></a></h3>
+<p>Four of the five inputs <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> needs used to be assembled by hand. Each was a place to make a silent mistake: a covariate table that did not match the parameter function, a reference row taken from the data while the function fell back to the model, algebra retyped out of <code>$PK</code>. There are now convenience functions that build those inputs from the model and the data instead.</p>
+<p>The convenience functions are starting points, not straitjackets. If the output from these functions does not match what a particular plot needs, the intended workflow is to take what the function returns and modify it programmatically - shown in <a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-forest-plot-inputs.html">Preparing Forest plot inputs</a>.</p>
+<div class="section level4">
+<h4 id="setupdfcovs-1-3-0"><code>setupDfCovs()</code><a class="anchor" aria-label="anchor" href="#setupdfcovs-1-3-0"></a></h4>
+<p><code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> is a wrapper for <code><a href="../reference/getCovStats.html">getCovStats()</a></code> and <code><a href="../reference/createInputForestData.html">createInputForestData()</a></code> and outputs one row of <code>dfCovs</code> per Forest plot row. The output is also used as input to <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code>.</p>
+</div>
+<div class="section level4">
+<h4 id="setupdfrefrow-1-3-0"><code>setupDfRefRow()</code><a class="anchor" aria-label="anchor" href="#setupdfrefrow-1-3-0"></a></h4>
+<p><code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> builds the reference row <code>getForestDF*()</code> expects, mapping computed baseline values onto the <code>dfCovs</code> geometry. <code>singleRef = TRUE</code> gives one row; <code>singleRef = FALSE</code> gives a full overlay preserving background missingness.</p>
+</div>
+<div class="section level4">
+<h4 id="createparamfunction-1-3-0"><code>createParamFunction()</code><a class="anchor" aria-label="anchor" href="#createparamfunction-1-3-0"></a></h4>
+<p>Writing a <code>paramFunction</code> by hand means retyping the model’s algebra - the easiest place in the whole workflow to introduce an error no test would catch. <code><a href="../reference/createParamFunction.html">createParamFunction()</a></code> reads the control stream and writes a <code>paramFunction</code> for you, as <strong>source text you read, check and evaluate yourself</strong>.</p>
+<p><code><a href="../reference/createParamFunction.html">createParamFunction()</a></code> takes an argument <code>secondary</code> that indicates how secondary parameters should be derived from the primary. Each entry is a line of R code (<code>secondary = list(AUC = "500 / CL")</code>) or the path to an <code>.R</code> file of arbitrary code, including a <code>deSolve</code> or <code>mrgsolve</code> simulation, whose text is <strong>inlined</strong> so the result stays self-contained.</p>
+<p><strong><code><a href="../reference/verifyParamFunction.html">verifyParamFunction()</a></code></strong> can be used to verify the correctness of the generated <code>paramFunction</code>, by evaluating it over a NONMEM <code>$TABLE</code> and comparing the result with the values NONMEM wrote.</p>
+<p><a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-nonmem-parsing.html">How the NONMEM model is parsed</a> is the full account of how <code><a href="../reference/createParamFunction.html">createParamFunction()</a></code> parses NONMEM models. The <a href="https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html">Secondary parameters</a> vignette walks through the secondary-parameter workflow end to end.</p>
+</div>
+<div class="section level4">
+<h4 id="setupcovexpressionslist-1-3-0"><code>setupCovExpressionsList()</code><a class="anchor" aria-label="anchor" href="#setupcovexpressionslist-1-3-0"></a></h4>
+<p><code><a href="../reference/setupCovExpressionsList.html">setupCovExpressionsList()</a></code> is the empirical counterpart of <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code>, producing the <code>covExpressionsList</code> and matching <code>cdfCovsNames</code> that <code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code> consumes.</p>
+</div>
+<div class="section level4">
+<h4 id="getsamples-1-3-0"><code>getSamples()</code><a class="anchor" aria-label="anchor" href="#getsamples-1-3-0"></a></h4>
+<p><code><a href="../reference/getSamples.html">getSamples()</a></code> is the uncertainty source. Not new, but substantially fixed and now documented.</p>
+</div>
+</div>
+<div class="section level3">
+<h3 id="other-notable-additions-1-3-0">Other notable additions<a class="anchor" aria-label="anchor" href="#other-notable-additions-1-3-0"></a></h3>
+<div class="section level4">
+<h4 id="faster-result-assembly-1-3-0">Faster result assembly<a class="anchor" aria-label="anchor" href="#faster-result-assembly-1-3-0"></a></h4>
+<p><code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> and <code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code> built their per-parameter-vector result with a per-cell <code><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame()</a></code> and a growing <code><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows()</a></code> loop. They now fill typed column vectors and construct the data frame once. Output is unchanged; the assembly step alone is roughly 50-80x faster on a representative shape - 10.7 s down to about 0.15 s. Effect on total runtime depends on how expensive <code>functionList</code> is.</p>
+</div>
+<div class="section level4">
+<h4 id="filterbymodel-1-3-0"><code>filterByModel()</code><a class="anchor" aria-label="anchor" href="#filterbymodel-1-3-0"></a></h4>
+<p><code><a href="../reference/filterByModel.html">filterByModel()</a></code> applies the <code>IGNORE</code> and <code>ACCEPT</code> statements in a control stream’s <code>$DATA</code> record, returning the analysis data - the rows the model actually used.</p>
+<div class="section level5">
+<h5 id="verifyfilterbymodel-1-3-0"><code>verifyFilterByModel()</code><a class="anchor" aria-label="anchor" href="#verifyfilterbymodel-1-3-0"></a></h5>
+<p><code><a href="../reference/verifyFilterByModel.html">verifyFilterByModel()</a></code> checks a filtered data set against NONMEM’s own account of the run. Every <code>.lst</code> prints how many records, subjects and observations were read once <code>$DATA</code> had been applied; those three numbers come from NONMEM rather than from a reading of the control stream, so they catch a filter that is wrong.</p>
+</div>
+</div>
+<div class="section level4">
+<h4 id="onehotencode-1-3-0"><code>oneHotEncode()</code><a class="anchor" aria-label="anchor" href="#onehotencode-1-3-0"></a></h4>
+<p><code><a href="../reference/oneHotEncode.html">oneHotEncode()</a></code> adds <code>&lt;covariate&gt;&lt;sep&gt;&lt;level&gt;</code> dummy columns following the convention shared with NONMEM FREM data sets and <code>PMXFrem::createFREMModel()</code>. It is idempotent on data that already carries them.</p>
+<ul><li>
+<code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> and <code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code> gain <code>oneHot</code> / <code>oneHotSep</code>, so raw multi-level columns are encoded before the parameter function runs and one function written against the dummies serves both the parametric and the empirical workflow.</li>
+<li>
+<code>oneHot</code> defaults to <code>NULL</code>; output is unchanged without it.</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="changes-to-existing-behaviour-1-3-0">Changes to existing behaviour<a class="anchor" aria-label="anchor" href="#changes-to-existing-behaviour-1-3-0"></a></h3>
+<ul><li><p><strong>Forest plots built from SIR files will change.</strong> <code><a href="../reference/getSamples.html">getSamples()</a></code>’s SIR-detection check looked for a <code>samples_order</code> column that PsN does not produce (the column is <code>sample_order</code>), so SIR files were routed through the bootstrap path. That path filters on <code>ofv != 0</code>, and therefore returned the full SIR <em>proposal</em> distribution rather than the importance-resampled parameter vectors (<code>resamples == 1</code>). It now returns the resampled vectors, with the final estimates prepended as the first row, as for every other input type. For a well-converged SIR run the confidence intervals shift by a few percent, not systematically in one direction; for a poorly initialised run the change can be larger.</p></li>
+<li><p><strong>The statistics table shows more digits on the relative scale.</strong> With neither <code>sigdigits</code> nor <code>decimals</code> set - the default - the table now uses 2 decimal places on the relative scale, and 2 significant digits on the absolute scale as before.</p></li>
+<li><p><strong><code>refLevels</code> is deprecated in favour of <code>catRef</code>.</strong> <code><a href="../reference/getCovStats.html">getCovStats()</a></code>, <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code>, <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> and <code><a href="../reference/setupCovExpressionsList.html">setupCovExpressionsList()</a></code> all take <code>catRef</code>, symmetric with <code>contRef</code>. <code>refLevels</code> still works and forwards to <code>catRef</code> with a deprecation warning; supplying both is an error.</p></li>
+<li><p><strong><code><a href="../reference/getCovStats.html">getCovStats()</a></code> sorts binary covariate levels.</strong> They were returned in order of appearance in the data, so row order in a Forest plot depended on which subject came first. Now always <code>c(0, 1)</code>.</p></li>
+<li><p><strong><code><a href="../reference/getCovStats.html">getCovStats()</a></code> refuses a covariate with no non-missing value</strong> instead of returning an empty result.</p></li>
+<li><p><strong>The statistics panel label gains its separating space.</strong> <code><a href="../reference/forestPlot.html">forestPlot()</a></code>’s <code>statisticsLabel</code> defaulted to <code>"Statistics:"</code> and is prepended verbatim, so every panel was titled <code>Statistics:CL (L/h)</code>. The default is now <code>"Statistics: "</code>.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-1-3-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-3-0"></a></h3>
+<ul><li><p><strong>Reversed relative confidence intervals.</strong> The <code>Q*_REL_REFFUNC</code> and <code>Q*_REL_REFFINAL</code> columns had their limits swapped when the parameter function returned a negative reference value. The relative quantiles are now computed from the ratio directly rather than by dividing the absolute quantiles by a possibly negative reference.</p></li>
+<li><p><strong><code><a href="../reference/getCovStats.html">getCovStats()</a></code> leaked <code>NA</code> into level counting and quantiles.</strong> <code>x != missVal</code> is <code>NA</code> where <code>x</code> is <code>NA</code>, and indexing rows by a logical <code>NA</code> keeps an all-<code>NA</code> row rather than dropping it. A binary covariate with a genuine <code>NA</code> therefore silently changed shape - the <code>NA</code> counted as a third level, returning a nested one-hot list where the documentation promises a sorted vector - and a continuous one reached <code><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile()</a></code>, whose <code>na.rm</code> is <code>FALSE</code>, and failed with an error naming neither the covariate nor the cause. <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> inherited both.</p></li>
+<li><p><strong><code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> with a single covariate</strong> failed, because <code>dfCovs[i, ]</code> dropped to a vector. The remaining accesses now use <code>drop = FALSE</code>. (Original ticket dates to 1.0.5/1.0.6.)</p></li>
+<li><p><strong><code>tibble</code> inputs</strong> to <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> / <code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code> failed with an unclear <code>vctrs</code> error, because the internal code relies on base-R <code>[</code> dropping a single-column selection to a vector. <code>dfCovs</code>, <code>dfRefRow</code> and <code>dfData</code> are now coerced with <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> on entry.</p></li>
+<li><p><strong>Windows / PSOCK parallelisation</strong> in <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> / <code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code>: with <code>ncores &gt; 1</code> on a PSOCK platform the <code>foreach</code> loop could fail with “object not found”, because its static global detection does not reliably follow the internal closure’s free variables. The local environment is now exported explicitly, mirroring the fix in <code>PMXFrem::getExplainedVar()</code>. The cluster is also torn down through <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code>, so it is released if the function errors mid-run. Fork-based parallelism and single-core runs are unaffected; results are identical.</p></li>
+<li><p><strong><code>1:length(x)</code> in loop bounds.</strong> <code>1:0</code> is <code>c(1, 0)</code>, so a loop over an empty vector ran twice with out-of-range indices instead of not running. Replaced with <code><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along()</a></code> / <code><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len()</a></code> throughout.</p></li>
+<li><p><strong>Programmatic evaluation.</strong> <code><a href="../reference/getCovStats.html">getCovStats()</a></code>’s <code>idVar</code> is now evaluated with <code><a href="https://rlang.r-lib.org/reference/sym.html" class="external-link">rlang::sym()</a></code> rather than <code><a href="https://rlang.r-lib.org/reference/defusing-advanced.html" class="external-link">rlang::ensym()</a></code>, so the function can be wrapped and called programmatically without scoping errors.</p></li>
+<li><p><strong><code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> and <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> were not reachable.</strong> Both were added without <code>NAMESPACE</code> entries or help pages, so <code><a href="../reference/setupDfCovs.html">PMXForest::setupDfCovs()</a></code> failed. Both are now exported and documented.</p></li>
+<li><p><strong>A per-covariate length error was reported unhelpfully.</strong> <code>contRef = c(70, 80)</code> was rejected clearly, but the same mistake written <code>contRef = list(WT = c(70, 80))</code> passed the check and failed much later with “replacement has 2 rows, data has 1”. The length check now covers the named entry and <code>default</code> too.</p></li>
+<li><p><strong>Rounded quantiles could collapse onto one another.</strong> <code><a href="../reference/setupCovExpressionsList.html">setupCovExpressionsList()</a></code> rounds its cut points with <code><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif()</a></code>, and when two distinct quantiles round to the same value the documented contrast inverts: the two rows then cover every subject instead of leaving those between them in neither. <code>minSubjects</code> cannot catch it, because both rows are non-empty. It now warns.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.2.15" id="pmxforest-1-2-15">PMXForest 1.2.15<a class="anchor" aria-label="anchor" href="#pmxforest-1-2-15"></a></h2>
 <ul><li>Fixed the “small bootstrap” logic (.csv with n provided) to correctly prepend the base estimates from the .ext file, ensuring the output is always n+1 rows.<ul><li>Refactored the data.frame input logic to act as a pure, generic MVRNORM sampler.</li>

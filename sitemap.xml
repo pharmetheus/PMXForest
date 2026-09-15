@@ -1,72 +1,135 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>/404.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/404.html</loc>
   </url>
   <url>
-    <loc>/LICENSE.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/LICENSE.html</loc>
   </url>
   <url>
-    <loc>/articles/Creating_Forest_plots_for_NONMEM_models.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/TODO.html</loc>
   </url>
   <url>
-    <loc>/articles/Creating_Forest_plots_for_R_coded_glm_models.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/Part1-quick-start.html</loc>
   </url>
   <url>
-    <loc>/articles/Creating_Forest_plots_for_tte_models.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/Part2-walkthrough.html</loc>
   </url>
   <url>
-    <loc>/articles/index.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-forest-plot-inputs.html</loc>
   </url>
   <url>
-    <loc>/authors.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-nonmem-parsing.html</loc>
   </url>
   <url>
-    <loc>/index.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-r-coded-models.html</loc>
   </url>
   <url>
-    <loc>/news/index.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-secondary-parameters.html</loc>
   </url>
   <url>
-    <loc>/reference/addMissingColumns.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/Part3-deep-dive-tte-models.html</loc>
   </url>
   <url>
-    <loc>/reference/createInputForestData.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/articles/index.html</loc>
   </url>
   <url>
-    <loc>/reference/forestPlot.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/authors.html</loc>
   </url>
   <url>
-    <loc>/reference/getCovStats.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/index.html</loc>
   </url>
   <url>
-    <loc>/reference/getExt.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/news/index.html</loc>
   </url>
   <url>
-    <loc>/reference/getForestDFSCM.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/addMissingColumns.html</loc>
   </url>
   <url>
-    <loc>/reference/getForestDFemp.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/addStamp.html</loc>
   </url>
   <url>
-    <loc>/reference/getParamPositions.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/createInputForestData.html</loc>
   </url>
   <url>
-    <loc>/reference/getPlotVars.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/createParamFunction.html</loc>
   </url>
   <url>
-    <loc>/reference/getSamples.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/filterByModel.html</loc>
   </url>
   <url>
-    <loc>/reference/index.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/forestPlot.html</loc>
   </url>
   <url>
-    <loc>/reference/mvrnorm_vector.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getCovStats.html</loc>
   </url>
   <url>
-    <loc>/reference/setCOVEFF.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getExt.html</loc>
   </url>
   <url>
-    <loc>/reference/setupForestPlotData.html</loc>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getForestDFSCM.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getForestDFemp.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getParamPositions.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getPlotVars.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getSamples.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/index.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/mvrnorm_vector.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/nmDeparse.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/nmFormatNum.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/nmParsePK.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/nmResolveSecondary.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/oneHotEncode.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/print.pmxFilterVerify.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/print.pmxParamFunction.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/print.pmxParamVerify.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/setCOVEFF.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/setupCovExpressionsList.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/setupDfCovs.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/setupDfRefRow.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/setupForestPlotData.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/verifyFilterByModel.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/verifyParamFunction.html</loc>
   </url>
 </urlset>

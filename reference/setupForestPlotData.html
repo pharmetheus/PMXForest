@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.15</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,9 +24,15 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_NONMEM_models.html">Creating Forest plots for NONMEM models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_R_coded_glm_models.html">Creating Forest plots for R coded logistic regression models</a>
-    <a class="dropdown-item" href="../articles/Creating_Forest_plots_for_tte_models.html">Creating Forest plots for tte models</a>
+    <a class="dropdown-item" href="../articles/Part1-quick-start.html">1. Quick-Start: Forest Plots for NONMEM Models</a>
+    <a class="dropdown-item" href="../articles/Part2-walkthrough.html">2. Walkthrough: End-to-End Forest Plots for NONMEM Models</a>
+    <div class="dropdown-divider"></div>
+    <h6 class="dropdown-header" data-toc-skip>Deep dives</h6>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-forest-plot-inputs.html">3. Deep Dive: Preparing Forest Plot Inputs</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-nonmem-parsing.html">3. Deep Dive: How the NONMEM Model is Parsed</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-r-coded-models.html">3. Deep Dive: Forest Plots for R-Coded Models</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-secondary-parameters.html">3. Deep Dive: Secondary Parameters</a>
+    <a class="dropdown-item" href="../articles/Part3-deep-dive-tte-models.html">3. Deep Dive: Forest Plots for Time-to-Event Models</a>
   </div>
 </li>
 <li class="nav-item">
@@ -35,7 +41,14 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="nav-link" href="../../">
+    <span class="fa fa-arrow-left"></span>
+     
+    All Versions
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -63,7 +76,8 @@
 <span>  plotRelative <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  noVar <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  reference <span class="op">=</span> <span class="st">"func"</span>,</span>
-<span>  sigdigits <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  sigdigits <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  decimals <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  onlySignificant <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  setSignEff <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -76,25 +90,37 @@
 
 
 <dt>parameters</dt>
-<dd><p>A character vector with the parameters present in the dfres$PARAMETER column to be included in the output.</p></dd>
+<dd><p>A character vector with the parameters present in the dfres$PARAMETER
+column to be included in the output.</p></dd>
 
 
 <dt>parameterLabels</dt>
-<dd><p>A vector of labels for the parameters. Should either have the same length as <code>parameters</code> or the same length as the number of rows in <code>dfres</code>.
-If a vector of the same length as <code>parameters</code> should also be ordered to match <code>parameters</code>. If <code>parameters</code> is not specified, then is should match the order in <code>dfres</code>. Is by default the same as <code>parameters</code>. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).</p></dd>
+<dd><p>A vector of labels for the parameters. Should either have the same
+length as <code>parameters</code> or the same length as the number of rows in <code>dfres</code>.
+If a vector of the same length as <code>parameters</code> should also be ordered to match
+<code>parameters</code>. If <code>parameters</code> is not specified, then is should match the order in
+<code>dfres</code>. Is by default the same as <code>parameters</code>. Used for faceting the errorbar
+panels in the Forest plot in the x-direction (columns).</p></dd>
 
 
 <dt>parameterLabelsPrefix</dt>
-<dd><p>A string to be added before the <code>parameterLabels</code> in the facet strip for the parameter panels.</p></dd>
+<dd><p>A string to be added before the <code>parameterLabels</code> in the
+facet strip for the parameter panels.</p></dd>
 
 
 <dt>groupNameLabels</dt>
-<dd><p>A vector of labels for the covariate groups. Should either have the same length as the number unique values in <code>dfres$GROUPNAME</code> or the same length as the number of rows in <code>dfres</code>.
+<dd><p>A vector of labels for the covariate groups. Should either have the
+same length as the number unique values in <code>dfres$GROUPNAME</code> or the same length as
+the number of rows in <code>dfres</code>.
 Is by default the same as <code>dfres$GROUPNAME</code>.</p></dd>
 
 
 <dt>statisticsLabels</dt>
-<dd><p>A character string that will precede the <code>parameterLabels</code> in the facet labels for the statistics panels. Default is `Statistics:`.</p></dd>
+<dd><p>A character string that will precede the <code>parameterLabels</code> in
+the facet labels for the statistics panels. It is prepended verbatim, with no
+separator added, so include any space you want: <code>"Statistics: "</code> gives
+<code>Statistics: CL</code>, <code>"Statistics:"</code> gives <code>Statistics:CL</code>. Default is
+<code>"Statistics: "</code>.</p></dd>
 
 
 <dt>plotRelative</dt>
@@ -106,38 +132,57 @@ Is by default the same as <code>dfres$GROUPNAME</code>.</p></dd>
 
 
 <dt>reference</dt>
-<dd><p>Which reference should be used, the final parameter estimates (final) or the parameter function (func)</p></dd>
+<dd><p>Which reference should be used, the final parameter estimates (final) or the
+parameter function (func)</p></dd>
 
 
 <dt>sigdigits</dt>
-<dd><p>An integer number specifying the number of significant digits to use in the statistics tables.</p></dd>
+<dd><p>Number of significant digits for the numbers in the statistics
+table. Mutually exclusive with <code>decimals</code>. If both <code>sigdigits</code> and
+<code>decimals</code> are <code>NULL</code> (the default), the number of decimals (2) is
+used on the relative scale and <code>sigdigits = 2</code> on the absolute scale.</p></dd>
+
+
+<dt>decimals</dt>
+<dd><p>Number of decimal places for the numbers in the statistics
+table. Mutually exclusive with <code>sigdigits</code>. See <code>sigdigits</code> for the
+default behaviour.</p></dd>
 
 
 <dt>onlySignificant</dt>
-<dd><p>Logical. Should only the significant covariates be included (TRUE) or all covariates regardless of significance (FALSE).</p></dd>
+<dd><p>Logical. Should only the significant covariates be included (TRUE) or
+all covariates regardless of significance (FALSE).</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     
 
-<p>A processed data.frame to the used for creating the Forest plot. Only the columns used in the actual Forest plot is included:</p><dl><dt>GROUPNAME</dt>
-<dd><p>The names of the covariate group, as specified in the call to <code><a href="createInputForestData.html">createInputForestData</a></code>.</p></dd>
+<p>A processed data.frame to the used for creating the Forest plot. Only the columns
+used in the actual Forest plot is included:</p><dl><dt>GROUPNAME</dt>
+<dd><p>The names of the covariate group, as specified in the call to
+<code><a href="createInputForestData.html">createInputForestData</a></code>.</p></dd>
 
 <dt>GROUPNAMELABEL</dt>
-<dd><p>The names of the covariate group as they will appear in the y-axis Facet. Is by default the same as <code>GROUPNAME</code>.</p></dd>
+<dd><p>The names of the covariate group as they will appear in the y-axis
+Facet. Is by default the same as <code>GROUPNAME</code>.</p></dd>
 
 <dt>COVNAME</dt>
-<dd><p>The label for each row in each facet in the Forest plot. For exampe Males and Females for the GROUPNAME Sex.</p></dd>
+<dd><p>The label for each row in each facet in the Forest plot. For exampe Males and
+Females for the GROUPNAME Sex.</p></dd>
 
 <dt>PARAMETER</dt>
-<dd><p>The parameters to be plotted in the Forest plot. Comes from <code>functionListName</code> in the call to <code><a href="getForestDFSCM.html">getForestDFSCM</a></code>.</p></dd>
+<dd><p>The parameters to be plotted in the Forest plot. Comes from
+<code>functionListName</code> in the call to <code><a href="getForestDFSCM.html">getForestDFSCM</a></code>.</p></dd>
 
 <dt>PARAMETERLABEL</dt>
-<dd><p>The labels for <code>PARAMETER</code> as they will appear in the Forest plot. Is by default the same as <code>PARAMETER</code>. Used for faceting the errorbar panels in the Forest plot in the x-direction (columns).</p></dd>
+<dd><p>The labels for <code>PARAMETER</code> as they will appear in the Forest plot.
+Is by default the same as <code>PARAMETER</code>. Used for faceting the errorbar panels in the
+Forest plot in the x-direction (columns).</p></dd>
 
 <dt>REF</dt>
-<dd><p>The parameter value to be used for the reference line, either REFTRUE or REFFUNC in <code>dfres</code> or 1 if <code>plotRelative=TRUE</code>.</p></dd>
+<dd><p>The parameter value to be used for the reference line, either REFTRUE or REFFUNC
+in <code>dfres</code> or 1 if <code>plotRelative=TRUE</code>.</p></dd>
 
 <dt>point</dt>
 <dd><p>The value used to plot the point estimate for each <code>COVNAME</code>.</p></dd>
@@ -146,19 +191,26 @@ Is by default the same as <code>dfres$GROUPNAME</code>.</p></dd>
 <dd><p>The values used to plot the lower (q1) and (q2) interval edges of the confidence intervals.</p></dd>
 
 <dt>reference</dt>
-<dd><p>A character string indicating what was used as the reference, either <code>func</code> or <code>true</code>, for the parameter function or the first row in <code>dfParameters</code></p></dd>
+<dd><p>A character string indicating what was used as the reference, either
+<code>func</code> or <code>true</code>, for the parameter function or the first row in <code>dfParameters</code></p></dd>
 
 <dt>STATISTIC</dt>
-<dd><p>A character variable with the numerical summary for each <code>COVNAME</code> to be used in the statistics table.</p></dd>
+<dd><p>A character variable with the numerical summary for each <code>COVNAME</code> to
+be used in the statistics table.</p></dd>
 
 <dt>STATISTICSLABEL</dt>
-<dd><p>Similar to <code>PARAMETERLABEL</code>. Is the label used for <code>PARAMETER</code> in the table plots. Used for faceting the table panels in the Forest plot in the x-direction (columns).</p></dd>
+<dd><p>Similar to <code>PARAMETERLABEL</code>. Is the label used for
+<code>PARAMETER</code> in the table plots. Used for faceting the table panels in the Forest plot in
+the x-direction (columns).</p></dd>
 
 <dt>onlySignificant</dt>
-<dd><p>Logical. Should only GROUPNAME with with TRUE in the COVEFF column be included in the Forest plot?</p></dd>
+<dd><p>Logical. Should only GROUPNAME with with TRUE in the COVEFF column be
+included in the Forest plot?</p></dd>
 
 <dt>setSignEff</dt>
-<dd><p>NULL of a list. If a list, it should be a list ov vectors with a string for PARAMETER as the forst element and a string for GROUPNAME as the second element. If they match PARAMETER and GROUPNAME in dfres then
+<dd><p>NULL of a list. If a list, it should be a list ov vectors with a string for
+PARAMETER as the forst element and a string for GROUPNAME as the second element. If they
+match PARAMETER and GROUPNAME in dfres then
 COVEFF will be set to TRUE else be set to FALSE. This will override the existing values in COVEFF.</p></dd>
 
 
@@ -166,9 +218,31 @@ COVEFF will be set to TRUE else be set to FALSE. This will override the existing
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span><span class="va">plotData</span><span class="op">&lt;-</span> <span class="fu">setupForestPlotData</span><span class="op">(</span><span class="va">dfres</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dfData</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/DAT-1-MI-PMX-2.csv"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">extFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/run7.ext"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">covFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SimVal/run7.cov"</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">dfCovs</span> <span class="op">&lt;-</span> <span class="fu"><a href="setupDfCovs.html">setupDfCovs</a></span><span class="op">(</span><span class="va">dfData</span>, covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WT"</span>, <span class="st">"AGE"</span><span class="op">)</span>, idVar <span class="op">=</span> <span class="st">"ID"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dfSamples</span> <span class="op">&lt;-</span> <span class="fu"><a href="getSamples.html">getSamples</a></span><span class="op">(</span><span class="va">covFile</span>, <span class="va">extFile</span>, n <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dfres</span> <span class="op">&lt;-</span> <span class="fu"><a href="getForestDFSCM.html">getForestDFSCM</a></span><span class="op">(</span><span class="va">dfCovs</span>,</span></span>
+<span class="r-in"><span>  functionList <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">thetas</span>, <span class="va">df</span>, <span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>CL <span class="op">=</span> <span class="va">thetas</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  functionListName <span class="op">=</span> <span class="st">"CL"</span>, noBaseThetas <span class="op">=</span> <span class="fl">14</span>,</span></span>
+<span class="r-in"><span>  dfParameters <span class="op">=</span> <span class="va">dfSamples</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu">PMXForest</span><span class="fu">:::</span><span class="fu">setupForestPlotData</span><span class="op">(</span><span class="va">dfres</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 13</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   GROUP…¹ GROUP…² COVEFF COVNAME PARAM…³ PARAM…⁴ STATI…⁵   REF point    q1    q2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> WT      WT      FALSE  WT=58.5 CL      CL      CL          1     1 0.961  1.05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> WT      WT      FALSE  WT=126  CL      CL      CL          1     1 0.961  1.05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> AGE     AGE     FALSE  AGE=22  CL      CL      CL          1     1 0.961  1.05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> AGE     AGE     FALSE  AGE=65  CL      CL      CL          1     1 0.961  1.05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># … with 2 more variables: reference &lt;chr&gt;, STATISTIC &lt;chr&gt;, and abbreviated</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   variable names ¹​GROUPNAME, ²​GROUPNAMELABEL, ³​PARAMETER, ⁴​PARAMETERLABEL,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   ⁵​STATISTICSLABEL</span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

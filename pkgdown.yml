@@ -2,8 +2,15 @@ pandoc: 2.0.6
 pkgdown: 2.0.6
 pkgdown_sha: ~
 articles:
-  Creating_Forest_plots_for_NONMEM_models: Creating_Forest_plots_for_NONMEM_models.html
-  Creating_Forest_plots_for_R_coded_glm_models: Creating_Forest_plots_for_R_coded_glm_models.html
-  Creating_Forest_plots_for_tte_models: Creating_Forest_plots_for_tte_models.html
-last_built: 2026-08-28T05:35Z
+  Part1-quick-start: Part1-quick-start.html
+  Part2-walkthrough: Part2-walkthrough.html
+  Part3-deep-dive-forest-plot-inputs: Part3-deep-dive-forest-plot-inputs.html
+  Part3-deep-dive-nonmem-parsing: Part3-deep-dive-nonmem-parsing.html
+  Part3-deep-dive-r-coded-models: Part3-deep-dive-r-coded-models.html
+  Part3-deep-dive-secondary-parameters: Part3-deep-dive-secondary-parameters.html
+  Part3-deep-dive-tte-models: Part3-deep-dive-tte-models.html
+last_built: 2026-09-15T14:02Z
+urls:
+  reference: https://rpkgs-docs.pmx.one/PMXForest/reference
+  article: https://rpkgs-docs.pmx.one/PMXForest/articles
 
