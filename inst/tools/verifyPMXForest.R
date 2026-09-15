@@ -36,7 +36,7 @@
 ## ------------------------------------------------------------------------ ##
 
 PMXF_SCRIPT_VERSION <- "1.0.0"
-PMXF_WANT_VERSION   <- "1.2.15.9009"
+PMXF_WANT_VERSION   <- "1.3.0"
 PMXF_MAX_DATA_BYTES <- 500e6
 PMXF_MAX_TABLE_ROWS <- 2e5
 PMXF_MODEL_TIMEOUT  <- 300

@@ -39,7 +39,7 @@ individual files. More models is better; a hundred is not too many.
 
 ### Getting the right version installed
 
-The script checks that PMXForest **1.2.15.9009** is loaded and stops if not.
+The script checks that PMXForest **1.3.0** is loaded and stops if not.
 To install it:
 
 ```r
