@@ -272,3 +272,52 @@ test_that("the walkers that ignore an eps node do so deliberately", {
   ## the case explicitly - this is the path PMXFrem takes on the raw tree
   expect_equal(nmDeparse(eps), "0")
 })
+
+test_that("a covariate the model guards is still a covariate for references", {
+  ## The generator discovers covariates as "read before assigned", which is
+  ## what NONMEM does - data items are populated before the block runs. That
+  ## is what makes IF(WT.EQ.-99) WT = 75 a covariate carrying its own
+  ## reference rather than a local.
+  ##
+  ## refModelValues(), behind setupDfRefRow(contRef = "model"), used "used
+  ## anywhere AND never assigned", which excludes exactly that idiom - the one
+  ## the primary reference rule exists to read - so the call fell back to the
+  ## data median without saying so.
+  f <- tempMod(c(
+    "$PROBLEM guarded", "$INPUT ID TIME DV AMT WT",
+    "$DATA d.csv IGNORE=@", "$PK",
+    "IF(WT.EQ.-99) WT = 75",
+    "CL = THETA(1)*(WT/70)",
+    "$THETA (0,7)"
+  ))
+  r <- PMXForest:::refModelValues(f, -99)
+  expect_true("WT" %in% names(r))
+  expect_equal(r$WT$value, 75)
+  expect_match(r$WT$source, "missing-value handling")
+
+  ## and it reaches setupDfRefRow(), where 75 is neither the data median (69)
+  ## nor the normalisation constant 70 - so only rule 1 can have produced it
+  ref <- setupDfRefRow(
+    dfCovs = data.frame(WT = -99),
+    data = data.frame(ID = 1:20, WT = seq(50, 88, length.out = 20)),
+    covariates = "WT", model = f, contRef = "model"
+  )
+  expect_equal(ref$WT, 75)
+})
+
+test_that("reference discovery skips what it cannot supply, without erroring", {
+  ## refModelValues() only reads references, so the symbols the generator
+  ## refuses over must fall out of the walk rather than stop it.
+  mix <- tempMod(c(
+    "$PROBLEM mix", "$INPUT ID DV WT", "$DATA d.csv IGNORE=@", "$PK",
+    "IF(MIXNUM.EQ.1) TVCL = THETA(1)", "IF(MIXNUM.EQ.2) TVCL = THETA(2)",
+    "CL = TVCL*(WT/70)", "$THETA 1 2"
+  ))
+  expect_equal(names(PMXForest:::refModelValues(mix, -99)), "WT")
+
+  carry <- tempMod(c(
+    "$PROBLEM carry", "$INPUT ID DV WT", "$DATA d.csv IGNORE=@", "$PK",
+    "CL = TVCL*(WT/70)", "TVCL = THETA(1)", "$THETA 1"
+  ))
+  expect_equal(names(PMXForest:::refModelValues(carry, -99)), "WT")
+})

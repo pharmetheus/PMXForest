@@ -138,7 +138,25 @@ refModelValues <- function(model, missVal) {
     nmParseStatements(found$rec, model, block = found$block)
   )
   syms <- nmSymbols(stmts)
-  covs <- intersect(syms$used, setdiff(nmInputNames(mod), syms$assigned))
+  ## Read before assigned, therefore a data item - the same rule the generator
+  ## uses, and for the same reason: NONMEM populates the $INPUT items before
+  ## the block runs. "Used anywhere and never assigned" would exclude a
+  ## covariate the model guards with IF(WT.EQ.-99) WT = 75, which is precisely
+  ## the idiom the primary reference rule exists to read, and the call would
+  ## then fall back to the data median without saying so.
+  ##
+  ## Symbols the generator would refuse over - one NONMEM supplies, one read
+  ## before its own assignment - are simply not $INPUT items here, so they fall
+  ## out of the walk. This function only reads references; it emits nothing.
+  inputNames <- nmInputNames(mod)
+  covs <- character(0)
+  seen <- character(0)
+  repeat {
+    unbound <- nmFirstUnboundUse(stmts, seen, syms$assigned)
+    if (is.null(unbound)) break
+    if (unbound$name %in% inputNames) covs <- c(covs, unbound$name)
+    seen <- c(seen, unbound$name)
+  }
   nmCovRef(stmts, covs, missVal)
 }
 
