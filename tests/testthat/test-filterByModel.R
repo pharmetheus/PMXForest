@@ -482,3 +482,146 @@ test_that("coercion for a numeric comparison does not change a textual one", {
   expect_false("1" %in% keptBoth$FLAG)
   expect_false("7.0" %in% keptBoth$FLAG)
 })
+
+## Subjects NONMEM reads but that carry no observation record ------------------
+
+## run7's dose-only subjects, found by hand: after the three IGNOREs, every
+## record they have left is a dose (EVID 1 or 4).
+noObsIds <- function() {
+  u <- subset(simData(), TYPE != 2 & BLQ != 1 & ID != 895)
+  hasObs <- tapply(u$EVID == 0, u$ID, any)
+  as.numeric(names(hasObs)[!hasObs])
+}
+
+## A minimal $PRED control stream.
+predMod <- function(input) {
+  f <- withr::local_tempfile(fileext = ".mod", .local_envir = parent.frame())
+  writeLines(c(
+    "$PROBLEM t", input, "$DATA d.csv IGNORE=@", "$PRED",
+    "Y = THETA(1) + EPS(1)", "$THETA 1"
+  ), f)
+  f
+}
+
+test_that("dropNoObs removes run7's subjects that have only dose records", {
+  d <- simData()
+  ids <- noObsIds()
+  expect_length(ids, 32)
+
+  used <- filterByModel(d, modFile, dropNoObs = TRUE, quiet = TRUE)
+  expect_equal(length(unique(used$ID)), 754 - 32)
+  expect_equal(nrow(used), 33885 - 585)
+  expect_equal(used, subset(d, TYPE != 2 & BLQ != 1 & ID != 895 & !ID %in% ids),
+    ignore_attr = TRUE
+  )
+})
+
+test_that("dropNoObs is off by default, so the subjects match NONMEM's count", {
+  used <- filterByModel(simData(), modFile, quiet = TRUE)
+  expect_equal(length(unique(used$ID)), 754)
+  expect_true(all(noObsIds() %in% used$ID))
+})
+
+test_that("the report says how many subjects had no observation and how they were found", {
+  expect_message(
+    filterByModel(simData(), modFile, dropNoObs = TRUE),
+    "32 subject\\(s\\) with no observation record.*EVID"
+  )
+})
+
+test_that("without EVID or MDV, doses are recognised from AMT and RATE", {
+  ## run7 with EVID dropped: NONMEM never sees it and NM-TRAN derives it from
+  ## the dose items. In run7 a record is a dose exactly when AMT or RATE is
+  ## non-zero, so the same 32 subjects must be found.
+  src <- readLines(modFile)
+  i <- grep("^\\$INPUT", src)
+  expect_match(src[i], " EVID ")
+  src[i] <- sub(" EVID ", " EVID=DROP ", src[i])
+  f <- withr::local_tempfile(fileext = ".mod")
+  writeLines(src, f)
+
+  d <- simData()
+  used <- filterByModel(d, f, dropNoObs = TRUE, quiet = TRUE)
+  kept <- unique(subset(d, TYPE != 2 & BLQ != 1 & ID != 895)$ID)
+  expect_equal(sort(setdiff(kept, used$ID)), sort(noObsIds()))
+})
+
+test_that("a steady-state infusion with AMT = 0 is still a dose", {
+  ## Subject 2's only record is an SS infusion: AMT 0, RATE and SS non-zero.
+  ## Looking at AMT alone would count it as an observation.
+  f <- tempMod("$INPUT ID TIME AMT RATE SS DV", "$DATA d.csv IGNORE=@")
+  d <- data.frame(
+    ID = c(1, 1, 2), TIME = c(0, 1, 0), AMT = 0,
+    RATE = c(10, 0, 10), SS = c(1, 0, 1), DV = c(0, 5, 0)
+  )
+  expect_equal(unique(filterByModel(d, f, dropNoObs = TRUE, quiet = TRUE)$ID), 1)
+})
+
+test_that("MDV decides where present, and MDV = 100 is not an observation", {
+  ## Subject 2 has an EVID = 0 record with MDV = 1: an observation event with
+  ## no observation. Subject 3's only candidate has MDV = 100, which NONMEM
+  ## ignores during estimation.
+  f <- tempMod("$INPUT ID TIME AMT EVID MDV DV", "$DATA d.csv IGNORE=@")
+  d <- data.frame(
+    ID = c(1, 1, 2, 2, 3, 3), TIME = c(0, 1, 0, 1, 0, 1),
+    AMT = c(100, 0, 100, 0, 100, 0), EVID = c(1, 0, 1, 0, 1, 0),
+    MDV = c(1, 0, 1, 1, 1, 100), DV = 0
+  )
+  expect_equal(unique(filterByModel(d, f, dropNoObs = TRUE, quiet = TRUE)$ID), 1)
+})
+
+test_that("a column dropped from $INPUT is not used", {
+  ## NONMEM never sees a =DROP column, so MDV here says nothing: NM-TRAN
+  ## derives it from AMT, and subject 1's second record is an observation.
+  f <- tempMod("$INPUT ID TIME AMT MDV=DROP DV", "$DATA d.csv IGNORE=@")
+  d <- data.frame(
+    ID = c(1, 1, 2), TIME = c(0, 1, 0), AMT = c(100, 0, 100),
+    MDV = 1, DV = 0
+  )
+  expect_equal(unique(filterByModel(d, f, dropNoObs = TRUE, quiet = TRUE)$ID), 1)
+})
+
+test_that("a $PRED model has only MDV to go by", {
+  ## AMT and EVID are PREDPP items; in a $PRED model they are ordinary columns.
+  d <- data.frame(
+    ID = c(1, 1, 2, 2), AMT = c(100, 0, 100, 100),
+    EVID = c(1, 0, 1, 1), DV = 1
+  )
+  ## No MDV: every record is an observation, so nobody goes
+  f <- predMod("$INPUT ID AMT EVID DV")
+  expect_equal(nrow(filterByModel(d, f, dropNoObs = TRUE, quiet = TRUE)), 4)
+
+  d$MDV <- c(0, 0, 1, 1)
+  f2 <- predMod("$INPUT ID AMT EVID DV MDV")
+  expect_equal(unique(filterByModel(d, f2, dropNoObs = TRUE, quiet = TRUE)$ID), 1)
+})
+
+test_that("'.' in a dose column reads as 0, as NM-TRAN reads it", {
+  f <- tempMod("$INPUT ID TIME AMT DV", "$DATA d.csv IGNORE=@")
+  d <- data.frame(
+    ID = c(1, 1, 2), TIME = c(0, 1, 0), AMT = c("100", ".", "100"), DV = 0,
+    stringsAsFactors = FALSE
+  )
+  expect_equal(unique(filterByModel(d, f, dropNoObs = TRUE, quiet = TRUE)$ID), 1)
+})
+
+test_that("a subject is a contiguous block of ID, as NONMEM reads it", {
+  ## ID 1 comes back after ID 2. NONMEM starts a new individual there, and
+  ## that one holds only a dose.
+  f <- tempMod("$INPUT ID TIME AMT DV", "$DATA d.csv IGNORE=@")
+  d <- data.frame(
+    ID = c(1, 1, 2, 1), TIME = c(0, 1, 0, 5), AMT = c(100, 0, 0, 100), DV = 0
+  )
+  used <- filterByModel(d, f, dropNoObs = TRUE, quiet = TRUE)
+  expect_equal(used$TIME, c(0, 1, 0))
+})
+
+test_that("dropNoObs needs an ID item", {
+  f <- tempMod("$INPUT TIME AMT DV", "$DATA d.csv IGNORE=@")
+  expect_error(
+    filterByModel(data.frame(TIME = 0, AMT = 0, DV = 1), f,
+      dropNoObs = TRUE, quiet = TRUE
+    ),
+    "ID"
+  )
+})

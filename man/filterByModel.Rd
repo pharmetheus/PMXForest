@@ -9,7 +9,8 @@ filterByModel(
   modFile,
   useInputNames = FALSE,
   quiet = FALSE,
-  idVar = "ID"
+  idVar = "ID",
+  dropNoObs = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,11 @@ how many records and subjects it removed.}
 
 \item{idVar}{The subject identifier, used only for that report. Defaults to
 \code{"ID"}.}
+
+\item{dropNoObs}{Logical. If \code{TRUE}, also remove subjects left with no
+observation record after filtering - subjects with only dose or other
+event records. Defaults to \code{FALSE}, which keeps every subject NONMEM
+counts. See Details.}
 }
 \value{
 A data frame containing the rows the model used.
@@ -84,6 +90,27 @@ about the first non-blank character of the raw record rather than a condition
 on the data, so it cannot be applied to a data frame. \verb{IGNORE=@} is the usual
 way of skipping a header line, which \code{read.csv()} has already done, so this
 is normally harmless - a warning is issued and the statement is skipped.
+
+\strong{Subjects without observations.} NONMEM reads a subject whose records
+are all doses or other events, and counts it among its individuals, but
+such a subject contributes nothing to the estimates. \code{dropNoObs = TRUE}
+removes them after the \verb{$DATA} filter, so they do not enter covariate
+summaries either. An observation is identified as NONMEM identifies it,
+from the columns \verb{$INPUT} declares and does not drop:
+\itemize{
+\item \code{MDV == 0} where there is an \code{MDV} column. \code{MDV = 100} is ignored
+during estimation and does not count.
+\item Otherwise, in a \verb{$PRED} model every record is an observation, since
+\code{EVID} and the dose items belong to PREDPP.
+\item Otherwise \code{EVID == 0} where there is an \code{EVID} column.
+\item Otherwise a record is a dose if any of \code{AMT}, \code{RATE} or \code{SS} is
+non-zero - the rule NM-TRAN uses to supply \code{EVID} - and an observation
+if not. A steady-state infusion has \code{AMT = 0}, which is why \code{AMT} alone
+is not enough.
+}
+A subject is a run of consecutive records with the same \code{ID}, as NONMEM
+reads it. In a FREM data set covariates are observation records, so there a
+subject with covariates but no other observations is kept.
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")
@@ -98,6 +125,10 @@ c(raw = length(unique(dfData$ID)), used = length(unique(dfUsed$ID)))
 ## Covariate quantiles differ between the two populations
 getCovStats(dfData, "CRCL", idVar = "ID")
 getCovStats(dfUsed, "CRCL", idVar = "ID")
+
+## 32 of the subjects run7 reads have dose records only
+dfObs <- filterByModel(dfData, modFile, dropNoObs = TRUE)
+length(unique(dfObs$ID))
 
 ## The names $INPUT uses are not the names in this csv file
 head(names(filterByModel(dfData, modFile, useInputNames = TRUE, quiet = TRUE)), 10)

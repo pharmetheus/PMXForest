@@ -929,6 +929,16 @@ getCovStats(dfUsed, "CRCL", idVar = "ID")
 So summarise `filterByModel(dfData, modFile)` rather than the raw file — or pass a
 `$TABLE` output, which is already filtered.
 
+Some of the subjects the model reads never contribute to its estimates: all their
+records are doses, with no observation left once `$DATA` has been applied. NONMEM
+counts them among its individuals, so `filterByModel()` keeps them by default;
+`dropNoObs = TRUE` removes them as well. A `$TABLE` output keeps them too.
+
+```{r}
+dfObs <- filterByModel(dfData, modFile, dropNoObs = TRUE)
+length(unique(dfObs$ID))
+```
+
 ::: {.callout-warning}
 `filterByModel()` matches columns **by position, not by name**. NONMEM skips the
 header line and takes its names from `$INPUT`, so the two can disagree — and in

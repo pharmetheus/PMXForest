@@ -1,3 +1,20 @@
+# PMXForest (development version)
+
+## Other notable additions
+
+- `filterByModel()` gains `dropNoObs`, which also removes subjects left with
+  no observation record - subjects with only dose or other event records.
+  NONMEM reads them but they do not inform the estimates, so they need not
+  enter the covariate summaries. Observations are identified the way NONMEM
+  identifies them: from `MDV`, `EVID`, or the dose items `AMT`, `RATE` and
+  `SS`, whichever the model declares.
+
+## Changes to existing behaviour
+
+- `verifyFilterByModel()` counts observations under the `$INPUT` names rather
+  than the data file's, uses the same rule as `dropNoObs`, and reads an empty
+  `MDV` field as 0, as NM-TRAN does.
+
 # PMXForest 1.3.0
 
 Every bug and issue reported against PMXForest has been addressed in this

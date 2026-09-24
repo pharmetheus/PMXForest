@@ -185,19 +185,43 @@ test_that("rawRows counts the data as read, not as reconstructed from a pass", {
   expect_equal(attr(f, "rawRows"), nrow(short))
 })
 
-test_that("the observation basis falls back from MDV to EVID to nothing", {
-  ## These three branches decide what OBSERVATIONS is compared against, and a
-  ## wrong basis makes the comparison silently meaningless rather than fail.
-  d <- data.frame(ID = 1:4, MDV = c(0, 1, 0, 0), EVID = c(0, 1, 0, 2))
-  expect_equal(nmObsCount(d), list(n = 3L, basis = "MDV"))
-  expect_equal(nmObsCount(d[c("ID", "EVID")]), list(n = 2L, basis = "EVID"))
+test_that("the observation basis falls back from MDV to EVID to the dose items", {
+  ## These branches decide what OBSERVATIONS is compared against, and a wrong
+  ## basis makes the comparison silently meaningless rather than fail.
+  obsOf <- function(d, input, pred = FALSE) {
+    f <- withr::local_tempfile(fileext = ".mod")
+    writeLines(c(
+      "$PROBLEM t", input, "$DATA d.csv IGNORE=@",
+      if (pred) "$PRED" else "$PK", "Y = THETA(1)", "$THETA 1"
+    ), f)
+    mod <- nmReadModel(f)
+    r <- nmObsRecords(mod, d, nmInputPositions(mod))
+    list(n = sum(r$obs), basis = r$basis)
+  }
+  d <- data.frame(
+    ID = 1:4, MDV = c(0, 1, 0, 0), EVID = c(0, 1, 0, 2),
+    AMT = c(0, 10, 0, 0), RATE = 0
+  )
+  expect_equal(obsOf(d, "$INPUT ID MDV EVID AMT RATE"), list(n = 3L, basis = "MDV"))
+  expect_equal(obsOf(d, "$INPUT ID MDV=DROP EVID AMT RATE"), list(n = 2L, basis = "EVID"))
   expect_equal(
-    nmObsCount(d["ID"]), list(n = NA_integer_, basis = "NONE")
+    obsOf(d, "$INPUT ID MDV=DROP EVID=DROP AMT RATE"),
+    list(n = 3L, basis = "AMT/RATE")
+  )
+  expect_equal(
+    obsOf(d, "$INPUT ID MDV=DROP EVID=DROP AMT=DROP RATE=DROP"),
+    list(n = 4L, basis = "NONE")
+  )
+  ## a $PRED model has no EVID or dose items to fall back on
+  expect_equal(
+    obsOf(d, "$INPUT ID MDV=DROP EVID AMT RATE", pred = TRUE),
+    list(n = 4L, basis = "NONE")
   )
 
-  ## and NA in the column does not become an observation
-  na <- data.frame(ID = 1:3, MDV = c(0, NA, 0))
-  expect_equal(nmObsCount(na)$n, 2L)
+  ## An empty field is a null data item, like ".", and NM-TRAN reads both as
+  ## 0 ($DATA help, NULL=): read.csv() gives NA for ",,", so NA is MDV = 0.
+  na <- data.frame(ID = 1:3, MDV = c(0, NA, 1))
+  expect_equal(obsOf(na, "$INPUT ID MDV")$n, 2L)
 })
 
 test_that("the .lst is looked for under each name PsN and NONMEM use", {
@@ -267,4 +291,16 @@ test_that("print() reports the verdict, the count and an uninformative check", {
   expect_false(grepl("record\\(s\\) removed", out2))
 
   expect_identical(withVisible(print(v))$visible, FALSE)
+})
+
+test_that("observations are counted under the $INPUT names, not the file's", {
+  ## Rename the file's EVID column. NONMEM reads it by position and so must
+  ## the observation count; a count by the file's names finds no EVID at all.
+  d <- read.csv(datFile)
+  expect_equal(names(d)[11], "EVID")
+  names(d)[11] <- "EVENT"
+  v <- verifyFilterByModel(modFile, data = d, quiet = TRUE)
+  chk <- attr(v, "checks")
+  expect_equal(chk$FILTERED[chk$CHECK == "OBSERVATIONS"], 6284)
+  expect_equal(attr(v, "obsBasis"), "EVID")
 })
