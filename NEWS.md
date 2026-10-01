@@ -9,6 +9,14 @@
   identifies them: from `MDV`, `EVID`, or the dose items `AMT`, `RATE` and
   `SS`, whichever the model declares.
 
+## Bug fixes
+
+- With `ncores > 1`, `getForestDFSCM()` and `getForestDFemp()` start fresh R
+  sessions on Windows, and these loaded the first PMXForest on `.libPaths()`
+  rather than the one the session uses - for example one loaded from a
+  versioned library. They now load the session's copy, and stop with both
+  versions named when they cannot. macOS and Linux were not affected.
+
 ## Changes to existing behaviour
 
 - `verifyFilterByModel()` counts observations under the `$INPUT` names rather
