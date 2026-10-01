@@ -15,6 +15,7 @@ Imports:
     ggplot2,
     stringr,
     doParallel,
+    parallel,
     foreach,
     ggpubr,
     MASS,

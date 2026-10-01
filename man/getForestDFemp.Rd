@@ -74,7 +74,10 @@ values that will be used as the reference, if NULL the typical subject is used a
 \item{cGrouping}{A vector of the same length as covExpressionList to indicate groupings of
 covariates. Default is no grouping. See example.}
 
-\item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization}
+\item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization.
+On Windows the workers are new R sessions. They load the same package
+versions as this session, including a package loaded from a folder that
+is not on \code{.libPaths()}, and the run stops if they cannot.}
 
 \item{cstrPackages}{a character vector with package names needed to run the calculations in parallel, default = NULL}
 
