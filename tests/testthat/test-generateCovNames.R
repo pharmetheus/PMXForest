@@ -132,3 +132,60 @@ test_that("generateCovNames strictly enforces COVNUM requirement when dfres is p
     "must contain a 'COVNUM' column to securely map"
   )
 })
+
+test_that("generateCovNames name_map uses the display name in every row label", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("WTKGBL", "WTKGBL", "SEXN", "SEXN", "AGE"),
+    WTKGBL = c(58.3, 126, -99, -99, -99),
+    SEXN = c(-99, -99, 1, 2, -99),
+    AGE = c(-99, -99, -99, -99, 65)
+  )
+
+  res <- generateCovNames(df,
+    name_map = c(WTKGBL = "Weight", SEXN = "Sex"),
+    unit_map = c(WTKGBL = "kg", AGE = "years")
+  )
+  # Continuous rows need no label_map; a covariate missing from name_map keeps
+  # its column name, and a row without a unit gets no trailing space
+  expect_equal(res, c("Weight = 58.3 kg", "Weight = 126 kg", "Sex = 1", "Sex = 2", "AGE = 65 years"))
+
+  # label_map still takes precedence, and a blank name_map entry is ignored
+  res_lab <- generateCovNames(df,
+    name_map = c(WTKGBL = "", SEXN = "Sex"),
+    label_map = c("SEXN=1" = "Male")
+  )
+  expect_equal(res_lab, c("WTKGBL = 58.3", "WTKGBL = 126", "Male", "Sex = 2", "AGE = 65"))
+})
+
+test_that("generateCovNames label_format controls the name_map labels", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("WTKGBL", "SEXN"),
+    WTKGBL = c(58.3, -99),
+    SEXN = c(-99, 1)
+  )
+  res <- generateCovNames(df,
+    name_map = c(WTKGBL = "Weight", SEXN = "Sex"),
+    unit_map = c(WTKGBL = "kg"),
+    label_format = "{name}: {value} {unit} (P10)"
+  )
+  expect_equal(res, c("Weight: 58.3 kg (P10)", "Sex: 1 (P10)"))
+})
+
+test_that("generateCovNames names the groups from name_map unless group_map says otherwise", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("WTKGBL", "WTKGBL", "SEXN", "AGE"),
+    WTKGBL = c(58.3, 126, -99, -99),
+    SEXN = c(-99, -99, 1, -99),
+    AGE = c(-99, -99, -99, 65)
+  )
+  dfres_mock <- data.frame(COVNUM = 1:4, PARAMETER = "CL")
+
+  mapped <- generateCovNames(df,
+    dfres = dfres_mock,
+    name_map = c(WTKGBL = "Weight", SEXN = "Sex"),
+    group_map = c(SEXN = "Sex at birth"),
+    unit_map = c(WTKGBL = "kg")
+  )
+  expect_equal(as.character(mapped$GROUPNAME), c("Weight", "Weight", "Sex at birth", "AGE"))
+  expect_equal(levels(mapped$COVNAME), c("Weight = 58.3 kg", "Weight = 126 kg", "Sex = 1", "AGE = 65"))
+})

@@ -10,7 +10,9 @@ generateCovNames(
   unit_map = NULL,
   label_map = NULL,
   group_map = NULL,
-  print_template = FALSE
+  print_template = FALSE,
+  name_map = NULL,
+  label_format = "{name} = {value} {unit}"
 )
 }
 \arguments{
@@ -26,9 +28,22 @@ and safely factored.}
 \item{label_map}{A named character vector for exact replacements (e.g., \code{c("SEX=1" = "Male")}).}
 
 \item{group_map}{A named character vector for replacing covariate group names
-(e.g., \code{c("WT" = "Weight", "SEX" = "Sex")}).}
+(e.g., \code{c("WT" = "Weight", "SEX" = "Sex")}). A group not in \code{group_map}
+takes its name from \code{name_map}, so \code{group_map} is only needed when the
+group header should differ from the name in the row labels.}
 
 \item{print_template}{Logical. If \code{TRUE}, prints an R script template to the console and exits.}
+
+\item{name_map}{A named character vector of display names for the covariates
+(e.g., \code{c(WTKGBL = "Weight", SEXN = "Sex")}). When given, every row not
+matched by \code{label_map} is labelled with \code{label_format}, using the
+display name in place of the column name; covariates missing from it keep their
+column name. It also names the groups, see \code{group_map}.}
+
+\item{label_format}{The row label used with \code{name_map}. \code{{name}}, \code{{value}}
+and \code{{unit}} are replaced by the display name, the covariate value and the
+\code{unit_map} entry. Defaults to \code{"{name} = {value} {unit}"}; the space before
+an empty unit is dropped.}
 }
 \value{
 If \code{dfres} is \code{NULL}, returns a character vector of formatted covariate names.
@@ -43,6 +58,13 @@ results data frame using the \code{COVNUM} relational key, returning the updated
 It features an interactive two-step workflow: run with \code{print_template = TRUE}
 to generate a boilerplate mapping script in the console, then fill it out and
 pass the maps back in to append units, replace categorical labels, or format group headers.
+
+With \code{name_map}, a covariate is named once and that name is used in every
+row label and in the group header: \code{name_map = c(WTKGBL = "Weight")} and
+\code{unit_map = c(WTKGBL = "kg")} label the rows \code{"Weight = 58.3 kg"} and
+\code{"Weight = 126 kg"}, whatever percentiles the data give, and head the group
+\code{"Weight"}. Without \code{name_map} the labels are \code{"WTKGBL=58.3 kg"}, as
+before.
 }
 \examples{
 # 1. Create a synthetic forest plot covariate dataframe
@@ -60,6 +82,7 @@ dfres <- data.frame(
 )
 
 # 3. Define Translation Maps
+name_map <- c(WT = "Body Weight", SEX = "Sex")
 unit_map <- c(WT = "kg")
 label_map <- c("SEX=1" = "Male", "SEX=2" = "Female")
 group_map <- c("WT" = "Body Weight", "SEX" = "Biological Sex")
@@ -79,6 +102,16 @@ dfres_updated <- generateCovNames(
 )
 
 print(dfres_updated)
+
+# --- Example C: Name each covariate once ---
+# Rows read "Body Weight = 70 kg"; the groups are "Body Weight" and "Sex"
+generateCovNames(
+  dfCovs,
+  dfres = dfres,
+  name_map = name_map,
+  unit_map = unit_map,
+  label_map = label_map
+)
 }
 \seealso{
 \code{\link[=setupDfCovs]{setupDfCovs()}} for the covariate table, \code{\link[=forestPlot]{forestPlot()}} for the plot.

@@ -6,6 +6,14 @@
   row labels and group names from the covariate table, so SCM and empirical
   Forest plots no longer need PMXFrem for it. PMXFrem re-exports it, so
   `PMXFrem::generateCovNames()` keeps working.
+- `generateCovNames()` gains `name_map`, so each covariate is named once:
+  `name_map = c(WTKGBL = "Weight")` with `unit_map = c(WTKGBL = "kg")` labels
+  the rows `Weight = 58.3 kg` and `Weight = 126 kg` and heads the group
+  `Weight`. Continuous covariates no longer need a `label_map` entry per
+  percentile, which also had to be rewritten whenever the data changed.
+  `label_format` sets the layout of these labels, and `group_map` is now only
+  needed where the group header should differ from the name. Without
+  `name_map` the labels are unchanged.
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
   no observation record - subjects with only dose or other event records.
   NONMEM reads them but they do not inform the estimates, so they need not
