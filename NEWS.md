@@ -2,6 +2,10 @@
 
 ## Other notable additions
 
+- `generateCovNames()` has moved here from PMXFrem. It builds the Forest plot
+  row labels and group names from the covariate table, so SCM and empirical
+  Forest plots no longer need PMXFrem for it. PMXFrem re-exports it, so
+  `PMXFrem::generateCovNames()` keeps working.
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
   no observation record - subjects with only dose or other event records.
   NONMEM reads them but they do not inform the estimates, so they need not
