@@ -263,3 +263,83 @@ test_that("generateCovNames rejects a level_map that is not a named list of name
   expect_error(generateCovNames(df, level_map = list(c("1" = "Male"))), "level_map must be a named list")
   expect_error(generateCovNames(df, level_map = list(SEXN = c("Male", "Female"))), "level_map must be a named list")
 })
+
+test_that("generateCovNames dummy_groups merges 0/1 dummies into one group with one reference row", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("WT", rep(c("GENO1N", "GENO3N", "GENO4N"), each = 2), "RACEL1N", "RACEL1N"),
+    WT = c(70, rep(-99, 8)),
+    GENO1N = c(-99, 0, 1, -99, -99, -99, -99, -99, -99),
+    GENO3N = c(-99, -99, -99, 0, 1, -99, -99, -99, -99),
+    GENO4N = c(-99, -99, -99, -99, -99, 0, 1, -99, -99),
+    RACEL1N = c(rep(-99, 7), 0, 1)
+  )
+  geno <- list("2D6 genotype" = list(
+    ref = "2D6 EM",
+    levels = c(GENO1N = "2D6 UM", GENO3N = "2D6 IM", GENO4N = "2D6 PM")
+  ))
+
+  # Vector mode: the first 0 row carries the reference, the other 0 rows are NA
+  res <- generateCovNames(df, dummy_groups = geno)
+  expect_equal(res, c("WT=70", "2D6 EM", "2D6 UM", NA, "2D6 IM", NA, "2D6 PM", "RACEL1N=0", "RACEL1N=1"))
+
+  dfres_mock <- data.frame(
+    COVNUM = rep(1:9, each = 2), PARAMETER = c("CL", "V"),
+    COVEFF = rep(c(TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE), each = 2)
+  )
+  mapped <- generateCovNames(df,
+    dfres = dfres_mock,
+    name_map = c(WT = "Weight", GENO1N = "ignored"),
+    group_map = c(GENO3N = "ignored too"),
+    dummy_groups = c(geno, list(Race = list(levels = c(RACEL1N = "White"))))
+  )
+  expect_equal(levels(mapped$GROUPNAME), c("Weight", "2D6 genotype", "Race"))
+  expect_equal(levels(mapped$COVNAME), c("Weight = 70", "2D6 EM", "2D6 UM", "2D6 IM", "2D6 PM", "White"))
+  # No ref: the reference row is dropped as well
+  expect_equal(as.character(mapped$COVNAME[mapped$GROUPNAME == "Race"]), c("White", "White"))
+  expect_equal(unique(mapped$COVNUM), c(1, 2, 3, 5, 7, 9))
+
+  # label_map still takes precedence for a single row
+  res_lab <- generateCovNames(df, dummy_groups = geno, label_map = c("GENO4N=1" = "Poor"))
+  expect_equal(res_lab[7], "Poor")
+})
+
+test_that("forestPlot onlySignificant keeps or drops a dummy group as a whole", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("GENO1N", "GENO1N", "GENO3N", "GENO3N"),
+    GENO1N = c(0, 1, -99, -99),
+    GENO3N = c(-99, -99, 0, 1)
+  )
+  # Only GENO1N=1 has an effect, but the merged group is kept whole
+  dfres_mock <- data.frame(
+    COVNUM = 1:4, PARAMETER = factor("CL"), GROUPNAME = factor(c("GENO1N", "GENO1N", "GENO3N", "GENO3N")),
+    COVEFF = c(FALSE, TRUE, FALSE, FALSE), POINT = 1, Q1 = 0.9, Q2 = 1.1,
+    POINT_REL_REFFUNC = c(1, 2, 1, 1), Q1_REL_REFFUNC = 0.9, Q2_REL_REFFUNC = 1.1, REFFUNC = 1
+  )
+  mapped <- generateCovNames(df,
+    dfres = dfres_mock,
+    dummy_groups = list(G = list(ref = "EM", levels = c(GENO1N = "UM", GENO3N = "IM")))
+  )
+  plotData <- setupForestPlotData(mapped, onlySignificant = TRUE)
+  expect_equal(as.character(unique(plotData$COVNAME)), c("EM", "UM", "IM"))
+})
+
+test_that("generateCovNames checks dummy_groups", {
+  df <- data.frame(COVARIATEGROUPS = c("GENO1N", "GENO1N"), GENO1N = c(0, 1))
+  expect_error(generateCovNames(df, dummy_groups = list(G = c(GENO1N = "UM"))), "dummy_groups must be")
+  expect_error(generateCovNames(df, dummy_groups = list(list(levels = c(GENO1N = "UM")))), "dummy_groups must be")
+  expect_error(
+    generateCovNames(df, dummy_groups = list(G = list(ref = c("a", "b"), levels = c(GENO1N = "UM")))),
+    "dummy_groups must be"
+  )
+  expect_error(
+    generateCovNames(df, dummy_groups = list(
+      A = list(levels = c(GENO1N = "UM")),
+      B = list(levels = c(GENO1N = "UM"))
+    )),
+    "only one of dummy_groups: GENO1N"
+  )
+  expect_warning(
+    generateCovNames(df, dummy_groups = list(G = list(ref = "EM", levels = c(GENO1N = "UM", GENO9N = "XX")))),
+    "not in dfCovs: GENO9N"
+  )
+})

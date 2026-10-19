@@ -13,7 +13,8 @@ generateCovNames(
   print_template = FALSE,
   name_map = NULL,
   label_format = "{name} = {value} {unit}",
-  level_map = NULL
+  level_map = NULL,
+  dummy_groups = NULL
 )
 }
 \arguments{
@@ -53,6 +54,14 @@ of labels named by level, e.g.
 A mapped level is labelled with its label alone. A level left out, or set to
 \code{""}, falls through to \code{name_map}, e.g. \code{"Sex = 1"}. A level set
 to \code{NA} drops the row.}
+
+\item{dummy_groups}{A named list merging 0/1 dummy covariates into one group each.
+The name is the group header, and each entry is a list with \code{levels}, the
+label of each dummy's \code{1} row named by the dummy, and \code{ref}, the label
+of the single reference row kept from the dummies' \code{0} rows, e.g.
+\code{list("2D6 genotype" = list(ref = "2D6 EM", levels = c(GENO1N = "2D6 UM",
+  GENO3N = "2D6 IM", GENO4N = "2D6 PM")))}. Leave \code{ref} out, or set it to
+\code{NA}, to drop the reference row as well.}
 }
 \value{
 If \code{dfres} is \code{NULL}, returns a character vector of formatted covariate names,
@@ -80,9 +89,17 @@ Categorical levels are named per covariate with \code{level_map}, e.g.
 \code{level_map = list(SEXN = c("1" = "Male", "2" = "Female"))}. A level set to
 \code{NA} drops its row from the plot.
 
+A set of 0/1 dummy covariates that together code one categorical covariate, such
+as \code{GENO1N}, \code{GENO3N} and \code{GENO4N} against a common reference
+genotype, is merged into one group with \code{dummy_groups}. Each dummy's
+\code{1} row is labelled with its level, and the \code{0} rows - one per dummy, all
+at the shared reference - become a single reference row. As the group is one
+\code{GROUPNAME}, \code{onlySignificant} in \code{\link[=forestPlot]{forestPlot()}} shows or hides it as a
+whole.
+
 A row's label is taken from the first of these that gives one: \code{label_map},
-\code{level_map}, \code{name_map} with \code{label_format}, and finally the column
-name and value, with the \code{unit_map} unit appended.
+\code{dummy_groups}, \code{level_map}, \code{name_map} with \code{label_format},
+and finally the column name and value, with the \code{unit_map} unit appended.
 }
 \examples{
 # 1. Create a synthetic forest plot covariate dataframe
@@ -139,6 +156,24 @@ generateCovNames(
   dfres = dfres,
   name_map = name_map,
   level_map = list(SEX = c("1" = "Male", "2" = NA))
+)
+
+# --- Example E: Merge dummy covariates into one group ---
+# Three 0/1 genotype dummies become one group with a single reference row:
+# "2D6 EM", "2D6 UM", "2D6 IM" and "2D6 PM"
+dfGeno <- data.frame(
+  COVARIATEGROUPS = rep(c("GENO1N", "GENO3N", "GENO4N"), each = 2),
+  GENO1N = c(0, 1, -99, -99, -99, -99),
+  GENO3N = c(-99, -99, 0, 1, -99, -99),
+  GENO4N = c(-99, -99, -99, -99, 0, 1)
+)
+generateCovNames(
+  dfGeno,
+  dfres = data.frame(COVNUM = 1:6, PARAMETER = "CL"),
+  dummy_groups = list("2D6 genotype" = list(
+    ref = "2D6 EM",
+    levels = c(GENO1N = "2D6 UM", GENO3N = "2D6 IM", GENO4N = "2D6 PM")
+  ))
 )
 }
 \seealso{

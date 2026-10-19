@@ -19,6 +19,13 @@
   "Female"))` - instead of one `label_map` string per covariate and level. A
   level set to `NA`, in `level_map` or `label_map`, drops its row from the
   plot. `label_map` still takes precedence.
+- `generateCovNames()` gains `dummy_groups`, which merges 0/1 dummy
+  covariates that code one categorical covariate - `GENO1N`, `GENO3N` and
+  `GENO4N` against a common reference genotype - into one group. Each dummy's
+  `1` row is labelled with its level and the `0` rows, which all sit at the
+  shared reference, become a single reference row instead of one per dummy.
+  The group is one `GROUPNAME`, so `forestPlot(onlySignificant = TRUE)` shows
+  or hides it as a whole.
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
   no observation record - subjects with only dose or other event records.
   NONMEM reads them but they do not inform the estimates, so they need not
