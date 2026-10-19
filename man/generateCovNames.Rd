@@ -12,7 +12,8 @@ generateCovNames(
   group_map = NULL,
   print_template = FALSE,
   name_map = NULL,
-  label_format = "{name} = {value} {unit}"
+  label_format = "{name} = {value} {unit}",
+  level_map = NULL
 )
 }
 \arguments{
@@ -25,7 +26,8 @@ and safely factored.}
 
 \item{unit_map}{A named character vector for appending units (e.g., \code{c(WT = "kg")}).}
 
-\item{label_map}{A named character vector for exact replacements (e.g., \code{c("SEX=1" = "Male")}).}
+\item{label_map}{A named character vector for exact replacements (e.g., \code{c("SEX=1" = "Male")}).
+An \code{NA} entry drops the row, as in \code{level_map}.}
 
 \item{group_map}{A named character vector for replacing covariate group names
 (e.g., \code{c("WT" = "Weight", "SEX" = "Sex")}). A group not in \code{group_map}
@@ -44,11 +46,19 @@ column name. It also names the groups, see \code{group_map}.}
 and \code{{unit}} are replaced by the display name, the covariate value and the
 \code{unit_map} entry. Defaults to \code{"{name} = {value} {unit}"}; the space before
 an empty unit is dropped.}
+
+\item{level_map}{A named list with one entry per categorical covariate: a vector
+of labels named by level, e.g.
+\code{list(SEXN = c("1" = "Male", "2" = "Female"), FOODDN = c("0" = "Fasted", "1" = "Fed"))}.
+A mapped level is labelled with its label alone. A level left out, or set to
+\code{""}, falls through to \code{name_map}, e.g. \code{"Sex = 1"}. A level set
+to \code{NA} drops the row.}
 }
 \value{
-If \code{dfres} is \code{NULL}, returns a character vector of formatted covariate names.
+If \code{dfres} is \code{NULL}, returns a character vector of formatted covariate names,
+one per row of \code{dfCovs}, with \code{NA} for a dropped row.
 If \code{dfres} is provided, returns the updated \code{dfres} data frame containing factored
-\code{COVNAME} and \code{GROUPNAME} columns.
+\code{COVNAME} and \code{GROUPNAME} columns, without the rows of dropped levels.
 }
 \description{
 Dynamically constructs covariate names from a forest plot covariate data frame.
@@ -65,6 +75,14 @@ row label and in the group header: \code{name_map = c(WTKGBL = "Weight")} and
 \code{"Weight = 126 kg"}, whatever percentiles the data give, and head the group
 \code{"Weight"}. Without \code{name_map} the labels are \code{"WTKGBL=58.3 kg"}, as
 before.
+
+Categorical levels are named per covariate with \code{level_map}, e.g.
+\code{level_map = list(SEXN = c("1" = "Male", "2" = "Female"))}. A level set to
+\code{NA} drops its row from the plot.
+
+A row's label is taken from the first of these that gives one: \code{label_map},
+\code{level_map}, \code{name_map} with \code{label_format}, and finally the column
+name and value, with the \code{unit_map} unit appended.
 }
 \examples{
 # 1. Create a synthetic forest plot covariate dataframe
@@ -83,6 +101,7 @@ dfres <- data.frame(
 
 # 3. Define Translation Maps
 name_map <- c(WT = "Body Weight", SEX = "Sex")
+level_map <- list(SEX = c("1" = "Male", "2" = "Female"))
 unit_map <- c(WT = "kg")
 label_map <- c("SEX=1" = "Male", "SEX=2" = "Female")
 group_map <- c("WT" = "Body Weight", "SEX" = "Biological Sex")
@@ -104,13 +123,22 @@ dfres_updated <- generateCovNames(
 print(dfres_updated)
 
 # --- Example C: Name each covariate once ---
-# Rows read "Body Weight = 70 kg"; the groups are "Body Weight" and "Sex"
+# Rows read "Body Weight = 70 kg" and "Male"; the groups are "Body Weight" and "Sex"
 generateCovNames(
   dfCovs,
   dfres = dfres,
   name_map = name_map,
   unit_map = unit_map,
-  label_map = label_map
+  level_map = level_map
+)
+
+# --- Example D: Drop a row ---
+# NA leaves the SEX = 2 row out of the plot
+generateCovNames(
+  dfCovs,
+  dfres = dfres,
+  name_map = name_map,
+  level_map = list(SEX = c("1" = "Male", "2" = NA))
 )
 }
 \seealso{

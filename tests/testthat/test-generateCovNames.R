@@ -189,3 +189,77 @@ test_that("generateCovNames names the groups from name_map unless group_map says
   expect_equal(as.character(mapped$GROUPNAME), c("Weight", "Weight", "Sex at birth", "AGE"))
   expect_equal(levels(mapped$COVNAME), c("Weight = 58.3 kg", "Weight = 126 kg", "Sex = 1", "AGE = 65"))
 })
+
+test_that("generateCovNames level_map labels levels per covariate", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("SEXN", "SEXN", "FOODDN", "FOODDN", "RACE", "RACE", "RACE"),
+    SEXN = c(1, 2, -99, -99, -99, -99, -99),
+    FOODDN = c(-99, -99, 0, 1, -99, -99, -99),
+    RACE_2 = c(-99, -99, -99, -99, 0, 1, 0),
+    RACE_3 = c(-99, -99, -99, -99, 0, 0, 1)
+  )
+
+  res <- generateCovNames(df,
+    name_map = c(SEXN = "Sex", FOODDN = "Food status"),
+    level_map = list(
+      SEXN = c("1" = "Male", "2" = "Female"),
+      FOODDN = c("0" = "Fasted", "1" = ""),
+      RACE = c("1" = "White", "3" = "Asian")
+    )
+  )
+  # A blank or missing level falls through to name_map, then to the column name
+  expect_equal(res, c("Male", "Female", "Fasted", "Food status = 1", "White", "RACE = 2", "Asian"))
+
+  # Without name_map, an unmapped level keeps the old format
+  res_old <- generateCovNames(df, level_map = list(SEXN = c("1" = "Male")))
+  expect_equal(res_old[1:3], c("Male", "SEXN=2", "FOODDN=0"))
+
+  # label_map takes precedence over level_map
+  res_lab <- generateCovNames(df,
+    label_map = c("SEXN=1" = "Men"),
+    level_map = list(SEXN = c("1" = "Male", "2" = "Female"))
+  )
+  expect_equal(res_lab[1:2], c("Men", "Female"))
+})
+
+test_that("generateCovNames drops rows whose level_map or label_map entry is NA", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("WT", "WT", "RACEL1N", "RACEL1N", "RACEL2N", "RACEL2N"),
+    WT = c(58, 126, -99, -99, -99, -99),
+    RACEL1N = c(-99, -99, 0, 1, -99, -99),
+    RACEL2N = c(-99, -99, -99, -99, 0, 1)
+  )
+  dfres_mock <- data.frame(COVNUM = rep(1:6, each = 2), PARAMETER = c("CL", "V"))
+
+  # The character vector keeps one entry per dfCovs row, NA for a dropped one
+  res <- generateCovNames(df, level_map = list(RACEL1N = c("0" = NA, "1" = "White")))
+  expect_equal(res, c("WT=58", "WT=126", NA, "White", "RACEL2N=0", "RACEL2N=1"))
+
+  mapped <- generateCovNames(df,
+    dfres = dfres_mock,
+    name_map = c(WT = "Weight", RACEL1N = "Race", RACEL2N = "Race"),
+    level_map = list(
+      RACEL1N = c("0" = NA, "1" = "White"),
+      RACEL2N = c("0" = NA, "1" = "Black")
+    ),
+    label_map = c("WT=126" = NA)
+  )
+  expect_equal(unique(mapped$COVNUM), c(1, 4, 6))
+  expect_equal(levels(mapped$COVNAME), c("Weight = 58", "White", "Black"))
+  expect_equal(levels(mapped$GROUPNAME), c("Weight", "Race"))
+  expect_false(anyNA(mapped$COVNAME))
+
+  # A group with every row dropped leaves no empty factor level behind
+  gone <- generateCovNames(df,
+    dfres = dfres_mock,
+    level_map = list(RACEL2N = c("0" = NA, "1" = NA))
+  )
+  expect_equal(levels(gone$GROUPNAME), c("WT", "RACEL1N"))
+})
+
+test_that("generateCovNames rejects a level_map that is not a named list of named vectors", {
+  df <- data.frame(COVARIATEGROUPS = "SEXN", SEXN = 1)
+  expect_error(generateCovNames(df, level_map = c("SEXN=1" = "Male")), "level_map must be a named list")
+  expect_error(generateCovNames(df, level_map = list(c("1" = "Male"))), "level_map must be a named list")
+  expect_error(generateCovNames(df, level_map = list(SEXN = c("Male", "Female"))), "level_map must be a named list")
+})

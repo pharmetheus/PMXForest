@@ -14,6 +14,11 @@
   `label_format` sets the layout of these labels, and `group_map` is now only
   needed where the group header should differ from the name. Without
   `name_map` the labels are unchanged.
+- `generateCovNames()` gains `level_map`, which labels the levels of each
+  categorical covariate - `level_map = list(SEXN = c("1" = "Male", "2" =
+  "Female"))` - instead of one `label_map` string per covariate and level. A
+  level set to `NA`, in `level_map` or `label_map`, drops its row from the
+  plot. `label_map` still takes precedence.
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
   no observation record - subjects with only dose or other event records.
   NONMEM reads them but they do not inform the estimates, so they need not
