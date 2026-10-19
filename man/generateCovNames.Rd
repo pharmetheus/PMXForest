@@ -14,7 +14,9 @@ generateCovNames(
   name_map = NULL,
   label_format = "{name} = {value} {unit}",
   level_map = NULL,
-  dummy_groups = NULL
+  dummy_groups = NULL,
+  sep = "_",
+  warn_unused = TRUE
 )
 }
 \arguments{
@@ -35,7 +37,12 @@ An \code{NA} entry drops the row, as in \code{level_map}.}
 takes its name from \code{name_map}, so \code{group_map} is only needed when the
 group header should differ from the name in the row labels.}
 
-\item{print_template}{Logical. If \code{TRUE}, prints an R script template to the console and exits.}
+\item{print_template}{Logical. If \code{TRUE}, prints an R script template to the console and exits.
+The template has a \code{name_map} entry per covariate, a \code{unit_map} entry per
+continuous covariate and a \code{level_map} entry per categorical one. Whether a
+covariate is categorical is guessed from \code{dfCovs} (one-hot encoded, or only
+integer values from 0 to 9), so check the two lists. Blank entries are ignored,
+so the template can be passed back before it is filled in.}
 
 \item{name_map}{A named character vector of display names for the covariates
 (e.g., \code{c(WTKGBL = "Weight", SEXN = "Sex")}). When given, every row not
@@ -62,6 +69,14 @@ of the single reference row kept from the dummies' \code{0} rows, e.g.
 \code{list("2D6 genotype" = list(ref = "2D6 EM", levels = c(GENO1N = "2D6 UM",
   GENO3N = "2D6 IM", GENO4N = "2D6 PM")))}. Leave \code{ref} out, or set it to
 \code{NA}, to drop the reference row as well.}
+
+\item{sep}{The separator between the covariate name and the level in the one-hot
+column names, as given to \code{\link[=setupDfCovs]{setupDfCovs()}}. When left out, it is read from
+\code{dfCovs} if \code{\link[=setupDfCovs]{setupDfCovs()}} made it, and is \code{"_"} otherwise.}
+
+\item{warn_unused}{Logical. Warn about map keys that match no covariate or level in
+\code{dfCovs}? Defaults to \code{TRUE}; set it to \code{FALSE} when sharing one set
+of maps between models with different covariates.}
 }
 \value{
 If \code{dfres} is \code{NULL}, returns a character vector of formatted covariate names,
@@ -96,6 +111,10 @@ genotype, is merged into one group with \code{dummy_groups}. Each dummy's
 at the shared reference - become a single reference row. As the group is one
 \code{GROUPNAME}, \code{onlySignificant} in \code{\link[=forestPlot]{forestPlot()}} shows or hides it as a
 whole.
+
+Every map is checked: a key given twice is an error, and with \code{warn_unused}, a
+key that matches no covariate or level in \code{dfCovs} - a typo, or a value that
+has changed with the data - is warned about rather than silently ignored.
 
 A row's label is taken from the first of these that gives one: \code{label_map},
 \code{dummy_groups}, \code{level_map}, \code{name_map} with \code{label_format},

@@ -28,6 +28,10 @@
 #' \code{GROUPNAME}, \code{onlySignificant} in [forestPlot()] shows or hides it as a
 #' whole.
 #'
+#' Every map is checked: a key given twice is an error, and with \code{warn_unused}, a
+#' key that matches no covariate or level in \code{dfCovs} - a typo, or a value that
+#' has changed with the data - is warned about rather than silently ignored.
+#'
 #' A row's label is taken from the first of these that gives one: \code{label_map},
 #' \code{dummy_groups}, \code{level_map}, \code{name_map} with \code{label_format},
 #' and finally the column name and value, with the \code{unit_map} unit appended.
@@ -45,6 +49,11 @@
 #'   takes its name from \code{name_map}, so \code{group_map} is only needed when the
 #'   group header should differ from the name in the row labels.
 #' @param print_template Logical. If \code{TRUE}, prints an R script template to the console and exits.
+#'   The template has a \code{name_map} entry per covariate, a \code{unit_map} entry per
+#'   continuous covariate and a \code{level_map} entry per categorical one. Whether a
+#'   covariate is categorical is guessed from \code{dfCovs} (one-hot encoded, or only
+#'   integer values from 0 to 9), so check the two lists. Blank entries are ignored,
+#'   so the template can be passed back before it is filled in.
 #' @param name_map A named character vector of display names for the covariates
 #'   (e.g., \code{c(WTKGBL = "Weight", SEXN = "Sex")}). When given, every row not
 #'   matched by \code{label_map} is labelled with \code{label_format}, using the
@@ -67,6 +76,12 @@
 #'   \code{list("2D6 genotype" = list(ref = "2D6 EM", levels = c(GENO1N = "2D6 UM",
 #'   GENO3N = "2D6 IM", GENO4N = "2D6 PM")))}. Leave \code{ref} out, or set it to
 #'   \code{NA}, to drop the reference row as well.
+#' @param sep The separator between the covariate name and the level in the one-hot
+#'   column names, as given to [setupDfCovs()]. When left out, it is read from
+#'   \code{dfCovs} if [setupDfCovs()] made it, and is \code{"_"} otherwise.
+#' @param warn_unused Logical. Warn about map keys that match no covariate or level in
+#'   \code{dfCovs}? Defaults to \code{TRUE}; set it to \code{FALSE} when sharing one set
+#'   of maps between models with different covariates.
 #'
 #' @return If \code{dfres} is \code{NULL}, returns a character vector of formatted covariate names,
 #'   one per row of \code{dfCovs}, with \code{NA} for a dropped row.
@@ -153,10 +168,14 @@
 generateCovNames <- function(dfCovs, dfres = NULL, unit_map = NULL, label_map = NULL, group_map = NULL,
                              print_template = FALSE, name_map = NULL,
                              label_format = "{name} = {value} {unit}", level_map = NULL,
-                             dummy_groups = NULL) {
+                             dummy_groups = NULL, sep = "_", warn_unused = TRUE) {
   if (!"COVARIATEGROUPS" %in% names(dfCovs)) {
     stop("dfCovs must contain a 'COVARIATEGROUPS' column.", call. = FALSE)
   }
+  ## setupDfCovs() records the sep it named the one-hot columns with, as for
+  ## setupDfRefRow(); an explicit sep wins
+  setup <- attr(dfCovs, "pmxCovSetup")
+  if (missing(sep) && !is.null(setup$sep)) sep <- setup$sep
   if (!is.null(level_map) && (!is.list(level_map) || is.null(names(level_map)) ||
     !all(vapply(level_map, function(x) !is.null(names(x)), logical(1))))) {
     stop("level_map must be a named list of vectors named by level, ",
@@ -174,15 +193,14 @@ generateCovNames <- function(dfCovs, dfres = NULL, unit_map = NULL, label_map = 
       return(as.character(dfCovs[[grp]][i]))
     }
 
-    pattern <- paste0("^", grp, "_")
-    dummy_cols <- grep(pattern, names(dfCovs), value = TRUE)
+    dummy_cols <- oneHotColumns(names(dfCovs), grp, sep)
 
     if (length(dummy_cols) == 0) {
       warning(paste("No matching columns found for covariate group:", grp), call. = FALSE)
       return("UNKNOWN")
     }
 
-    suffixes <- as.numeric(gsub(pattern, "", dummy_cols))
+    suffixes <- as.numeric(substring(dummy_cols, nchar(paste0(grp, sep)) + 1))
     row_vals <- as.numeric(dfCovs[i, dummy_cols, drop = FALSE])
 
     if (any(row_vals == 1, na.rm = TRUE)) {
@@ -194,8 +212,15 @@ generateCovNames <- function(dfCovs, dfres = NULL, unit_map = NULL, label_map = 
   })
   base_strings <- paste0(groups, "=", values)
 
-  # The dummy_groups group of each dummy, and the row kept as each group's reference
+  # Check the maps against each other and against dfCovs
   dummy_of <- dummyGroupLookup(dummy_groups, groups)
+  checkCovMaps(
+    groups, values, base_strings,
+    list(name_map = name_map, unit_map = unit_map, group_map = group_map, label_map = label_map),
+    level_map, warn_unused
+  )
+
+  # The row kept as each dummy group's reference
   ref_rows <- vapply(names(dummy_groups), function(dg) {
     i <- which(groups %in% names(dummy_of)[dummy_of == dg] & values == "0")
     return(if (length(i) > 0) i[1] else NA_integer_)
@@ -203,23 +228,7 @@ generateCovNames <- function(dfCovs, dfres = NULL, unit_map = NULL, label_map = 
 
   # 2. Template Generation Mode
   if (print_template) {
-    u_groups <- unique(groups)
-    u_base <- unique(base_strings)
-
-    cat("# Copy and paste this mapping template into your script:\n\n")
-
-    cat("group_map <- c(\n")
-    cat(paste0("  \"", u_groups, "\" = \"\""), sep = ",\n")
-    cat("\n)\n\n")
-
-    cat("unit_map <- c(\n")
-    cat(paste0("  \"", u_groups, "\" = \"\""), sep = ",\n")
-    cat("\n)\n\n")
-
-    cat("label_map <- c(\n")
-    cat(paste0("  \"", u_base, "\" = \"\""), sep = ",\n")
-    cat("\n)\n")
-
+    printCovTemplate(dfCovs, groups, values)
     return(invisible(NULL))
   }
 
@@ -354,4 +363,85 @@ dummyGroupLookup <- function(dummy_groups, groups) {
     warning("dummy_groups covariates not in dfCovs: ", paste(missing, collapse = ", "), ".", call. = FALSE)
   }
   return(dummy_of)
+}
+
+## The one-hot columns of grp: <grp><sep><numeric level>. The numeric level
+## keeps GENO from matching GENO1N when sep is "".
+oneHotColumns <- function(cols, grp, sep) {
+  prefix <- paste0(grp, sep)
+  cand <- cols[startsWith(cols, prefix) & nchar(cols) > nchar(prefix)]
+  lev <- suppressWarnings(as.numeric(substring(cand, nchar(prefix) + 1)))
+  return(cand[!is.na(lev)])
+}
+
+## Duplicated keys in any map are an error, since a named vector silently uses
+## the first. With warn_unused, keys that match nothing in dfCovs are a warning.
+checkCovMaps <- function(groups, values, base_strings, maps, level_map, warn_unused) {
+  maps$level_map <- level_map
+  for (m in names(maps)) {
+    keys <- names(maps[[m]])
+    if (anyDuplicated(keys)) {
+      stop(m, " has duplicated keys: ", paste(unique(keys[duplicated(keys)]), collapse = ", "), ".",
+        call. = FALSE
+      )
+    }
+  }
+  for (g in names(level_map)) {
+    keys <- names(level_map[[g]])
+    if (anyDuplicated(keys)) {
+      stop("level_map$", g, " has duplicated levels: ", paste(unique(keys[duplicated(keys)]), collapse = ", "), ".",
+        call. = FALSE
+      )
+    }
+  }
+  if (!warn_unused) {
+    return(invisible(NULL))
+  }
+
+  unused <- c(
+    unlist(lapply(c("name_map", "unit_map", "group_map", "level_map"), function(m) {
+      keys <- setdiff(names(maps[[m]]), groups)
+      if (length(keys) > 0) paste0(m, ": ", paste(keys, collapse = ", ")) else NULL
+    })),
+    if (length(setdiff(names(maps$label_map), base_strings)) > 0) {
+      paste0("label_map: ", paste(setdiff(names(maps$label_map), base_strings), collapse = ", "))
+    },
+    unlist(lapply(intersect(names(level_map), groups), function(g) {
+      keys <- setdiff(names(level_map[[g]]), values[groups == g])
+      if (length(keys) > 0) paste0("level_map$", g, ": ", paste(keys, collapse = ", ")) else NULL
+    }))
+  )
+  if (length(unused) > 0) {
+    warning("Map entries matching nothing in dfCovs (set warn_unused = FALSE to silence):\n  ",
+      paste(unused, collapse = "\n  "),
+      call. = FALSE
+    )
+  }
+  return(invisible(NULL))
+}
+
+## Print name_map, unit_map and level_map with a blank entry per covariate.
+## A covariate is taken to be categorical when it is one-hot encoded, or all
+## its values are integers 0-9; the rest get a unit_map entry instead.
+printCovTemplate <- function(dfCovs, groups, values) {
+  u_groups <- unique(groups)
+  is_cat <- vapply(u_groups, function(g) {
+    v <- suppressWarnings(as.numeric(values[groups == g]))
+    return(!g %in% names(dfCovs) || all(!is.na(v) & v == round(v) & v >= 0 & v <= 9))
+  }, logical(1))
+
+  printMap <- function(name, entries, fun = "c") {
+    cat(name, " <- ", fun, "(\n", sep = "")
+    if (length(entries) > 0) cat(paste0("  ", entries, collapse = ",\n"), "\n", sep = "")
+    cat(")\n\n")
+  }
+
+  cat("# Copy and paste this mapping template into your script:\n\n")
+  printMap("name_map", paste0(u_groups, " = \"\""))
+  printMap("unit_map", paste0(u_groups[!is_cat], " = \"\""))
+  printMap("level_map", vapply(u_groups[is_cat], function(g) {
+    levs <- unique(values[groups == g])
+    return(paste0(g, " = c(", paste0("\"", levs, "\" = \"\"", collapse = ", "), ")"))
+  }, character(1)), fun = "list")
+  return(invisible(NULL))
 }

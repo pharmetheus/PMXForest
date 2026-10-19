@@ -74,22 +74,31 @@ test_that("generateCovNames maps labels relationally to dfres", {
   expect_equal(as.character(mapped_df$COVNAME[mapped_df$COVNUM == 3]), c("Male", "Male"))
 })
 
-test_that("generateCovNames print_template = TRUE prints the three maps and returns NULL", {
+test_that("generateCovNames print_template = TRUE prints name_map, unit_map and level_map", {
   df <- data.frame(
-    COVARIATEGROUPS = c("WT", "WT", "SEX"),
-    WT = c(70, 90, -99),
-    SEX = c(-99, -99, 1)
+    COVARIATEGROUPS = c("WT", "WT", "SEX", "SEX", "RACE", "RACE", "RACE"),
+    WT = c(70, 90, -99, -99, -99, -99, -99),
+    SEX = c(-99, -99, 1, 2, -99, -99, -99),
+    RACE_2 = c(-99, -99, -99, -99, 0, 1, 0),
+    RACE_3 = c(-99, -99, -99, -99, 0, 0, 1)
   )
-  expect_output(
-    out <- generateCovNames(df, print_template = TRUE),
-    "group_map <- c\\("
-  )
-  expect_output(generateCovNames(df, print_template = TRUE), "unit_map <- c\\(")
-  expect_output(generateCovNames(df, print_template = TRUE), "label_map <- c\\(")
-  # the template lists the distinct groups and base strings
-  expect_output(generateCovNames(df, print_template = TRUE), "\"WT=70\"")
-  invisible(utils::capture.output(res <- generateCovNames(df, print_template = TRUE)))
+  out <- utils::capture.output(res <- generateCovNames(df, print_template = TRUE))
   expect_null(res)
+  expect_equal(out, c(
+    "# Copy and paste this mapping template into your script:", "",
+    "name_map <- c(", "  WT = \"\",", "  SEX = \"\",", "  RACE = \"\"", ")", "",
+    "unit_map <- c(", "  WT = \"\"", ")", "",
+    "level_map <- list(",
+    "  SEX = c(\"1\" = \"\", \"2\" = \"\"),",
+    "  RACE = c(\"1\" = \"\", \"2\" = \"\", \"3\" = \"\")",
+    ")", ""
+  ))
+
+  # The blank template can be passed back as it is
+  name_map <- c(WT = "", SEX = "", RACE = "")
+  level_map <- list(SEX = c("1" = "", "2" = ""), RACE = c("1" = "", "2" = "", "3" = ""))
+  expect_silent(res <- generateCovNames(df, name_map = name_map, unit_map = c(WT = ""), level_map = level_map))
+  expect_equal(res[c(1, 3, 5)], c("WT = 70", "SEX = 1", "RACE = 1"))
 })
 
 test_that("generateCovNames applies group_map to GROUPNAME in relational mode", {
@@ -342,4 +351,69 @@ test_that("generateCovNames checks dummy_groups", {
     generateCovNames(df, dummy_groups = list(G = list(ref = "EM", levels = c(GENO1N = "UM", GENO9N = "XX")))),
     "not in dfCovs: GENO9N"
   )
+})
+
+test_that("generateCovNames reads sep from setupDfCovs() and matches one-hot columns strictly", {
+  df <- data.frame(
+    COVARIATEGROUPS = c("GENO", "GENO", "GENO1N", "GENO1N"),
+    GENO2 = c(0, 1, -99, -99),
+    GENO1N = c(-99, -99, 0, 1)
+  )
+  # With sep = "", GENO1N is not taken for a GENO level
+  expect_equal(generateCovNames(df, sep = ""), c("GENO=1", "GENO=2", "GENO1N=0", "GENO1N=1"))
+
+  # Without sep, the one setupDfCovs() recorded is used
+  attr(df, "pmxCovSetup") <- list(sep = "")
+  expect_equal(generateCovNames(df)[1:2], c("GENO=1", "GENO=2"))
+  # An explicit sep wins over the recorded one
+  w <- testthat::capture_warnings(generateCovNames(df, sep = "_"))
+  expect_match(w, "No matching columns found for covariate group: GENO", all = TRUE)
+})
+
+test_that("generateCovNames labels setupDfCovs() output with sep = \"\"", {
+  dfData <- read.csv(system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest"))
+  dfCovs <- setupDfCovs(dfData, covariates = c("WT", "GENO"), idVar = "ID", sep = "")
+  expect_silent(res <- generateCovNames(dfCovs, name_map = c(WT = "Weight", GENO = "Genotype")))
+  expect_false(any(grepl("UNKNOWN", res)))
+  expect_true(all(grepl("^(Weight|Genotype) = ", res)))
+})
+
+test_that("generateCovNames rejects duplicated map keys", {
+  df <- data.frame(COVARIATEGROUPS = c("WT", "SEX"), WT = c(70, -99), SEX = c(-99, 1))
+  expect_error(
+    generateCovNames(df, name_map = c(WT = "Weight", WT = "Body weight")),
+    "name_map has duplicated keys: WT"
+  )
+  expect_error(
+    generateCovNames(df, group_map = c(SEX = "a", WT = "b", SEX = "c")),
+    "group_map has duplicated keys: SEX"
+  )
+  expect_error(generateCovNames(df, unit_map = c(WT = "kg", WT = "lb")), "unit_map has duplicated keys")
+  expect_error(generateCovNames(df, label_map = c("SEX=1" = "M", "SEX=1" = "F")), "label_map has duplicated keys")
+  expect_error(
+    generateCovNames(df, level_map = list(SEX = c("1" = "M"), SEX = c("2" = "F"))),
+    "level_map has duplicated keys: SEX"
+  )
+  expect_error(
+    generateCovNames(df, level_map = list(SEX = c("1" = "M", "1" = "F"))),
+    "level_map\\$SEX has duplicated levels: 1"
+  )
+})
+
+test_that("generateCovNames warns about map keys that match nothing", {
+  df <- data.frame(COVARIATEGROUPS = c("WT", "SEX"), WT = c(70, -99), SEX = c(-99, 1))
+  expect_warning(
+    generateCovNames(df,
+      name_map = c(WT = "Weight", WTKG = "Weight"),
+      unit_map = c(WT = "kg"),
+      label_map = c("WT=71" = "x"),
+      level_map = list(SEX = c("1" = "Male", "2" = "Female"), AGE = c("1" = "Old"))
+    ),
+    "name_map: WTKG\n  level_map: AGE\n  label_map: WT=71\n  level_map\\$SEX: 2"
+  )
+  expect_silent(
+    generateCovNames(df, name_map = c(WT = "Weight", WTKG = "Weight"), warn_unused = FALSE)
+  )
+  # Duplicates are an error even with warn_unused = FALSE
+  expect_error(generateCovNames(df, name_map = c(WT = "a", WT = "b"), warn_unused = FALSE), "duplicated")
 })
