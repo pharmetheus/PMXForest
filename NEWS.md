@@ -26,6 +26,10 @@
   shared reference, become a single reference row instead of one per dummy.
   The group is one `GROUPNAME`, so `forestPlot(onlySignificant = TRUE)` shows
   or hides it as a whole.
+- `generateCovNames()` warns about map entries that match no covariate or
+  level in the covariate table - a typo, or a value that changed with the
+  data - instead of ignoring them. `warn_unused = FALSE` silences this for
+  maps shared between models.
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
   no observation record - subjects with only dose or other event records.
   NONMEM reads them but they do not inform the estimates, so they need not
@@ -35,6 +39,12 @@
 
 ## Bug fixes
 
+- `generateCovNames()` ignored the `sep` the covariate table was built
+  with and always looked for `<covariate>_<level>` one-hot columns, so with
+  `setupDfCovs(sep = "")` a covariate with more than two levels was labelled
+  `GENO=UNKNOWN`. It now reads `sep` from `setupDfCovs()` output, or takes it
+  as an argument, and matches only columns ending in a numeric level, so
+  `GENO` no longer picks up `GENO1N`.
 - With `ncores > 1`, `getForestDFSCM()` and `getForestDFemp()` start fresh R
   sessions on Windows, and these loaded the first PMXForest on `.libPaths()`
   rather than the one the session uses - for example one loaded from a
@@ -43,6 +53,13 @@
 
 ## Changes to existing behaviour
 
+- A key given twice in a `generateCovNames()` map is an error. A named
+  vector silently used the first, so `group_map = c(AST = "AST", ...,
+  AST = "Aspartate aminotransferase")` never showed the second.
+- `generateCovNames(print_template = TRUE)` prints `name_map`, `unit_map`
+  (continuous covariates) and `level_map` (categorical ones) instead of
+  `group_map`, `unit_map` and `label_map`, with no entry per percentile to
+  rewrite when the data change.
 - `verifyFilterByModel()` counts observations under the `$INPUT` names rather
   than the data file's, uses the same rule as `dropNoObs`, and reads an empty
   `MDV` field as 0, as NM-TRAN does.
