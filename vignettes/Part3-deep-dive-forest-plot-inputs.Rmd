@@ -78,7 +78,9 @@ does underneath — the function to reach for when you want to take over.
 | `covExpressionsList` | which subjects each empirical row summarises | `setupCovExpressionsList()` | applies the same level and quantile rules as `getCovStats()`, but **implements them separately** rather than calling it, because the two return different shapes |
 
 The empirical entry point `getForestDFemp()` takes a `covExpressionsList` in place
-of `dfCovs`; that is covered in Section 7.
+of `dfCovs`; that is covered in Section 7. The row and group labels are not an
+input: `generateCovNames()` puts them on the results afterwards, as Section 9
+describes.
 
 There is a third way to read the table, and it matters more than either. A
 convenience function encodes one reasonable answer to "what should this input
@@ -1061,7 +1063,144 @@ function still has to handle `-99` in the `BMI` column of `dfCovs`, because that
 is what marks the rows where `BMI` is inactive — which is exactly what the
 preamble in Section 2 does.
 
-# 9. Feeding the result forward
+# 9. Row and group labels: `generateCovNames()`
+
+`getForestDFSCM()` labels each row from its covariate values - `WT=58.3`,
+`GENO=1` - and each group with the covariate's column name. `generateCovNames()`
+replaces both, from labels given once per covariate rather than once per row.
+It reads the covariate values from `dfCovs`, so no percentile is retyped, and
+matches the rows of `dfres` to `dfCovs` through `COVNUM`.
+
+```{r}
+dfCovs <- setupDfCovs(dfUsed,
+  covariates = c("WT", "AGE", "SEX", "GENO"),
+  catRef = list(GENO = 2), sep = "", idVar = "ID"
+)
+```
+
+## Starting from a template
+
+`print_template = TRUE` prints the maps with a blank entry for every covariate
+in `dfCovs`, and every level of the categorical ones. Whether a covariate is
+categorical is guessed - one-hot encoded, or only whole numbers from 0 to 9 -
+so check which list each one landed in. Blank entries are ignored, so a
+half-filled template can be passed back as it is.
+
+```{r}
+generateCovNames(dfCovs, print_template = TRUE)
+```
+
+## The maps
+
+```{r}
+name_map <- c(WT = "Weight", AGE = "Age", SEX = "Sex", GENO = "2D6 genotype")
+unit_map <- c(WT = "kg", AGE = "years")
+level_map <- list(
+  SEX  = c("1" = "Male", "2" = "Female"),
+  GENO = c("1" = "2D6 UM", "2" = "2D6 EM", "3" = "2D6 IM", "4" = "2D6 PM")
+)
+
+generateCovNames(dfCovs, name_map = name_map, unit_map = unit_map, level_map = level_map)
+```
+
+Without `dfres`, the result is one label per row of `dfCovs`; with it, `dfres`
+comes back with `COVNAME` and `GROUPNAME` replaced, as factors in `dfCovs`
+order, ready for `forestPlot()`.
+
+| Argument | Keyed by | Effect |
+| --- | --- | --- |
+| `name_map` | covariate | display name, used in the row labels and as the group header |
+| `unit_map` | covariate | unit appended to the value |
+| `level_map` | covariate, then level | label for a categorical level; `NA` drops the row |
+| `dummy_groups` | group header, then dummy | merges 0/1 dummy covariates into one group with a single reference row |
+| `group_map` | covariate | group header, where it should differ from `name_map` |
+| `label_map` | `"COV=value"` | label for one row; overrides everything else, `NA` drops the row |
+| `label_format` | | layout of the `name_map` labels, `"{name} = {value} {unit}"` by default |
+
+A row's label is taken from the first of `label_map`, `dummy_groups`,
+`level_map` and `name_map` with `label_format` that has one. A covariate in none
+of them keeps its column name, so the maps can be filled in gradually. Without
+`name_map` the labels keep the old layout - `WT=58.3 kg` - so existing scripts
+are unaffected.
+
+`label_format` changes the layout of every `name_map` label at once, for example
+to leave the name to the group header:
+
+```{r}
+generateCovNames(dfCovs[1:2, ], name_map = name_map, unit_map = unit_map, label_format = "{value} {unit}")
+```
+
+## Dropping rows
+
+A level set to `NA` is left out of the plot, and out of the `COVNAME` and
+`GROUPNAME` factor levels, so no empty row or group is left behind:
+
+```{r}
+generateCovNames(dfCovs,
+  name_map = name_map, unit_map = unit_map,
+  level_map = modifyList(level_map, list(SEX = c("1" = "Male", "2" = NA)))
+)
+```
+
+Without `dfres`, a dropped row is `NA`, so the labels still line up with
+`dfCovs`.
+
+## Covariates coded as 0/1 dummies
+
+A categorical covariate is often in the data as 0/1 dummies against a common
+reference - `GENO1N`, `GENO3N` and `GENO4N` for ultra-rapid, intermediate and
+poor metabolisers against extensive ones. `setupDfCovs()` treats each dummy as a
+covariate of its own, so there are three `0` rows, all at the same reference
+subject. `dummy_groups` turns them into one group: each dummy's `1` row gets its
+level, and the `0` rows become a single reference row.
+
+```{r}
+dfGeno <- data.frame(
+  COVARIATEGROUPS = rep(c("GENO1N", "GENO3N", "GENO4N"), each = 2),
+  GENO1N = c(0, 1, -99, -99, -99, -99),
+  GENO3N = c(-99, -99, 0, 1, -99, -99),
+  GENO4N = c(-99, -99, -99, -99, 0, 1)
+)
+
+generateCovNames(dfGeno,
+  dfres = data.frame(COVNUM = 1:6, PARAMETER = "CL"),
+  dummy_groups = list("2D6 genotype" = list(
+    ref    = "2D6 EM",
+    levels = c(GENO1N = "2D6 UM", GENO3N = "2D6 IM", GENO4N = "2D6 PM")
+  ))
+)
+```
+
+Leave `ref` out to drop the reference row too. The merged group is a single
+`GROUPNAME`, so `forestPlot(onlySignificant = TRUE)` keeps or drops it as a
+whole: one significant genotype brings in all of them, with their one reference
+row.
+
+## The maps are checked
+
+A key given twice is an error - in a named vector, the first one would silently
+win. A key that matches nothing in `dfCovs` is a warning: a typo, a covariate
+that is not in this model, or a level that is not in the data.
+
+```{r, error = TRUE}
+generateCovNames(dfCovs, name_map = c(WT = "Weight", AGE = "Age", WT = "Body weight"))
+```
+
+```{r, warning = TRUE}
+labels <- generateCovNames(dfCovs,
+  name_map = c(WT = "Weight", WTKG = "Weight"),
+  level_map = list(SEX = c("1" = "Male", "2" = "Female", "9" = "Unknown"))
+)
+```
+
+`warn_unused = FALSE` silences the warning, for one set of maps shared between
+models with different covariates.
+
+`generateCovNames()` reads the `sep` and `catRef` that `setupDfCovs()` recorded
+on `dfCovs`, to find the one-hot columns and the level of the reference row. A
+subset of `dfCovs` loses them; pass `sep` again in that case.
+
+# 10. Feeding the result forward
 
 Putting the four inputs together:
 
@@ -1081,6 +1220,9 @@ dfres <- getForestDFSCM(
   noBaseThetas     = gen$noBaseThetas,
   dfParameters     = dfSamples,
   dfRefRow         = dfRefRow
+)
+dfres <- generateCovNames(dfCovs, dfres,
+  name_map = name_map, unit_map = unit_map, level_map = level_map
 )
 ```
 

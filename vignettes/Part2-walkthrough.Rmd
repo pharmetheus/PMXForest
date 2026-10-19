@@ -177,30 +177,37 @@ agree, or the reference row's columns will not line up with `dfCovs` and the
 reference values are silently dropped.
 :::
 
-Row labels and covariate-group labels are supplied separately. Deriving the
-numeric ones from `dfCovs` keeps them honest: `setupDfCovs()` computes the
-percentiles, so hard-coding them in the labels is a standing invitation for the
-two to drift apart. The `stopifnot()` makes a miscount fail immediately rather
-than shifting every label below it.
+The row labels and covariate-group labels are described once per covariate,
+not once per row, and `generateCovNames()` applies them to the results in
+Section 5. `name_map` gives each covariate a display name, used in its row
+labels and as its group header; `unit_map` adds a unit to the continuous ones;
+`level_map` labels the levels of the categorical ones. Nothing here repeats a
+value from `dfCovs`, so the labels cannot drift away from the percentiles
+`setupDfCovs()` computed. `group_map` is only needed where the group header
+should differ from the name in the row labels - here, a header broken over two
+lines.
 
 ```{r}
-covnames <- c(
-  paste0("WT ", dfCovs$WT[1:2], " kg"),
-  paste0("Age ", dfCovs$AGE[3:4], " y"),
-  paste0("CRCL ", dfCovs$CRCL[5:6], " mL/min"),
-  "Male", "Female",
-  "NCI = 0", "NCI > 0",
-  "Oral tablet", "FDC",
-  "Fasted", "Fed",
-  "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM"
+name_map <- c(
+  WT = "Weight", AGE = "Age", CRCL = "CRCL", SEX = "Sex",
+  NCIL = "NCI", FORM = "Formulation", FOOD = "Food status", GENO = "2D6 genotype"
 )
-stopifnot(length(covnames) == nrow(dfCovs))
-
-covariateGroupNames <- c(
-  "Weight", "Age", "Creatinine\nclearance", "Sex",
-  "NCI", "Formulation", "Food status", "2D6 genotype"
+unit_map <- c(WT = "kg", AGE = "y", CRCL = "mL/min")
+level_map <- list(
+  SEX  = c("1" = "Male", "2" = "Female"),
+  NCIL = c("0" = "NCI = 0", "1" = "NCI > 0"),
+  FORM = c("0" = "Oral tablet", "1" = "FDC"),
+  FOOD = c("0" = "Fasted", "1" = "Fed"),
+  GENO = c("1" = "2D6 UM", "2" = "2D6 EM", "3" = "2D6 IM", "4" = "2D6 PM")
 )
+group_map <- c(CRCL = "Creatinine\nclearance")
 ```
+
+`generateCovNames(dfCovs, print_template = TRUE)` prints these maps with a blank
+entry for every covariate and level in `dfCovs`, ready to fill in. The
+[Forest plot inputs deep dive, Section 9](Part3-deep-dive-forest-plot-inputs.html)
+covers the rest: merging 0/1 dummy covariates into one group, dropping rows, and the
+checks made on the maps.
 
 `setupDfCovs()` is a composition of two lower-level functions: `getCovStats()`
 chooses the values, `createInputForestData()` lays them out as rows. Call them
@@ -409,15 +416,21 @@ the `GENO1`/`GENO3`/`GENO4` columns; a `dfCovs` with a raw `GENO` column instead
 can be encoded on the fly with `oneHot = list(GENO = list(ref = 2))` and
 `oneHotSep = ""`.
 
+`generateCovNames()` then labels the rows with the maps from Section 1. It
+matches them to `dfresBS` through `COVNUM`, the row of `dfCovs` each result
+came from.
+
 ```{r}
 dfresBS <- getForestDFSCM(
   dfCovs           = dfCovs,
-  cdfCovsNames     = covnames,
   functionList     = list(paramFunction),
   functionListName = functionListName,
   noBaseThetas     = gen$noBaseThetas,
   dfParameters     = dfSamplesBS,
   dfRefRow         = dfRefRow
+)
+dfresBS <- generateCovNames(dfCovs, dfresBS,
+  name_map = name_map, unit_map = unit_map, level_map = level_map, group_map = group_map
 )
 head(dfresBS[, c("COVNUM", "COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
 ```
@@ -443,17 +456,19 @@ Switching the uncertainty source is a one-argument change:
 ```{r}
 dfresCOV <- getForestDFSCM(
   dfCovs           = dfCovs,
-  cdfCovsNames     = covnames,
   functionList     = list(paramFunction),
   functionListName = functionListName,
   noBaseThetas     = gen$noBaseThetas,
   dfParameters     = dfSamplesCOV,
   dfRefRow         = dfRefRow
 )
+dfresCOV <- generateCovNames(dfCovs, dfresCOV,
+  name_map = name_map, unit_map = unit_map, level_map = level_map, group_map = group_map
+)
 ```
 
 ```{r}
-forestPlot(dfresBS, parameters = "CL", groupNameLabels = covariateGroupNames)
+forestPlot(dfresBS, parameters = "CL")
 ```
 
 # 6. Empirical Forest plots
@@ -559,7 +574,6 @@ default for empirical data) drops it and shows only the covariate effect.
 forestPlot(
   dfresBS,
   parameters      = c("CL", "FREL"),
-  groupNameLabels = covariateGroupNames,
   statisticsLabel = "Estimate: ",
   xlim            = c(0.5, 1.6)
 )
@@ -573,7 +587,7 @@ caption naming the working directory and the time, and inside a `knitr` chunk th
 source file and chunk label as well.
 
 ```{r}
-addStamp(forestPlot(dfresBS, parameters = "CL", groupNameLabels = covariateGroupNames))
+addStamp(forestPlot(dfresBS, parameters = "CL"))
 ```
 
 It takes and returns a `ggplot`, so it composes with anything else you do to the
