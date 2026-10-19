@@ -417,3 +417,19 @@ test_that("generateCovNames warns about map keys that match nothing", {
   # Duplicates are an error even with warn_unused = FALSE
   expect_error(generateCovNames(df, name_map = c(WT = "a", WT = "b"), warn_unused = FALSE), "duplicated")
 })
+
+test_that("generateCovNames finds the level of a one-hot group's reference row", {
+  dfData <- read.csv(system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest"))
+
+  # The catRef setupDfCovs() recorded
+  dfCovs <- setupDfCovs(dfData, covariates = "GENO", catRef = list(GENO = 2), sep = "", idVar = "ID")
+  expect_equal(generateCovNames(dfCovs), c("GENO=1", "GENO=2", "GENO=3", "GENO=4"))
+
+  # Without the attribute, from the row's position: first, in between, last
+  pos <- function(ref) {
+    d <- setupDfCovs(dfData, covariates = "GENO", catRef = list(GENO = ref), sep = "", idVar = "ID")
+    attr(d, "pmxCovSetup") <- NULL
+    return(generateCovNames(d, sep = ""))
+  }
+  for (ref in 1:4) expect_equal(pos(ref), c("GENO=1", "GENO=2", "GENO=3", "GENO=4"))
+})

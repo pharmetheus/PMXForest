@@ -206,7 +206,7 @@ generateCovNames <- function(dfCovs, dfres = NULL, unit_map = NULL, label_map = 
     if (any(row_vals == 1, na.rm = TRUE)) {
       val <- suffixes[which(row_vals == 1)[1]]
     } else {
-      val <- min(suffixes, na.rm = TRUE) - 1
+      val <- oneHotRefLevel(sort(suffixes), match(i, which(groups == grp)), setup$catRef[[grp]])
     }
     return(as.character(val))
   })
@@ -372,6 +372,21 @@ oneHotColumns <- function(cols, grp, sep) {
   cand <- cols[startsWith(cols, prefix) & nchar(cols) > nchar(prefix)]
   lev <- suppressWarnings(as.numeric(substring(cand, nchar(prefix) + 1)))
   return(cand[!is.na(lev)])
+}
+
+## The level of the all-zero row of a one-hot group, which has no column of
+## its own. The catRef setupDfCovs() recorded says it outright when numeric.
+## Otherwise it comes from the row's position: getCovStats() lays the levels
+## out in sorted order with the reference in its place, so the reference sits
+## right after the dummy rows before it.
+oneHotRefLevel <- function(levels, pos, catRef = NULL) {
+  if (is.numeric(catRef) && length(catRef) == 1) {
+    return(catRef)
+  }
+  if (pos <= 1) {
+    return(levels[1] - 1)
+  }
+  return(levels[min(pos, length(levels) + 1) - 1] + 1)
 }
 
 ## Duplicated keys in any map are an error, since a named vector silently uses

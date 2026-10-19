@@ -45,6 +45,11 @@
   `GENO=UNKNOWN`. It now reads `sep` from `setupDfCovs()` output, or takes it
   as an argument, and matches only columns ending in a numeric level, so
   `GENO` no longer picks up `GENO1N`.
+- `generateCovNames()` labelled the reference row of a one-hot covariate as
+  one below the lowest remaining level, which is only right when the
+  reference is the lowest level: with `catRef = list(GENO = 2)` the 2D6 EM
+  row read `GENO=0`. It now takes the level from the `catRef` recorded by
+  `setupDfCovs()`, or else from where the row sits among the levels.
 - With `ncores > 1`, `getForestDFSCM()` and `getForestDFemp()` start fresh R
   sessions on Windows, and these loaded the first PMXForest on `.libPaths()`
   rather than the one the session uses - for example one loaded from a
