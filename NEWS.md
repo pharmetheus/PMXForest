@@ -2,6 +2,34 @@
 
 ## Other notable additions
 
+- `generateCovNames()` has moved here from PMXFrem. It builds the Forest plot
+  row labels and group names from the covariate table, so SCM and empirical
+  Forest plots no longer need PMXFrem for it. PMXFrem re-exports it, so
+  `PMXFrem::generateCovNames()` keeps working.
+- `generateCovNames()` gains `name_map`, so each covariate is named once:
+  `name_map = c(WTKGBL = "Weight")` with `unit_map = c(WTKGBL = "kg")` labels
+  the rows `Weight = 58.3 kg` and `Weight = 126 kg` and heads the group
+  `Weight`. Continuous covariates no longer need a `label_map` entry per
+  percentile, which also had to be rewritten whenever the data changed.
+  `label_format` sets the layout of these labels, and `group_map` is now only
+  needed where the group header should differ from the name. Without
+  `name_map` the labels are unchanged.
+- `generateCovNames()` gains `level_map`, which labels the levels of each
+  categorical covariate - `level_map = list(SEXN = c("1" = "Male", "2" =
+  "Female"))` - instead of one `label_map` string per covariate and level. A
+  level set to `NA`, in `level_map` or `label_map`, drops its row from the
+  plot. `label_map` still takes precedence.
+- `generateCovNames()` gains `dummy_groups`, which merges 0/1 dummy
+  covariates that code one categorical covariate - `GENO1N`, `GENO3N` and
+  `GENO4N` against a common reference genotype - into one group. Each dummy's
+  `1` row is labelled with its level and the `0` rows, which all sit at the
+  shared reference, become a single reference row instead of one per dummy.
+  The group is one `GROUPNAME`, so `forestPlot(onlySignificant = TRUE)` shows
+  or hides it as a whole.
+- `generateCovNames()` warns about map entries that match no covariate or
+  level in the covariate table - a typo, or a value that changed with the
+  data - instead of ignoring them. `warn_unused = FALSE` silences this for
+  maps shared between models.
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
   no observation record - subjects with only dose or other event records.
   NONMEM reads them but they do not inform the estimates, so they need not
@@ -14,6 +42,17 @@
 
 ## Bug fixes
 
+- `generateCovNames()` ignored the `sep` the covariate table was built
+  with and always looked for `<covariate>_<level>` one-hot columns, so with
+  `setupDfCovs(sep = "")` a covariate with more than two levels was labelled
+  `GENO=UNKNOWN`. It now reads `sep` from `setupDfCovs()` output, or takes it
+  as an argument, and matches only columns ending in a numeric level, so
+  `GENO` no longer picks up `GENO1N`.
+- `generateCovNames()` labelled the reference row of a one-hot covariate as
+  one below the lowest remaining level, which is only right when the
+  reference is the lowest level: with `catRef = list(GENO = 2)` the 2D6 EM
+  row read `GENO=0`. It now takes the level from the `catRef` recorded by
+  `setupDfCovs()`, or else from where the row sits among the levels.
 - With `ncores > 1`, `getForestDFSCM()` and `getForestDFemp()` start fresh R
   sessions on Windows, and these loaded the first PMXForest on `.libPaths()`
   rather than the one the session uses - for example one loaded from a
@@ -25,6 +64,13 @@
 
 ## Changes to existing behaviour
 
+- A key given twice in a `generateCovNames()` map is an error. A named
+  vector silently used the first, so `group_map = c(AST = "AST", ...,
+  AST = "Aspartate aminotransferase")` never showed the second.
+- `generateCovNames(print_template = TRUE)` prints `name_map`, `unit_map`
+  (continuous covariates) and `level_map` (categorical ones) instead of
+  `group_map`, `unit_map` and `label_map`, with no entry per percentile to
+  rewrite when the data change.
 - `verifyFilterByModel()` counts observations under the `$INPUT` names rather
   than the data file's, uses the same rule as `dropNoObs`, and reads an empty
   `MDV` field as 0, as NM-TRAN does.
