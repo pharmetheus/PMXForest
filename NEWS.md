@@ -1,5 +1,11 @@
 # PMXForest (development version)
 
+## Bug fixes
+
+- `forestPlot()` gives the reference line and the confidence intervals their
+  width as `linewidth` on ggplot2 3.4.0 or later and as `size` before it, so
+  neither version warns and both draw the width asked for.
+
 ## Other notable additions
 
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
