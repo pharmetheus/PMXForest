@@ -1,6 +1,6 @@
 # PMXForest 1.4.0
 
-## Other notable additions
+## Changes
 
 - `generateCovNames()` has moved here from PMXFrem. It builds the Forest plot
   row labels and group names from the covariate table, so SCM and empirical
@@ -19,26 +19,30 @@
   "Female"))` - instead of one `label_map` string per covariate and level. A
   level set to `NA`, in `level_map` or `label_map`, drops its row from the
   plot. `label_map` still takes precedence.
-- `generateCovNames()` gains `dummy_groups`, which merges 0/1 dummy
-  covariates that code one categorical covariate - `GENO1N`, `GENO3N` and
-  `GENO4N` against a common reference genotype - into one group. Each dummy's
-  `1` row is labelled with its level and the `0` rows, which all sit at the
-  shared reference, become a single reference row instead of one per dummy.
-  The group is one `GROUPNAME`, so `forestPlot(onlySignificant = TRUE)` shows
-  or hides it as a whole.
+- `generateCovNames()` gains `dummy_groups`, for data sets that already code
+  one categorical covariate as separate 0/1 columns - `GENO1N`, `GENO3N` and
+  `GENO4N` for three genotypes against a common reference - rather than the
+  one-hot columns `setupDfCovs()` creates. It merges them into one group:
+  `dummy_groups = list("2D6 genotype" = list(ref = "2D6 EM", levels =
+  c(GENO1N = "2D6 UM", GENO3N = "2D6 IM", GENO4N = "2D6 PM")))` labels each
+  dummy's `1` row with its level and turns the `0` rows, which all sit at the
+  shared reference, into a single "2D6 EM" row instead of one per dummy. The
+  group is one `GROUPNAME`, so `forestPlot(onlySignificant = TRUE)` shows or
+  hides it as a whole.
 - `generateCovNames()` warns about map entries that match no covariate or
   level in the covariate table - a typo, or a value that changed with the
   data - instead of ignoring them. `warn_unused = FALSE` silences this for
   maps shared between models.
-- `filterByModel()` gains `dropNoObs`, which also removes subjects left with
-  no observation record - subjects with only dose or other event records.
+- `filterByModel()` gains `dropNoObs` (default `FALSE`), which also removes
+  subjects left with no observation record - subjects with only dose or other
+  event records.
   NONMEM reads them but they do not inform the estimates, so they need not
   enter the covariate summaries. Observations are identified the way NONMEM
   identifies them: from `MDV`, `EVID`, or the dose items `AMT`, `RATE` and
   `SS`, whichever the model declares.
 - `startParallelWorkers()` is exported for packages that build on PMXForest:
   PMXFrem starts its parallel workers with it instead of keeping its own copy.
-  It is not meant for analysis scripts and is left out of the reference index.
+  It is not meant for analysis scripts and is not listed in the help index.
 
 ## Bug fixes
 
@@ -55,9 +59,10 @@
   `setupDfCovs()`, or else from where the row sits among the levels.
 - With `ncores > 1`, `getForestDFSCM()` and `getForestDFemp()` start fresh R
   sessions on Windows, and these loaded the first PMXForest on `.libPaths()`
-  rather than the one the session uses - for example one loaded from a
-  versioned library. They now load the session's copy, and stop with both
-  versions named when they cannot. macOS and Linux were not affected.
+  rather than the one the session uses - for example one loaded with
+  `library(lib.loc = )` or from PMXRenv's versioned library. They now load the
+  session's copy, and when they cannot, stop with an error that names both
+  versions. macOS and Linux were not affected.
 - `forestPlot()` gives the reference line and the confidence intervals their
   width as `linewidth` on ggplot2 3.4.0 or later and as `size` before it, so
   neither version warns and both draw the width asked for.
