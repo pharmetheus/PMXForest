@@ -14,17 +14,24 @@
 #' and are checked against the session: any package whose version differs
 #' stops the run, naming both versions and where they came from.
 #'
+#' Exported for packages that build on PMXForest (PMXFrem), so they start their
+#' workers the same way rather than keep a copy of this function. Not meant to
+#' be called from an analysis script.
+#'
 #' @param ncores Number of workers.
-#' @param pkgs Packages the loop needs on the workers.
+#' @param pkgs Packages the loop needs on the workers. A calling package names
+#'   itself and whatever its loop uses.
 #' @param fresh Start fresh worker sessions instead of forking. Defaults to
 #'   `TRUE` on Windows, where doParallel cannot fork. The
-#'   `PMXForest.freshWorkers` option sets it elsewhere, for testing.
+#'   `PMXForest.freshWorkers` option sets it elsewhere, for testing; a calling
+#'   package can pass its own option's value.
 #'
 #' @return A function that stops the workers, to be called on exit. Its
 #'   `cluster` attribute holds the workers, for tests.
-#' @noRd
-.forestStartWorkers <- function(ncores, pkgs = "PMXForest",
-                                fresh = getOption("PMXForest.freshWorkers", .Platform$OS.type == "windows")) {
+#' @keywords internal
+#' @export
+startParallelWorkers <- function(ncores, pkgs = "PMXForest",
+                                 fresh = getOption("PMXForest.freshWorkers", .Platform$OS.type == "windows")) {
   if (!fresh) {
     doParallel::registerDoParallel(cores = ncores)
     return(function() doParallel::stopImplicitCluster())

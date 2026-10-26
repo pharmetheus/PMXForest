@@ -55,11 +55,25 @@ test_that("fresh workers load a package from the folder the session loaded it fr
   parallel::stopCluster(cl)
   expect_equal(plain, "1.0.0")
 
-  ## With .forestStartWorkers() they get the session's copy.
-  stopWorkers <- .forestStartWorkers(2, pkgs = "forestToyPkg", fresh = TRUE)
+  ## With startParallelWorkers() they get the session's copy.
+  stopWorkers <- startParallelWorkers(2, pkgs = "forestToyPkg", fresh = TRUE)
   withr::defer(stopWorkers())
   got <- foreach::foreach(i = 1:2, .packages = "forestToyPkg") %dopar% forestToyPkg::toyVersion()
   expect_equal(unlist(got), c("2.0.0", "2.0.0"))
+})
+
+test_that("startParallelWorkers() is exported for packages that build on PMXForest", {
+  skip_on_cran()
+  ## PMXFrem starts its workers with this function rather than a copy of it,
+  ## so it must be in NAMESPACE - load_all() alone would reach it either way.
+  expect_true("export(startParallelWorkers)" %in% readLines(system.file("NAMESPACE", package = "PMXForest")))
+
+  ## Called the way another package calls it, for that package's own copy.
+  paths <- versionedSetup()
+  stopWorkers <- PMXForest::startParallelWorkers(1, pkgs = "forestToyPkg", fresh = TRUE)
+  withr::defer(stopWorkers())
+  got <- parallel::clusterEvalQ(attr(stopWorkers, "cluster"), forestToyPkg::toyVersion())[[1]]
+  expect_equal(got, "2.0.0")
 })
 
 test_that("setting up the workers does not itself load PMXForest there", {
@@ -68,7 +82,7 @@ test_that("setting up the workers does not itself load PMXForest there", {
   ## would load PMXForest from its own library path before the setup could put
   ## the session's folders first - the very mismatch this exists to prevent.
   paths <- versionedSetup()
-  stopWorkers <- .forestStartWorkers(1, pkgs = "forestToyPkg", fresh = TRUE)
+  stopWorkers <- startParallelWorkers(1, pkgs = "forestToyPkg", fresh = TRUE)
   withr::defer(stopWorkers())
   loaded <- parallel::clusterEvalQ(attr(stopWorkers, "cluster"), loadedNamespaces())[[1]]
   expect_true("forestToyPkg" %in% loaded)
@@ -89,7 +103,7 @@ test_that("a worker that cannot load the session's version stops with both versi
   expect_equal(forestToyPkg::toyVersion(), "2.0.0")
 
   err <- expect_error(
-    .forestStartWorkers(2, pkgs = "forestToyPkg", fresh = TRUE),
+    startParallelWorkers(2, pkgs = "forestToyPkg", fresh = TRUE),
     "forestToyPkg"
   )
   expect_match(conditionMessage(err), "2.0.0", fixed = TRUE)
@@ -100,14 +114,14 @@ test_that("a worker that cannot load the session's version stops with both versi
 test_that("a package the workers cannot load at all is reported as such", {
   skip_on_cran()
   expect_error(
-    .forestStartWorkers(1, pkgs = "forestNoSuchPkg", fresh = TRUE),
+    startParallelWorkers(1, pkgs = "forestNoSuchPkg", fresh = TRUE),
     "forestNoSuchPkg"
   )
 })
 
 test_that("forked workers are registered as before", {
   skip_on_os("windows")
-  stopWorkers <- .forestStartWorkers(2, fresh = FALSE)
+  stopWorkers <- startParallelWorkers(2, fresh = FALSE)
   withr::defer(stopWorkers())
   expect_equal(foreach::getDoParName(), "doParallelMC")
   expect_equal(foreach::getDoParWorkers(), 2)
