@@ -84,6 +84,11 @@ and reshapes the output into the required plotting format. It natively supports
 how inactive covariate cells are populated.
 }
 \details{
+\strong{Inactive cells and the reference subject.} Cells not active on a row hold
+\code{missVal} (\code{-99}), and the parameter function treats them as "not set". The
+reference subject is not written into them: it is built separately with
+\code{\link[=setupDfRefRow]{setupDfRefRow()}} and passed as \code{dfRefRow}.
+
 \strong{Methodological Note on Reference Calculations:} To maintain mathematical
 symmetry with how primary \code{covariates} are evaluated, the reference values
 for \code{conditionalCovs} (and primary covariates when \code{useMissVal = FALSE}) are

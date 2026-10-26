@@ -7,6 +7,11 @@
 #'   how inactive covariate cells are populated.
 #'
 #' @details
+#'   **Inactive cells and the reference subject.** Cells not active on a row hold
+#'   `missVal` (`-99`), and the parameter function treats them as "not set". The
+#'   reference subject is not written into them: it is built separately with
+#'   [setupDfRefRow()] and passed as `dfRefRow`.
+#'
 #'   **Methodological Note on Reference Calculations:** To maintain mathematical
 #'   symmetry with how primary `covariates` are evaluated, the reference values
 #'   for `conditionalCovs` (and primary covariates when `useMissVal = FALSE`) are
