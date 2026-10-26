@@ -1,4 +1,4 @@
-# PMXForest (development version)
+# PMXForest 1.4.0
 
 ## Other notable additions
 
