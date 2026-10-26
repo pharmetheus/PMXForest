@@ -142,7 +142,7 @@ getForestDFemp <- function(dfData,
   ## Register to allow for paralell computing. Tear the cluster down on exit
   ## (including on error) rather than only at the end of a successful run.
   if (ncores > 1) {
-    stopWorkers <- .forestStartWorkers(ncores, pkgs = unique(c("PMXForest", cstrPackages)))
+    stopWorkers <- startParallelWorkers(ncores, pkgs = unique(c("PMXForest", cstrPackages)))
     on.exit(stopWorkers(), add = TRUE)
   }
 

@@ -1,11 +1,5 @@
 # PMXForest (development version)
 
-## Bug fixes
-
-- `forestPlot()` gives the reference line and the confidence intervals their
-  width as `linewidth` on ggplot2 3.4.0 or later and as `size` before it, so
-  neither version warns and both draw the width asked for.
-
 ## Other notable additions
 
 - `filterByModel()` gains `dropNoObs`, which also removes subjects left with
@@ -14,6 +8,9 @@
   enter the covariate summaries. Observations are identified the way NONMEM
   identifies them: from `MDV`, `EVID`, or the dose items `AMT`, `RATE` and
   `SS`, whichever the model declares.
+- `startParallelWorkers()` is exported for packages that build on PMXForest:
+  PMXFrem starts its parallel workers with it instead of keeping its own copy.
+  It is not meant for analysis scripts and is left out of the reference index.
 
 ## Bug fixes
 
@@ -22,6 +19,9 @@
   rather than the one the session uses - for example one loaded from a
   versioned library. They now load the session's copy, and stop with both
   versions named when they cannot. macOS and Linux were not affected.
+- `forestPlot()` gives the reference line and the confidence intervals their
+  width as `linewidth` on ggplot2 3.4.0 or later and as `size` before it, so
+  neither version warns and both draw the width asked for.
 
 ## Changes to existing behaviour
 
