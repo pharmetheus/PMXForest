@@ -130,18 +130,23 @@ below is computed on the analysis data for that reason.
 
 # 1. Build the covariate structure
 
-Three decisions about covariate values come before any modelling: which values
-to explore (the rows of the plot), which to condition on (values held fixed
-while another covariate varies, covered in the
-[Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html)), and
-which to compare against (the reference subject). This section makes the first,
-Section 2 the last.
+Three decisions about covariate values come before any modelling:
 
-Each row of `dfCovs` becomes one row of the Forest plot. The covariate effect on
-that row is a function of the covariate values in that row. Cells that are not
-active on a row hold the missing-value indicator (`-99` by default), and they
-stay that way: the reference subject is not written into `dfCovs` but kept in
-a row of its own, built in Section 2.
+1. which values to explore - the rows of the plot, made in this section;
+2. which values to condition on - covariates that, on the rows where they are
+   not varied, sit at a reference value taken from the data instead of `-99`,
+   set with `setupDfCovs(conditionalCovs = )`. This walkthrough does not need
+   any; the
+   [Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html)
+   covers them;
+3. which values to compare against - the reference subject, in Section 2.
+
+Each row of `dfCovs` becomes one row of the Forest plot, and on each row one
+covariate is *active*: the one that row varies. The covariate effect on that
+row is a function of the covariate values in that row. Every other cell holds
+the missing-value indicator (`-99` by default), and they stay that way: the
+reference subject is not written into `dfCovs` but kept in a row of its own,
+built in Section 2.
 
 `setupDfCovs()` builds that structure from the data. It summarises each covariate
 and reshapes the result in one call, so the values plotted are the ones the study
@@ -525,8 +530,8 @@ lsExpr
 
 Note what it refuses to do. Each row has to be backed by at least `minSubjects`
 subjects (10 by default), because a covariate effect estimated from a handful of
-people is not worth plotting. On the first 300 subjects rather than 500, this
-call stops with
+people is not worth plotting. Run it on the first 300 subjects instead of the
+500 used here, and it stops with
 
 ```
 Expression `GENO == 1` selects 7 subject(s) in `data`, fewer than
@@ -544,8 +549,9 @@ separately rather than calling it, so the two are kept in step by hand. The
 :::
 
 `getForestDFemp()` then needs the analysis data itself; `ncores > 1` parallelises
-the calculation and `cstrPackages` names the packages the workers need. Half the
-uncertainty samples are used here purely to keep the vignette quick — an
+the calculation and `cstrPackages` names the packages the workers need. Only
+100 of the 200 covariance-matrix samples are used here, purely to keep the
+vignette quick — an
 empirical plot evaluates the parameter function once per subject per sample, so
 its cost is the product of the two.
 
@@ -569,8 +575,8 @@ dfresEmp <- getForestDFemp(
 forestPlot(dfresEmp, parameters = "CL", noVar = FALSE)
 ```
 
-`noVar = FALSE` keeps the parameter-uncertainty interval. `noVar = TRUE` (the
-default for empirical data) drops it and shows only the covariate effect.
+`noVar = FALSE` keeps the parameter-uncertainty interval. `noVar = TRUE`,
+`forestPlot()`'s default, drops it and shows only the covariate effect.
 
 # 7. Customise the plot
 
