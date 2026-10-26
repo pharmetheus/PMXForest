@@ -60,9 +60,9 @@ This walkthrough covers the full process of building Forest plots from a NONMEM
 model and PsN output. It extends the [Quick-Start](Part1-quick-start.html) with:
 
 * two ways to build the covariate structure, and how to label the rows;
+* an explicit reference subject with `setupDfRefRow()`;
 * the parameter function in detail, including missing-value handling;
 * the four sources of parameter uncertainty `getSamples()` accepts;
-* an explicit reference subject with `setupDfRefRow()`;
 * *empirical* Forest plots with `getForestDFemp()`;
 * the formatting arguments of `forestPlot()`.
 
@@ -88,7 +88,7 @@ dfData <- read.csv(dataFile)
 derives comes out of it, so it is worth having open alongside. It is bundled
 with the package, so it can be read straight off disk — the whole file is
 below, and the records that matter here are `$DATA` in Section 0 and `$PK` in
-Section 2.
+Sections 2 and 3.
 
 <details>
 <summary>Show the full run7.mod control stream</summary>
@@ -130,9 +130,18 @@ below is computed on the analysis data for that reason.
 
 # 1. Build the covariate structure
 
+Three decisions about covariate values come before any modelling: which values
+to explore (the rows of the plot), which to condition on (values held fixed
+while another covariate varies, covered in the
+[Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html)), and
+which to compare against (the reference subject). This section makes the first,
+Section 2 the last.
+
 Each row of `dfCovs` becomes one row of the Forest plot. The covariate effect on
 that row is a function of the covariate values in that row. Cells that are not
-active on a row hold the missing-value indicator (`-99` by default).
+active on a row hold the missing-value indicator (`-99` by default), and they
+stay that way: the reference subject is not written into `dfCovs` but kept in
+a row of its own, built in Section 2.
 
 `setupDfCovs()` builds that structure from the data. It summarises each covariate
 and reshapes the result in one call, so the values plotted are the ones the study
@@ -172,7 +181,7 @@ The last row is the one that matters here: those are the names `run7`'s `$PK`
 uses, so a parameter function generated from it reads exactly these columns.
 
 ::: {.callout-note}
-Pass the same `catRef` and `sep` to `setupDfRefRow()` in Section 4. They have to
+Pass the same `catRef` and `sep` to `setupDfRefRow()` in Section 2. They have to
 agree, or the reference row's columns will not line up with `dfCovs` and the
 reference values are silently dropped.
 :::
@@ -225,7 +234,82 @@ varies one at a time. Take what it produced and edit that — the deep dive's
 [Adjusting what `setupDfCovs()` produced](Part3-deep-dive-forest-plot-inputs.html)
 works through both.
 
-# 2. Generate the parameter function
+# 2. Define the reference subject
+
+Without a reference, `getForestDFSCM()` uses the model with every covariate effect
+switched off (all cells `-99`). To make the reference a typical subject instead,
+pass `dfRefRow`.
+
+The reference goes in `dfRefRow` only. `getForestDFSCM()` evaluates each row of
+`dfCovs` as it stands and the reference row separately, as the denominator, so
+there is no need to replace the `-99`s in `dfCovs` with reference values, as
+hand-built covariate tables used to. Write values into `dfCovs` only to hold the
+covariates a row does not vary at something other than the model's reference -
+and then the reference row has to carry the same values.
+
+`setupDfRefRow()` builds that row, matched to the geometry of a `setupDfCovs()`
+result. By default it takes the reference from the **data** — the median for a
+continuous covariate, the most common level for a categorical one.
+
+That default is the wrong choice here, and it is worth seeing why, because the
+symptom is subtle. The parameter function generated in Section 3 falls back to
+the **model's** reference when a covariate is inactive on a row: `-99` for `WT` means the
+function uses 75, the normalisation constant in `$PK`. If the reference row
+instead carries the data median, the two disagree, and every row where that
+covariate is inactive is displaced from 1 — not because the covariate has an
+effect, but because the denominator was computed differently from the numerator.
+
+Taking both from the control stream removes the mismatch:
+
+```{r}
+refCovs <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO")
+
+dfRefRow <- setupDfRefRow(
+  dfCovs = dfCovs,
+  data = dfData,
+  covariates = refCovs,
+  contRef = list(WT = "model", default = "median"),
+  catRef = list(
+    SEX = "model", FORM = "model", FOOD = "model",
+    GENO = 2, default = "mode"
+  ),
+  model = modFile,
+  sep = "",
+  idVar = "ID"
+)
+dfRefRow
+```
+
+Three things about that call are worth stating, because each is a trap:
+
+**`catRef` and `sep` are repeated from Section 1 and are not optional.**
+`setupDfRefRow()` keys its result by the column names `setupDfCovs()` produced,
+so a different `sep` gives `GENO_1` where `dfCovs` has `GENO1`, and the reference
+value for that covariate is quietly lost.
+
+**`"model"` is given per covariate, not as a bare scalar.** As a scalar it
+applies to everything, and the first covariate `$PK` does not mention — `AGE`
+here — fails the whole call. The named-list form asks for `"model"` where the
+model has an answer and falls back to `"median"` / `"mode"` where it does not.
+
+**`GENO` gets a literal level, not `"model"`.** `$PK` names the dummies `GENO1`,
+`GENO3`, `GENO4` and never bare `GENO`, so there is no model reference to find
+for the covariate they encode. The error says so if you try it; the
+[deep dive](Part3-deep-dive-forest-plot-inputs.html) shows the exact text.
+
+A hand-built `dfCovs` needs a hand-built reference to match it — a one-row data
+frame with the same columns works just as well. That route, and how to keep the
+two consistent, is in the
+[Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html).
+
+::: {.callout-note}
+The reference enters the relative scale as the denominator: each row is plotted as
+its parameter value divided by the reference-subject value. A reference subject
+that carries a large covariate effect shifts every other row. Choose it
+deliberately, and state it in the plot caption.
+:::
+
+# 3. Generate the parameter function
 
 The parameter function turns a vector of `thetas` and one row of covariate values
 into the quantities to plot. Written by hand it duplicates algebra that already
@@ -315,7 +399,7 @@ away. It is source text precisely so that it can be corrected: Section 2.4 shows
 how to patch the emitted code programmatically, so the translation stays derived
 from the model and the deviation stays visible in the script.
 
-# 3. Sample the parameter uncertainty
+# 4. Sample the parameter uncertainty
 
 `getSamples()` returns a data frame of parameter vectors in `.ext` column order.
 The confidence interval on each Forest plot row is the quantile of the parameter
@@ -338,74 +422,6 @@ dfSamplesBSsmall <- getSamples(bsFile, extFile = extFile, n = 200)
 
 Sampling from the covariance matrix or from a small bootstrap produces symmetric
 intervals. A full bootstrap or SIR file lets the interval be asymmetric.
-
-# 4. Define the reference subject
-
-Without a reference, `getForestDFSCM()` uses the model with every covariate effect
-switched off (all cells `-99`). To make the reference a typical subject instead,
-pass `dfRefRow`.
-
-`setupDfRefRow()` builds that row, matched to the geometry of a `setupDfCovs()`
-result. By default it takes the reference from the **data** — the median for a
-continuous covariate, the most common level for a categorical one.
-
-That default is the wrong choice here, and it is worth seeing why, because the
-symptom is subtle. A generated parameter function falls back to the **model's**
-reference when a covariate is inactive on a row: `-99` for `WT` means the
-function uses 75, the normalisation constant in `$PK`. If the reference row
-instead carries the data median, the two disagree, and every row where that
-covariate is inactive is displaced from 1 — not because the covariate has an
-effect, but because the denominator was computed differently from the numerator.
-
-Taking both from the control stream removes the mismatch:
-
-```{r}
-refCovs <- c("WT", "AGE", "CRCL", "SEX", "NCIL", "FORM", "FOOD", "GENO")
-
-dfRefRow <- setupDfRefRow(
-  dfCovs = dfCovs,
-  data = dfData,
-  covariates = refCovs,
-  contRef = list(WT = "model", default = "median"),
-  catRef = list(
-    SEX = "model", FORM = "model", FOOD = "model",
-    GENO = 2, default = "mode"
-  ),
-  model = modFile,
-  sep = "",
-  idVar = "ID"
-)
-dfRefRow
-```
-
-Three things about that call are worth stating, because each is a trap:
-
-**`catRef` and `sep` are repeated from Section 1 and are not optional.**
-`setupDfRefRow()` keys its result by the column names `setupDfCovs()` produced,
-so a different `sep` gives `GENO_1` where `dfCovs` has `GENO1`, and the reference
-value for that covariate is quietly lost.
-
-**`"model"` is given per covariate, not as a bare scalar.** As a scalar it
-applies to everything, and the first covariate `$PK` does not mention — `AGE`
-here — fails the whole call. The named-list form asks for `"model"` where the
-model has an answer and falls back to `"median"` / `"mode"` where it does not.
-
-**`GENO` gets a literal level, not `"model"`.** `$PK` names the dummies `GENO1`,
-`GENO3`, `GENO4` and never bare `GENO`, so there is no model reference to find
-for the covariate they encode. The error says so if you try it; the
-[deep dive](Part3-deep-dive-forest-plot-inputs.html) shows the exact text.
-
-A hand-built `dfCovs` needs a hand-built reference to match it — a one-row data
-frame with the same columns works just as well. That route, and how to keep the
-two consistent, is in the
-[Forest plot inputs deep dive](Part3-deep-dive-forest-plot-inputs.html).
-
-::: {.callout-note}
-The reference enters the relative scale as the denominator: each row is plotted as
-its parameter value divided by the reference-subject value. A reference subject
-that carries a large covariate effect shifts every other row. Choose it
-deliberately, and state it in the plot caption.
-:::
 
 # 5. Compute the parametric Forest plot data
 
@@ -435,7 +451,7 @@ dfresBS <- generateCovNames(dfCovs, dfresBS,
 head(dfresBS[, c("COVNUM", "COVNAME", "GROUPNAME", "PARAMETER", "POINT", "Q1", "Q2")])
 ```
 
-The model-derived reference from Section 4 can now be checked rather than taken
+The model-derived reference from Section 2 can now be checked rather than taken
 on trust. `POINT` is the parameter value for a row; `REFFUNC` is the reference
 the row is divided by. For any covariate the model gives **no** effect on `CL` —
 `AGE`, `CRCL`, `SEX`, `NCIL`, `FORM` are all absent from `run7`'s clearance —
