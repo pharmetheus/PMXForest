@@ -14,7 +14,7 @@ them onto the structure of the provided dfCovs."><!-- mathjax --><script src="ht
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -182,7 +182,12 @@ otherwise <code>"_"</code>. Supplying it here overrides the recorded value.</p><
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><strong>Choosing the reference.</strong> <code>contRef</code> and <code>catRef</code> both accept either a
+    <p><strong>The reference lives here, not in <code>dfCovs</code>.</strong> <code><a href="getForestDFSCM.html">getForestDFSCM()</a></code> evaluates
+each row of <code>dfCovs</code> as it stands and this row separately, as the
+denominator, so the <code>-99</code> cells in <code>dfCovs</code> stay as they are. Write values
+into them only to hold a row's other covariates at something other than the
+model's reference, and then give this row the same values.</p>
+<p><strong>Choosing the reference.</strong> <code>contRef</code> and <code>catRef</code> both accept either a
 single setting applied to every covariate, or a named list with an entry per
 covariate plus an optional <code>default</code> component:</p><ul><li><p>continuous - a number, <code>"mean"</code>, <code>"median"</code> (default) or <code>"model"</code>;</p></li>
 <li><p>categorical - a level, <code>"mode"</code> (default), <code>"lowest"</code> or <code>"model"</code>.</p></li>

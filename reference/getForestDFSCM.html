@@ -14,7 +14,7 @@ see function dfCreateInputForestData"><!-- mathjax --><script src="https://cdnjs
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -160,7 +160,10 @@ If NULL (default) an educated guess of the grouping will be set</p></dd>
 
 
 <dt>ncores</dt>
-<dd><p>the number of cores to use for the calculations, default = 1 which means no parallellization</p></dd>
+<dd><p>the number of cores to use for the calculations, default = 1 which means no parallellization.
+On Windows the workers are new R sessions. They load the same package
+versions as this session, including a package loaded from a folder that
+is not on <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, and the run stops if they cannot.</p></dd>
 
 
 <dt>cstrPackages</dt>
@@ -241,13 +244,13 @@ dummy column names created when <code>oneHot</code> is used. Defaults to <code>"
 <span class="r-in"><span>  dfParameters     <span class="op">=</span> <span class="va">dfSamples</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dfres</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"COVNAME"</span>, <span class="st">"GROUPNAME"</span>, <span class="st">"PARAMETER"</span>, <span class="st">"POINT"</span>, <span class="st">"Q1"</span>, <span class="st">"Q2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     COVNAME GROUPNAME PARAMETER    POINT        Q1       Q2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   WT=58.5        WT        CL  9.86918  9.433654 10.23882</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2    WT=126        WT        CL 17.54656 16.772235 18.20375</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    AGE=22       AGE        CL 11.89077 11.366035 12.33613</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4    AGE=65       AGE        CL 11.89077 11.366035 12.33613</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5 CRCL=74.9      CRCL        CL 11.89077 11.366035 12.33613</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  CRCL=150      CRCL        CL 11.89077 11.366035 12.33613</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     COVNAME GROUPNAME PARAMETER     POINT        Q1       Q2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   WT=58.5        WT        CL  9.759797  9.400577 10.24009</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    WT=126        WT        CL 17.352090 16.713428 18.20602</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3    AGE=22       AGE        CL 11.758985 11.326183 12.33766</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4    AGE=65       AGE        CL 11.758985 11.326183 12.33766</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 CRCL=74.9      CRCL        CL 11.758985 11.326183 12.33766</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  CRCL=150      CRCL        CL 11.758985 11.326183 12.33766</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

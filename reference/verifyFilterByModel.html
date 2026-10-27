@@ -22,7 +22,7 @@ It needs nothing but artefacts already on disk - the control stream, its
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -130,12 +130,17 @@ against NONMEM's own count (<code>rawRows</code> minus <code>NO. OF DATA RECS</c
 independent of what <code><a href="filterByModel.html">filterByModel()</a></code> did. On a failing check it will
 not reconcile with the filtered count, which is the point.</p></li>
 <li><p><code>rawRows</code> - rows in the data set as read, before filtering.</p></li>
-<li><p><code>obsBasis</code> - <code>"MDV"</code>, <code>"EVID"</code> or <code>"NONE"</code>.</p></li>
+<li><p><code>obsBasis</code> - the column(s) observations were identified from:
+<code>"MDV"</code>, <code>"EVID"</code>, the dose items present (e.g. <code>"AMT/RATE"</code>), or
+<code>"NONE"</code> when every record is an observation.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The observation count follows NONMEM: records with <code>MDV == 0</code>, or
-<code>EVID == 0</code> where the data set carries no <code>MDV</code> column.</p>
+    <p>The observation count follows NONMEM, using the rule described
+under <strong>Subjects without observations</strong> in <code><a href="filterByModel.html">filterByModel()</a></code>: <code>MDV == 0</code>
+where there is an <code>MDV</code> column, otherwise <code>EVID == 0</code>, otherwise records
+with no non-zero <code>AMT</code>, <code>RATE</code> or <code>SS</code>. Columns are read by position under
+the <code>$INPUT</code> names.</p>
 <p>The <code>.lst</code> describes the model NONMEM read, which is not always the model
 on disk. Where its echoed <code>$INPUT</code> or <code>$DATA</code> filter clauses disagree with
 <code>modFile</code>, the counts no longer describe it and the comparison is noise, so

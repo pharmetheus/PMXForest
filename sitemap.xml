@@ -61,6 +61,9 @@
     <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/forestPlot.html</loc>
   </url>
   <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/generateCovNames.html</loc>
+  </url>
+  <url>
     <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/getCovStats.html</loc>
   </url>
   <url>
@@ -125,6 +128,9 @@
   </url>
   <url>
     <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/setupForestPlotData.html</loc>
+  </url>
+  <url>
+    <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/startParallelWorkers.html</loc>
   </url>
   <url>
     <loc>https://rpkgs-docs.pmx.one/PMXForest/reference/verifyFilterByModel.html</loc>

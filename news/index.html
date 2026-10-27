@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,6 +59,44 @@
       
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.4.0" id="pmxforest-1-4-0">PMXForest 1.4.0<a class="anchor" aria-label="anchor" href="#pmxforest-1-4-0"></a></h2>
+<div class="section level3">
+<h3 id="forest-plot-labels-from-one-set-of-names-1-4-0">Forest plot labels from one set of names<a class="anchor" aria-label="anchor" href="#forest-plot-labels-from-one-set-of-names-1-4-0"></a></h3>
+<p><code><a href="../reference/generateCovNames.html">generateCovNames()</a></code> has moved here from PMXFrem, which re-exports it, so SCM and empirical Forest plots no longer need PMXFrem for their row labels.</p>
+<p><code>name_map</code> names each covariate once, and <code>unit_map</code> adds the unit: <code>name_map = c(WT = "Weight")</code> and <code>unit_map = c(WT = "kg")</code> label the rows <code>Weight = &lt;value&gt; kg</code>, whatever percentiles the data give. <code>level_map</code> labels the levels of the categorical covariates, so <code>label_map</code> no longer needs a string per percentile or level. <code>print_template = TRUE</code> prints <code>name_map</code>, <code>unit_map</code> and <code>level_map</code> to fill in.</p>
+<p><code>dummy_groups</code> merges a categorical covariate already coded as separate 0/1 columns (<code>GENO1N</code>, <code>GENO3N</code>, <code>GENO4N</code>) into one group with a single reference row.</p>
+</div>
+<div class="section level3">
+<h3 id="other-notable-additions-1-4-0">Other notable additions<a class="anchor" aria-label="anchor" href="#other-notable-additions-1-4-0"></a></h3>
+<ul><li>
+<code><a href="../reference/filterByModel.html">filterByModel()</a></code> takes <code>dropNoObs = TRUE</code> to also remove subjects without observation records.</li>
+<li>
+<code><a href="../reference/generateCovNames.html">generateCovNames()</a></code> warns about map entries that match nothing; <code>warn_unused = FALSE</code> silences it.</li>
+<li>
+<code><a href="../reference/startParallelWorkers.html">startParallelWorkers()</a></code> is exported for packages that build on PMXForest, such as PMXFrem, so they need not keep their own copy.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="changes-to-existing-behaviour-1-4-0">Changes to existing behaviour<a class="anchor" aria-label="anchor" href="#changes-to-existing-behaviour-1-4-0"></a></h3>
+<ul><li>
+<strong>A key given twice in a <code><a href="../reference/generateCovNames.html">generateCovNames()</a></code> map is an error.</strong> A named vector silently used the first.</li>
+<li>
+<code><a href="../reference/verifyFilterByModel.html">verifyFilterByModel()</a></code> counts observations under the <code>$INPUT</code> names, with the same rule as <code>dropNoObs</code>, and reads an empty <code>MDV</code> as 0, as NM-TRAN does.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-1-4-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-4-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/generateCovNames.html">generateCovNames()</a></code> mislabelled one-hot covariates in two cases:</strong> it ignored the <code>sep</code> that <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> was called with, and it labelled the reference row from the lowest level rather than from <code>catRef</code>.</li>
+<li>
+<strong>Parallel runs on Windows could use another installed PMXForest.</strong> With <code>ncores &gt; 1</code>, <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> and <code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code> loaded the first PMXForest on <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> rather than the one the session uses. They now load the session’s copy, and stop with both versions named when they cannot. macOS and Linux were not affected.</li>
+<li>
+<strong><code><a href="../reference/forestPlot.html">forestPlot()</a></code> no longer warns about <code>size</code> on ggplot2 3.4.0 or later,</strong> and still draws the width asked for on older versions.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="vignettes-1-4-0">Vignettes<a class="anchor" aria-label="anchor" href="#vignettes-1-4-0"></a></h3>
+<p>The walkthrough now defines the reference subject next to the covariate setup.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.3.0" id="pmxforest-1-3-0">PMXForest 1.3.0<a class="anchor" aria-label="anchor" href="#pmxforest-1-3-0"></a></h2>
 <p>Every bug and issue reported against PMXForest has been addressed in this release. Beyond that, 1.3.0 is about removing the hand-written steps from the Forest plot workflow:</p>

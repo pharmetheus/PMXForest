@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -120,9 +120,9 @@
 <p>This walkthrough covers the full process of building Forest plots from a NONMEM model and PsN output. It extends the <a href="Part1-quick-start.html">Quick-Start</a> with:</p>
 <ul>
 <li>two ways to build the covariate structure, and how to label the rows;</li>
+<li>an explicit reference subject with <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code>;</li>
 <li>the parameter function in detail, including missing-value handling;</li>
 <li>the four sources of parameter uncertainty <code><a href="../reference/getSamples.html">getSamples()</a></code> accepts;</li>
-<li>an explicit reference subject with <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code>;</li>
 <li>
 <em>empirical</em> Forest plots with <code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code>;</li>
 <li>the formatting arguments of <code><a href="../reference/forestPlot.html">forestPlot()</a></code>.</li>
@@ -138,7 +138,7 @@
 <span><span class="va">sirFile</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">modDir</span>, <span class="st">"/sir7.dir/raw_results_run7.csv"</span><span class="op">)</span>, package <span class="op">=</span> <span class="st">"PMXForest"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">dfData</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="va">dataFile</span><span class="op">)</span></span></code></pre></div>
-<p><code>modFile</code> is the <code>run7</code> control stream itself. Everything this walkthrough derives comes out of it, so it is worth having open alongside. It is bundled with the package, so it can be read straight off disk — the whole file is below, and the records that matter here are <code>$DATA</code> in Section 0 and <code>$PK</code> in Section 2.</p>
+<p><code>modFile</code> is the <code>run7</code> control stream itself. Everything this walkthrough derives comes out of it, so it is worth having open alongside. It is bundled with the package, so it can be read straight off disk — the whole file is below, and the records that matter here are <code>$DATA</code> in Section 0 and <code>$PK</code> in Sections 2 and 3.</p>
 <details><p><summary>Show the full run7.mod control stream</summary></p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="va">modFile</span><span class="op">)</span>, sep <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
@@ -283,7 +283,13 @@
 <div class="section level2">
 <h2 id="build-the-covariate-structure">1. Build the covariate structure<a class="anchor" aria-label="anchor" href="#build-the-covariate-structure"></a>
 </h2>
-<p>Each row of <code>dfCovs</code> becomes one row of the Forest plot. The covariate effect on that row is a function of the covariate values in that row. Cells that are not active on a row hold the missing-value indicator (<code>-99</code> by default).</p>
+<p>Three decisions about covariate values come before any modelling:</p>
+<ol style="list-style-type: decimal">
+<li>which values to explore - the rows of the plot, made in this section;</li>
+<li>which values to condition on - covariates that, on the rows where they are not varied, sit at a reference value taken from the data instead of <code>-99</code>, set with <code>setupDfCovs(conditionalCovs = )</code>. This walkthrough does not need any; the <a href="Part3-deep-dive-forest-plot-inputs.html">Forest plot inputs deep dive</a> covers them;</li>
+<li>which values to compare against - the reference subject, in Section 2.</li>
+</ol>
+<p>Each row of <code>dfCovs</code> becomes one row of the Forest plot, and on each row one covariate is <em>active</em>: the one that row varies. The covariate effect on that row is a function of the covariate values in that row. Every other cell holds the missing-value indicator (<code>-99</code> by default), and they stay that way: the reference subject is not written into <code>dfCovs</code> but kept in a row of its own, built in Section 2.</p>
 <p><code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> builds that structure from the data. It summarises each covariate and reshapes the result in one call, so the values plotted are the ones the study actually observed rather than numbers typed in by hand. Continuous covariates are represented by their 5th and 95th percentiles; categorical covariates get one row per level.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dfCovs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/setupDfCovs.html">setupDfCovs</a></span><span class="op">(</span></span>
@@ -345,35 +351,69 @@
 </table>
 <p>The last row is the one that matters here: those are the names <code>run7</code>’s <code>$PK</code> uses, so a parameter function generated from it reads exactly these columns.</p>
 <div class="callout-note">
-<p>Pass the same <code>catRef</code> and <code>sep</code> to <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> in Section 4. They have to agree, or the reference row’s columns will not line up with <code>dfCovs</code> and the reference values are silently dropped.</p>
+<p>Pass the same <code>catRef</code> and <code>sep</code> to <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> in Section 2. They have to agree, or the reference row’s columns will not line up with <code>dfCovs</code> and the reference values are silently dropped.</p>
 </div>
-<p>Row labels and covariate-group labels are supplied separately. Deriving the numeric ones from <code>dfCovs</code> keeps them honest: <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> computes the percentiles, so hard-coding them in the labels is a standing invitation for the two to drift apart. The <code><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot()</a></code> makes a miscount fail immediately rather than shifting every label below it.</p>
+<p>The row labels and covariate-group labels are described once per covariate, not once per row, and <code><a href="../reference/generateCovNames.html">generateCovNames()</a></code> applies them to the results in Section 5. <code>name_map</code> gives each covariate a display name, used in its row labels and as its group header; <code>unit_map</code> adds a unit to the continuous ones; <code>level_map</code> labels the levels of the categorical ones. Nothing here repeats a value from <code>dfCovs</code>, so the labels cannot drift away from the percentiles <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> computed. <code>group_map</code> is only needed where the group header should differ from the name in the row labels - here, a header broken over two lines.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">covnames</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"WT "</span>, <span class="va">dfCovs</span><span class="op">$</span><span class="va">WT</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>, <span class="st">" kg"</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Age "</span>, <span class="va">dfCovs</span><span class="op">$</span><span class="va">AGE</span><span class="op">[</span><span class="fl">3</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>, <span class="st">" y"</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"CRCL "</span>, <span class="va">dfCovs</span><span class="op">$</span><span class="va">CRCL</span><span class="op">[</span><span class="fl">5</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span>, <span class="st">" mL/min"</span><span class="op">)</span>,</span>
-<span>  <span class="st">"Male"</span>, <span class="st">"Female"</span>,</span>
-<span>  <span class="st">"NCI = 0"</span>, <span class="st">"NCI &gt; 0"</span>,</span>
-<span>  <span class="st">"Oral tablet"</span>, <span class="st">"FDC"</span>,</span>
-<span>  <span class="st">"Fasted"</span>, <span class="st">"Fed"</span>,</span>
-<span>  <span class="st">"2D6 UM"</span>, <span class="st">"2D6 EM"</span>, <span class="st">"2D6 IM"</span>, <span class="st">"2D6 PM"</span></span>
+<code class="sourceCode R"><span><span class="va">name_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  WT <span class="op">=</span> <span class="st">"Weight"</span>, AGE <span class="op">=</span> <span class="st">"Age"</span>, CRCL <span class="op">=</span> <span class="st">"CRCL"</span>, SEX <span class="op">=</span> <span class="st">"Sex"</span>,</span>
+<span>  NCIL <span class="op">=</span> <span class="st">"NCI"</span>, FORM <span class="op">=</span> <span class="st">"Formulation"</span>, FOOD <span class="op">=</span> <span class="st">"Food status"</span>, GENO <span class="op">=</span> <span class="st">"2D6 genotype"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">covnames</span><span class="op">)</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">dfCovs</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">covariateGroupNames</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="st">"Weight"</span>, <span class="st">"Age"</span>, <span class="st">"Creatinine\nclearance"</span>, <span class="st">"Sex"</span>,</span>
-<span>  <span class="st">"NCI"</span>, <span class="st">"Formulation"</span>, <span class="st">"Food status"</span>, <span class="st">"2D6 genotype"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">unit_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>WT <span class="op">=</span> <span class="st">"kg"</span>, AGE <span class="op">=</span> <span class="st">"y"</span>, CRCL <span class="op">=</span> <span class="st">"mL/min"</span><span class="op">)</span></span>
+<span><span class="va">level_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  SEX  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span> <span class="op">=</span> <span class="st">"Male"</span>, <span class="st">"2"</span> <span class="op">=</span> <span class="st">"Female"</span><span class="op">)</span>,</span>
+<span>  NCIL <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0"</span> <span class="op">=</span> <span class="st">"NCI = 0"</span>, <span class="st">"1"</span> <span class="op">=</span> <span class="st">"NCI &gt; 0"</span><span class="op">)</span>,</span>
+<span>  FORM <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0"</span> <span class="op">=</span> <span class="st">"Oral tablet"</span>, <span class="st">"1"</span> <span class="op">=</span> <span class="st">"FDC"</span><span class="op">)</span>,</span>
+<span>  FOOD <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0"</span> <span class="op">=</span> <span class="st">"Fasted"</span>, <span class="st">"1"</span> <span class="op">=</span> <span class="st">"Fed"</span><span class="op">)</span>,</span>
+<span>  GENO <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span> <span class="op">=</span> <span class="st">"2D6 UM"</span>, <span class="st">"2"</span> <span class="op">=</span> <span class="st">"2D6 EM"</span>, <span class="st">"3"</span> <span class="op">=</span> <span class="st">"2D6 IM"</span>, <span class="st">"4"</span> <span class="op">=</span> <span class="st">"2D6 PM"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">group_map</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>CRCL <span class="op">=</span> <span class="st">"Creatinine\nclearance"</span><span class="op">)</span></span></code></pre></div>
+<p><code>generateCovNames(dfCovs, print_template = TRUE)</code> prints these maps with a blank entry for every covariate and level in <code>dfCovs</code>, ready to fill in. The <a href="Part3-deep-dive-forest-plot-inputs.html">Forest plot inputs deep dive, Section 9</a> covers the rest: merging 0/1 dummy covariates into one group, dropping rows, and the checks made on the maps.</p>
 <p><code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> is a composition of two lower-level functions: <code><a href="../reference/getCovStats.html">getCovStats()</a></code> chooses the values, <code><a href="../reference/createInputForestData.html">createInputForestData()</a></code> lays them out as rows. Call them yourself when you want values the data does not supply — a weight of exactly 70 kg, a covariate combination no subject has — or a geometry <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> does not produce. Both, along with <code>conditionalCovs</code>, <code>useMissVal</code> and <code>contRef</code>, are covered in the <a href="Part3-deep-dive-forest-plot-inputs.html">Forest plot inputs deep dive</a>.</p>
 <p>More often, though, the answer is neither the wrapper nor the primitives: the generated structure is right except for one part. A protocol may specify weight bands rather than the observed percentiles, or the question may be about a <em>combination</em> of covariates, which <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> does not produce because it varies one at a time. Take what it produced and edit that — the deep dive’s <a href="Part3-deep-dive-forest-plot-inputs.html">Adjusting what <code>setupDfCovs()</code> produced</a> works through both.</p>
 </div>
 <div class="section level2">
-<h2 id="generate-the-parameter-function">2. Generate the parameter function<a class="anchor" aria-label="anchor" href="#generate-the-parameter-function"></a>
+<h2 id="define-the-reference-subject">2. Define the reference subject<a class="anchor" aria-label="anchor" href="#define-the-reference-subject"></a>
+</h2>
+<p>Without a reference, <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> uses the model with every covariate effect switched off (all cells <code>-99</code>). To make the reference a typical subject instead, pass <code>dfRefRow</code>.</p>
+<p>The reference goes in <code>dfRefRow</code> only. <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> evaluates each row of <code>dfCovs</code> as it stands and the reference row separately, as the denominator, so there is no need to replace the <code>-99</code>s in <code>dfCovs</code> with reference values, as hand-built covariate tables used to. Write values into <code>dfCovs</code> only to hold the covariates a row does not vary at something other than the model’s reference - and then the reference row has to carry the same values.</p>
+<p><code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> builds that row, matched to the geometry of a <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> result. By default it takes the reference from the <strong>data</strong> — the median for a continuous covariate, the most common level for a categorical one.</p>
+<p>That default is the wrong choice here, and it is worth seeing why, because the symptom is subtle. The parameter function generated in Section 3 falls back to the <strong>model’s</strong> reference when a covariate is inactive on a row: <code>-99</code> for <code>WT</code> means the function uses 75, the normalisation constant in <code>$PK</code>. If the reference row instead carries the data median, the two disagree, and every row where that covariate is inactive is displaced from 1 — not because the covariate has an effect, but because the denominator was computed differently from the numerator.</p>
+<p>Taking both from the control stream removes the mismatch:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">refCovs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WT"</span>, <span class="st">"AGE"</span>, <span class="st">"CRCL"</span>, <span class="st">"SEX"</span>, <span class="st">"NCIL"</span>, <span class="st">"FORM"</span>, <span class="st">"FOOD"</span>, <span class="st">"GENO"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">dfRefRow</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/setupDfRefRow.html">setupDfRefRow</a></span><span class="op">(</span></span>
+<span>  dfCovs <span class="op">=</span> <span class="va">dfCovs</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">dfData</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">refCovs</span>,</span>
+<span>  contRef <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>WT <span class="op">=</span> <span class="st">"model"</span>, default <span class="op">=</span> <span class="st">"median"</span><span class="op">)</span>,</span>
+<span>  catRef <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    SEX <span class="op">=</span> <span class="st">"model"</span>, FORM <span class="op">=</span> <span class="st">"model"</span>, FOOD <span class="op">=</span> <span class="st">"model"</span>,</span>
+<span>    GENO <span class="op">=</span> <span class="fl">2</span>, default <span class="op">=</span> <span class="st">"mode"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  model <span class="op">=</span> <span class="va">modFile</span>,</span>
+<span>  sep <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  idVar <span class="op">=</span> <span class="st">"ID"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">dfRefRow</span></span>
+<span><span class="co">#&gt;   WT AGE CRCL SEX NCIL FORM FOOD GENO1 GENO3 GENO4 COVARIATEGROUPS</span></span>
+<span><span class="co">#&gt; 1 75  45  119   1    0    1    1     0     0     0       Reference</span></span></code></pre></div>
+<p>Three things about that call are worth stating, because each is a trap:</p>
+<p><strong><code>catRef</code> and <code>sep</code> are repeated from Section 1 and are not optional.</strong> <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> keys its result by the column names <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> produced, so a different <code>sep</code> gives <code>GENO_1</code> where <code>dfCovs</code> has <code>GENO1</code>, and the reference value for that covariate is quietly lost.</p>
+<p><strong><code>"model"</code> is given per covariate, not as a bare scalar.</strong> As a scalar it applies to everything, and the first covariate <code>$PK</code> does not mention — <code>AGE</code> here — fails the whole call. The named-list form asks for <code>"model"</code> where the model has an answer and falls back to <code>"median"</code> / <code>"mode"</code> where it does not.</p>
+<p><strong><code>GENO</code> gets a literal level, not <code>"model"</code>.</strong> <code>$PK</code> names the dummies <code>GENO1</code>, <code>GENO3</code>, <code>GENO4</code> and never bare <code>GENO</code>, so there is no model reference to find for the covariate they encode. The error says so if you try it; the <a href="Part3-deep-dive-forest-plot-inputs.html">deep dive</a> shows the exact text.</p>
+<p>A hand-built <code>dfCovs</code> needs a hand-built reference to match it — a one-row data frame with the same columns works just as well. That route, and how to keep the two consistent, is in the <a href="Part3-deep-dive-forest-plot-inputs.html">Forest plot inputs deep dive</a>.</p>
+<div class="callout-note">
+<p>The reference enters the relative scale as the denominator: each row is plotted as its parameter value divided by the reference-subject value. A reference subject that carries a large covariate effect shifts every other row. Choose it deliberately, and state it in the plot caption.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="generate-the-parameter-function">3. Generate the parameter function<a class="anchor" aria-label="anchor" href="#generate-the-parameter-function"></a>
 </h2>
 <p>The parameter function turns a vector of <code>thetas</code> and one row of covariate values into the quantities to plot. Written by hand it duplicates algebra that already exists in the control stream, and it is the easiest place in this workflow to introduce an error that no test will catch.</p>
 <p><code><a href="../reference/createParamFunction.html">createParamFunction()</a></code> writes it by translating the model’s <code>$PK</code> block.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gen</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createParamFunction.html">createParamFunction</a></span><span class="op">(</span></span>
 <span>  <span class="va">modFile</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"CL"</span>, <span class="st">"FREL"</span>, <span class="st">"V"</span><span class="op">)</span>,</span>
@@ -385,7 +425,7 @@
 <p><code>covRef</code> supplies reference values the control stream does not settle on its own. <code>run7</code>’s <code>$PK</code> carries <code>GENO1</code> and <code>GENO3</code> dummies that no <code>IF()</code> tests directly, so the generator can only <em>propose</em> a level — and warns when it does. Stating them removes the guess. Which covariates need this is not something to memorise: run the call without <code>covRef</code> once and the warning names them.</p>
 <p><code>secondary</code> adds quantities that are not in <code>$PK</code> at all. <code>AUC</code> here is exposure after an 80 mg dose, and the dose appears nowhere in the control stream, so no translator could infer it. Anything derived — AUC, half-life, <code>Cmax</code> — arrives this way; the <a href="Part3-deep-dive-secondary-parameters.html">Secondary parameters vignette</a> covers the fuller forms, including running an <code>mrgsolve</code> or <code>deSolve</code> simulation.</p>
 <p><strong>Nothing has been evaluated yet.</strong> <code>gen$code</code> is source text, and the point of returning text is that you read it against the control stream before trusting it. Here is the <code>$PK</code> it was translated from, so the two can be compared directly:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pkRec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^\\$PK"</span>, <span class="va">nmLines</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">nmLines</span><span class="op">[</span><span class="va">pkRec</span><span class="op">:</span><span class="op">(</span><span class="va">nextRec</span><span class="op">[</span><span class="va">nextRec</span> <span class="op">&gt;</span> <span class="va">pkRec</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span><span class="op">]</span>, sep <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $PK</span></span>
@@ -456,7 +496,7 @@
 <span><span class="co">#&gt; KA    = 1 / (MAT-D1)</span></span>
 <span><span class="co">#&gt; S2    = V</span></span></code></pre></div>
 <p>Note the preamble: every missing-value decision is hoisted to the top and annotated with where the reference came from, so the algebra below it is a plain transliteration you can compare line by line with <code>$PK</code>.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">gen</span><span class="op">$</span><span class="va">code</span>, sep <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ## Generated by PMXForest::createParamFunction() from run7.mod.</span></span>
 <span><span class="co">#&gt; ## Typical values: every ETA() in $PK has been set to 0.</span></span>
@@ -526,17 +566,17 @@
 <span><span class="co">#&gt; ## functionListName &lt;- c("CL", "FREL", "V", "AUC")</span></span>
 <span><span class="co">#&gt; ## noBaseThetas     &lt;- 14</span></span></code></pre></div>
 <p>Once that matches the model, evaluate it:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">paramFunction</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">eval</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/parse.html" class="external-link">parse</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">gen</span><span class="op">$</span><span class="va">code</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>The call also returns the two values that otherwise get typed in by hand and go stale — the parameter names, and the THETA count <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> needs:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">functionListName</span> <span class="op">&lt;-</span> <span class="va">gen</span><span class="op">$</span><span class="va">functionListName</span></span>
 <span><span class="va">functionListName</span></span>
 <span><span class="co">#&gt; [1] "CL"   "FREL" "V"    "AUC"</span></span>
 <span><span class="va">gen</span><span class="op">$</span><span class="va">noBaseThetas</span></span>
 <span><span class="co">#&gt; [1] 14</span></span></code></pre></div>
 <p>If the model was run with a <code>$TABLE</code> containing both the parameters and the covariates, <code><a href="../reference/verifyParamFunction.html">verifyParamFunction()</a></code> turns “do I trust this translation?” into a pass or a fail, by comparing the generated function against the values NONMEM itself wrote:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/verifyParamFunction.html">verifyParamFunction</a></span><span class="op">(</span><span class="va">gen</span>, tabFile <span class="op">=</span> <span class="st">"xptab7"</span>, thetas <span class="op">=</span> <span class="va">thetas</span><span class="op">)</span></span>
 <span><span class="co">#&gt; PASS - verifyParamFunction: 3/3 parameter(s)</span></span></code></pre></div>
 <p>No <code>$TABLE</code> is bundled with the package, so that call is shown rather than run.</p>
@@ -544,10 +584,10 @@
 <p>And if the generated function is not quite right, it does not have to be thrown away. It is source text precisely so that it can be corrected: Section 2.4 shows how to patch the emitted code programmatically, so the translation stays derived from the model and the deviation stays visible in the script.</p>
 </div>
 <div class="section level2">
-<h2 id="sample-the-parameter-uncertainty">3. Sample the parameter uncertainty<a class="anchor" aria-label="anchor" href="#sample-the-parameter-uncertainty"></a>
+<h2 id="sample-the-parameter-uncertainty">4. Sample the parameter uncertainty<a class="anchor" aria-label="anchor" href="#sample-the-parameter-uncertainty"></a>
 </h2>
 <p><code><a href="../reference/getSamples.html">getSamples()</a></code> returns a data frame of parameter vectors in <code>.ext</code> column order. The confidence interval on each Forest plot row is the quantile of the parameter function evaluated over these vectors.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## Covariance matrix: n draws from the multivariate normal implied by the .cov step</span></span>
 <span><span class="va">dfSamplesCOV</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getSamples.html">getSamples</a></span><span class="op">(</span><span class="va">covFile</span>, extFile <span class="op">=</span> <span class="va">extFile</span>, n <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
 <span></span>
@@ -563,98 +603,68 @@
 <p>Sampling from the covariance matrix or from a small bootstrap produces symmetric intervals. A full bootstrap or SIR file lets the interval be asymmetric.</p>
 </div>
 <div class="section level2">
-<h2 id="define-the-reference-subject">4. Define the reference subject<a class="anchor" aria-label="anchor" href="#define-the-reference-subject"></a>
-</h2>
-<p>Without a reference, <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> uses the model with every covariate effect switched off (all cells <code>-99</code>). To make the reference a typical subject instead, pass <code>dfRefRow</code>.</p>
-<p><code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> builds that row, matched to the geometry of a <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> result. By default it takes the reference from the <strong>data</strong> — the median for a continuous covariate, the most common level for a categorical one.</p>
-<p>That default is the wrong choice here, and it is worth seeing why, because the symptom is subtle. A generated parameter function falls back to the <strong>model’s</strong> reference when a covariate is inactive on a row: <code>-99</code> for <code>WT</code> means the function uses 75, the normalisation constant in <code>$PK</code>. If the reference row instead carries the data median, the two disagree, and every row where that covariate is inactive is displaced from 1 — not because the covariate has an effect, but because the denominator was computed differently from the numerator.</p>
-<p>Taking both from the control stream removes the mismatch:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">refCovs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WT"</span>, <span class="st">"AGE"</span>, <span class="st">"CRCL"</span>, <span class="st">"SEX"</span>, <span class="st">"NCIL"</span>, <span class="st">"FORM"</span>, <span class="st">"FOOD"</span>, <span class="st">"GENO"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">dfRefRow</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/setupDfRefRow.html">setupDfRefRow</a></span><span class="op">(</span></span>
-<span>  dfCovs <span class="op">=</span> <span class="va">dfCovs</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">dfData</span>,</span>
-<span>  covariates <span class="op">=</span> <span class="va">refCovs</span>,</span>
-<span>  contRef <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>WT <span class="op">=</span> <span class="st">"model"</span>, default <span class="op">=</span> <span class="st">"median"</span><span class="op">)</span>,</span>
-<span>  catRef <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    SEX <span class="op">=</span> <span class="st">"model"</span>, FORM <span class="op">=</span> <span class="st">"model"</span>, FOOD <span class="op">=</span> <span class="st">"model"</span>,</span>
-<span>    GENO <span class="op">=</span> <span class="fl">2</span>, default <span class="op">=</span> <span class="st">"mode"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  model <span class="op">=</span> <span class="va">modFile</span>,</span>
-<span>  sep <span class="op">=</span> <span class="st">""</span>,</span>
-<span>  idVar <span class="op">=</span> <span class="st">"ID"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">dfRefRow</span></span>
-<span><span class="co">#&gt;   WT AGE CRCL SEX NCIL FORM FOOD GENO1 GENO3 GENO4 COVARIATEGROUPS</span></span>
-<span><span class="co">#&gt; 1 75  45  119   1    0    1    1     0     0     0       Reference</span></span></code></pre></div>
-<p>Three things about that call are worth stating, because each is a trap:</p>
-<p><strong><code>catRef</code> and <code>sep</code> are repeated from Section 1 and are not optional.</strong> <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> keys its result by the column names <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> produced, so a different <code>sep</code> gives <code>GENO_1</code> where <code>dfCovs</code> has <code>GENO1</code>, and the reference value for that covariate is quietly lost.</p>
-<p><strong><code>"model"</code> is given per covariate, not as a bare scalar.</strong> As a scalar it applies to everything, and the first covariate <code>$PK</code> does not mention — <code>AGE</code> here — fails the whole call. The named-list form asks for <code>"model"</code> where the model has an answer and falls back to <code>"median"</code> / <code>"mode"</code> where it does not.</p>
-<p><strong><code>GENO</code> gets a literal level, not <code>"model"</code>.</strong> <code>$PK</code> names the dummies <code>GENO1</code>, <code>GENO3</code>, <code>GENO4</code> and never bare <code>GENO</code>, so there is no model reference to find for the covariate they encode. The error says so if you try it; the <a href="Part3-deep-dive-forest-plot-inputs.html">deep dive</a> shows the exact text.</p>
-<p>A hand-built <code>dfCovs</code> needs a hand-built reference to match it — a one-row data frame with the same columns works just as well. That route, and how to keep the two consistent, is in the <a href="Part3-deep-dive-forest-plot-inputs.html">Forest plot inputs deep dive</a>.</p>
-<div class="callout-note">
-<p>The reference enters the relative scale as the denominator: each row is plotted as its parameter value divided by the reference-subject value. A reference subject that carries a large covariate effect shifts every other row. Choose it deliberately, and state it in the plot caption.</p>
-</div>
-</div>
-<div class="section level2">
 <h2 id="compute-the-parametric-forest-plot-data">5. Compute the parametric Forest plot data<a class="anchor" aria-label="anchor" href="#compute-the-parametric-forest-plot-data"></a>
 </h2>
 <p><code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> evaluates <code>paramFunction</code> for every row of <code>dfCovs</code> and every parameter vector, then appends the summary columns <code><a href="../reference/forestPlot.html">forestPlot()</a></code> reads. <code>noBaseThetas</code> is the number of THETAs in the model. <code>dfCovs</code> here already carries the <code>GENO1</code>/<code>GENO3</code>/<code>GENO4</code> columns; a <code>dfCovs</code> with a raw <code>GENO</code> column instead can be encoded on the fly with <code>oneHot = list(GENO = list(ref = 2))</code> and <code>oneHotSep = ""</code>.</p>
+<p><code><a href="../reference/generateCovNames.html">generateCovNames()</a></code> then labels the rows with the maps from Section 1. It matches them to <code>dfresBS</code> through <code>COVNUM</code>, the row of <code>dfCovs</code> each result came from.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dfresBS</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getForestDFSCM.html">getForestDFSCM</a></span><span class="op">(</span></span>
 <span>  dfCovs           <span class="op">=</span> <span class="va">dfCovs</span>,</span>
-<span>  cdfCovsNames     <span class="op">=</span> <span class="va">covnames</span>,</span>
 <span>  functionList     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">paramFunction</span><span class="op">)</span>,</span>
 <span>  functionListName <span class="op">=</span> <span class="va">functionListName</span>,</span>
 <span>  noBaseThetas     <span class="op">=</span> <span class="va">gen</span><span class="op">$</span><span class="va">noBaseThetas</span>,</span>
 <span>  dfParameters     <span class="op">=</span> <span class="va">dfSamplesBS</span>,</span>
 <span>  dfRefRow         <span class="op">=</span> <span class="va">dfRefRow</span></span>
 <span><span class="op">)</span></span>
+<span><span class="va">dfresBS</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/generateCovNames.html">generateCovNames</a></span><span class="op">(</span><span class="va">dfCovs</span>, <span class="va">dfresBS</span>,</span>
+<span>  name_map <span class="op">=</span> <span class="va">name_map</span>, unit_map <span class="op">=</span> <span class="va">unit_map</span>, level_map <span class="op">=</span> <span class="va">level_map</span>, group_map <span class="op">=</span> <span class="va">group_map</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dfresBS</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"COVNUM"</span>, <span class="st">"COVNAME"</span>, <span class="st">"GROUPNAME"</span>, <span class="st">"PARAMETER"</span>, <span class="st">"POINT"</span>, <span class="st">"Q1"</span>, <span class="st">"Q2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    COVNUM    COVNAME GROUPNAME PARAMETER      POINT         Q1         Q2</span></span>
-<span><span class="co">#&gt; 1       1 WT 58.3 kg        WT        CL   9.908044   9.488383  10.383027</span></span>
-<span><span class="co">#&gt; 2       1 WT 58.3 kg        WT      FREL   1.000000   1.000000   1.000000</span></span>
-<span><span class="co">#&gt; 3       1 WT 58.3 kg        WT         V 148.542959 140.171662 158.862836</span></span>
-<span><span class="co">#&gt; 4       1 WT 58.3 kg        WT       AUC   8.074249   7.704882   8.431378</span></span>
-<span><span class="co">#&gt; 21      2  WT 126 kg        WT        CL  17.660965  16.912923  18.507616</span></span>
-<span><span class="co">#&gt; 22      2  WT 126 kg        WT      FREL   1.000000   1.000000   1.000000</span></span></code></pre></div>
-<p>The model-derived reference from Section 4 can now be checked rather than taken on trust. <code>POINT</code> is the parameter value for a row; <code>REFFUNC</code> is the reference the row is divided by. For any covariate the model gives <strong>no</strong> effect on <code>CL</code> — <code>AGE</code>, <code>CRCL</code>, <code>SEX</code>, <code>NCIL</code>, <code>FORM</code> are all absent from <code>run7</code>’s clearance — the two should be identical, and the row should sit exactly at 1:</p>
+<span><span class="co">#&gt;    COVNUM          COVNAME GROUPNAME PARAMETER      POINT         Q1         Q2</span></span>
+<span><span class="co">#&gt; 1       1 Weight = 58.3 kg    Weight        CL   9.908044   9.488383  10.383027</span></span>
+<span><span class="co">#&gt; 2       1 Weight = 58.3 kg    Weight      FREL   1.000000   1.000000   1.000000</span></span>
+<span><span class="co">#&gt; 3       1 Weight = 58.3 kg    Weight         V 148.542959 140.171662 158.862836</span></span>
+<span><span class="co">#&gt; 4       1 Weight = 58.3 kg    Weight       AUC   8.074249   7.704882   8.431378</span></span>
+<span><span class="co">#&gt; 21      2  Weight = 126 kg    Weight        CL  17.660965  16.912923  18.507616</span></span>
+<span><span class="co">#&gt; 22      2  Weight = 126 kg    Weight      FREL   1.000000   1.000000   1.000000</span></span></code></pre></div>
+<p>The model-derived reference from Section 2 can now be checked rather than taken on trust. <code>POINT</code> is the parameter value for a row; <code>REFFUNC</code> is the reference the row is divided by. For any covariate the model gives <strong>no</strong> effect on <code>CL</code> — <code>AGE</code>, <code>CRCL</code>, <code>SEX</code>, <code>NCIL</code>, <code>FORM</code> are all absent from <code>run7</code>’s clearance — the two should be identical, and the row should sit exactly at 1:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">dfresBS</span>, <span class="va">PARAMETER</span> <span class="op">==</span> <span class="st">"CL"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">COVNAME</span>, <span class="va">POINT</span>, <span class="va">REFFUNC</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;             COVNAME     POINT REFFUNC</span></span>
-<span><span class="co">#&gt; 1        WT 58.3 kg  9.908044 11.9683</span></span>
-<span><span class="co">#&gt; 21        WT 126 kg 17.660965 11.9683</span></span>
-<span><span class="co">#&gt; 31         Age 21 y 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 41         Age 65 y 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 5  CRCL 77.7 mL/min 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 6   CRCL 150 mL/min 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 7              Male 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 8            Female 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 9           NCI = 0 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 10          NCI &gt; 0 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 11      Oral tablet 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 12              FDC 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 13           Fasted 15.006832 11.9683</span></span>
-<span><span class="co">#&gt; 14              Fed 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 15           2D6 UM 26.407168 11.9683</span></span>
-<span><span class="co">#&gt; 16           2D6 EM 11.968300 11.9683</span></span>
-<span><span class="co">#&gt; 17           2D6 IM  7.898712 11.9683</span></span>
-<span><span class="co">#&gt; 18           2D6 PM  5.706930 11.9683</span></span></code></pre></div>
+<span><span class="co">#&gt;               COVNAME     POINT REFFUNC</span></span>
+<span><span class="co">#&gt; 1    Weight = 58.3 kg  9.908044 11.9683</span></span>
+<span><span class="co">#&gt; 21    Weight = 126 kg 17.660965 11.9683</span></span>
+<span><span class="co">#&gt; 31         Age = 21 y 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 41         Age = 65 y 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 5  CRCL = 77.7 mL/min 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 6   CRCL = 150 mL/min 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 7                Male 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 8              Female 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 9             NCI = 0 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 10            NCI &gt; 0 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 11        Oral tablet 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 12                FDC 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 13             Fasted 15.006832 11.9683</span></span>
+<span><span class="co">#&gt; 14                Fed 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 15             2D6 UM 26.407168 11.9683</span></span>
+<span><span class="co">#&gt; 16             2D6 EM 11.968300 11.9683</span></span>
+<span><span class="co">#&gt; 17             2D6 IM  7.898712 11.9683</span></span>
+<span><span class="co">#&gt; 18             2D6 PM  5.706930 11.9683</span></span></code></pre></div>
 <p>They match to the last digit. Only <code>WT</code>, <code>FOOD = 0</code> and the genotypes move, which are exactly the covariates <code>$PK</code> gives a clearance effect. Had the reference been left at its data-derived default, every one of those rows would sit slightly off 1 — a displacement easy to read as a small covariate effect when it is only a mismatched denominator.</p>
 <p>Switching the uncertainty source is a one-argument change:</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dfresCOV</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getForestDFSCM.html">getForestDFSCM</a></span><span class="op">(</span></span>
 <span>  dfCovs           <span class="op">=</span> <span class="va">dfCovs</span>,</span>
-<span>  cdfCovsNames     <span class="op">=</span> <span class="va">covnames</span>,</span>
 <span>  functionList     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">paramFunction</span><span class="op">)</span>,</span>
 <span>  functionListName <span class="op">=</span> <span class="va">functionListName</span>,</span>
 <span>  noBaseThetas     <span class="op">=</span> <span class="va">gen</span><span class="op">$</span><span class="va">noBaseThetas</span>,</span>
 <span>  dfParameters     <span class="op">=</span> <span class="va">dfSamplesCOV</span>,</span>
 <span>  dfRefRow         <span class="op">=</span> <span class="va">dfRefRow</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">dfresCOV</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/generateCovNames.html">generateCovNames</a></span><span class="op">(</span><span class="va">dfCovs</span>, <span class="va">dfresCOV</span>,</span>
+<span>  name_map <span class="op">=</span> <span class="va">name_map</span>, unit_map <span class="op">=</span> <span class="va">unit_map</span>, level_map <span class="op">=</span> <span class="va">level_map</span>, group_map <span class="op">=</span> <span class="va">group_map</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/forestPlot.html">forestPlot</a></span><span class="op">(</span><span class="va">dfresBS</span>, parameters <span class="op">=</span> <span class="st">"CL"</span>, groupNameLabels <span class="op">=</span> <span class="va">covariateGroupNames</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/forestPlot.html">forestPlot</a></span><span class="op">(</span><span class="va">dfresBS</span>, parameters <span class="op">=</span> <span class="st">"CL"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Part2-walkthrough_files/figure-html/unnamed-chunk-19-1.png" width="1152"></p>
 </div>
 <div class="section level2">
@@ -718,14 +728,14 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $SEX</span></span>
 <span><span class="co">#&gt; expression(SEX == 2)</span></span></code></pre></div>
-<p>Note what it refuses to do. Each row has to be backed by at least <code>minSubjects</code> subjects (10 by default), because a covariate effect estimated from a handful of people is not worth plotting. On the first 300 subjects rather than 500, this call stops with</p>
+<p>Note what it refuses to do. Each row has to be backed by at least <code>minSubjects</code> subjects (10 by default), because a covariate effect estimated from a handful of people is not worth plotting. Run it on the first 300 subjects instead of the 500 used here, and it stops with</p>
 <pre><code>Expression `GENO == 1` selects 7 subject(s) in `data`, fewer than
 `minSubjects` (10).</code></pre>
 <p>which is the guard working, not a problem to route around. Widen the data, widen <code>probs</code>, or lower <code>minSubjects</code> deliberately.</p>
 <div class="callout-note">
 <p>The two continuous cut points come from the same 5th and 95th percentiles <code><a href="../reference/getCovStats.html">getCovStats()</a></code> uses — but <code><a href="../reference/setupCovExpressionsList.html">setupCovExpressionsList()</a></code> implements that rule separately rather than calling it, so the two are kept in step by hand. The <a href="Part3-deep-dive-forest-plot-inputs.html">deep dive</a> says where that matters.</p>
 </div>
-<p><code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code> then needs the analysis data itself; <code>ncores &gt; 1</code> parallelises the calculation and <code>cstrPackages</code> names the packages the workers need. Half the uncertainty samples are used here purely to keep the vignette quick — an empirical plot evaluates the parameter function once per subject per sample, so its cost is the product of the two.</p>
+<p><code><a href="../reference/getForestDFemp.html">getForestDFemp()</a></code> then needs the analysis data itself; <code>ncores &gt; 1</code> parallelises the calculation and <code>cstrPackages</code> names the packages the workers need. Only 100 of the 200 covariance-matrix samples are used here, purely to keep the vignette quick — an empirical plot evaluates the parameter function once per subject per sample, so its cost is the product of the two.</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dfresEmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getForestDFemp.html">getForestDFemp</a></span><span class="op">(</span></span>
 <span>  dfData             <span class="op">=</span> <span class="va">dfDataEmp</span>,</span>
@@ -743,7 +753,7 @@
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/forestPlot.html">forestPlot</a></span><span class="op">(</span><span class="va">dfresEmp</span>, parameters <span class="op">=</span> <span class="st">"CL"</span>, noVar <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Part2-walkthrough_files/figure-html/unnamed-chunk-23-1.png" width="1152"></p>
-<p><code>noVar = FALSE</code> keeps the parameter-uncertainty interval. <code>noVar = TRUE</code> (the default for empirical data) drops it and shows only the covariate effect.</p>
+<p><code>noVar = FALSE</code> keeps the parameter-uncertainty interval. <code>noVar = TRUE</code>, <code><a href="../reference/forestPlot.html">forestPlot()</a></code>’s default, drops it and shows only the covariate effect.</p>
 </div>
 <div class="section level2">
 <h2 id="customise-the-plot">7. Customise the plot<a class="anchor" aria-label="anchor" href="#customise-the-plot"></a>
@@ -795,7 +805,6 @@
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/forestPlot.html">forestPlot</a></span><span class="op">(</span></span>
 <span>  <span class="va">dfresBS</span>,</span>
 <span>  parameters      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"CL"</span>, <span class="st">"FREL"</span><span class="op">)</span>,</span>
-<span>  groupNameLabels <span class="op">=</span> <span class="va">covariateGroupNames</span>,</span>
 <span>  statisticsLabel <span class="op">=</span> <span class="st">"Estimate: "</span>,</span>
 <span>  xlim            <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.6</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -805,7 +814,7 @@
 </h3>
 <p>A Forest plot that leaves the session — pasted into a report, attached to an email — is easier to trust when it says where it was made. <code><a href="../reference/addStamp.html">addStamp()</a></code> appends a caption naming the working directory and the time, and inside a <code>knitr</code> chunk the source file and chunk label as well.</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/addStamp.html">addStamp</a></span><span class="op">(</span><span class="fu"><a href="../reference/forestPlot.html">forestPlot</a></span><span class="op">(</span><span class="va">dfresBS</span>, parameters <span class="op">=</span> <span class="st">"CL"</span>, groupNameLabels <span class="op">=</span> <span class="va">covariateGroupNames</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/addStamp.html">addStamp</a></span><span class="op">(</span><span class="fu"><a href="../reference/forestPlot.html">forestPlot</a></span><span class="op">(</span><span class="va">dfresBS</span>, parameters <span class="op">=</span> <span class="st">"CL"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Part2-walkthrough_files/figure-html/unnamed-chunk-25-1.png" width="1152"></p>
 <p>It takes and returns a <code>ggplot</code>, so it composes with anything else you do to the plot. Pass <code>source</code> to say something more specific than the directory name.</p>
 </div>

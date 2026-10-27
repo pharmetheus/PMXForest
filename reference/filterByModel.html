@@ -18,7 +18,7 @@ the model never saw."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -83,7 +83,8 @@ the model never saw.</p>
 <span>  <span class="va">modFile</span>,</span>
 <span>  useInputNames <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  idVar <span class="op">=</span> <span class="st">"ID"</span></span>
+<span>  idVar <span class="op">=</span> <span class="st">"ID"</span>,</span>
+<span>  dropNoObs <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -113,6 +114,13 @@ how many records and subjects it removed.</p></dd>
 <dt>idVar</dt>
 <dd><p>The subject identifier, used only for that report. Defaults to
 <code>"ID"</code>.</p></dd>
+
+
+<dt>dropNoObs</dt>
+<dd><p>Logical. If <code>TRUE</code>, also remove subjects left with no
+observation record after filtering - subjects with only dose or other
+event records. Defaults to <code>FALSE</code>, which keeps every subject NONMEM
+counts. See Details.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -163,6 +171,23 @@ about the first non-blank character of the raw record rather than a condition
 on the data, so it cannot be applied to a data frame. <code>IGNORE=@</code> is the usual
 way of skipping a header line, which <code><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv()</a></code> has already done, so this
 is normally harmless - a warning is issued and the statement is skipped.</p>
+<p><strong>Subjects without observations.</strong> NONMEM reads a subject whose records
+are all doses or other events, and counts it among its individuals, but
+such a subject contributes nothing to the estimates. <code>dropNoObs = TRUE</code>
+removes them after the <code>$DATA</code> filter, so they do not enter covariate
+summaries either. An observation is identified as NONMEM identifies it,
+from the columns <code>$INPUT</code> declares and does not drop:</p><ul><li><p><code>MDV == 0</code> where there is an <code>MDV</code> column. <code>MDV = 100</code> is ignored
+during estimation and does not count.</p></li>
+<li><p>Otherwise, in a <code>$PRED</code> model every record is an observation, since
+<code>EVID</code> and the dose items belong to PREDPP.</p></li>
+<li><p>Otherwise <code>EVID == 0</code> where there is an <code>EVID</code> column.</p></li>
+<li><p>Otherwise a record is a dose if any of <code>AMT</code>, <code>RATE</code> or <code>SS</code> is
+non-zero - the rule NM-TRAN uses to supply <code>EVID</code> - and an observation
+if not. A steady-state infusion has <code>AMT = 0</code>, which is why <code>AMT</code> alone
+is not enough.</p></li>
+</ul><p>A subject is a run of consecutive records with the same <code>ID</code>, as NONMEM
+reads it. In a FREM data set covariates are observation records, so there a
+subject with covariates but no other observations is kept.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -198,6 +223,14 @@ record, subject and observation counts NONMEM printed in the <code>.lst</code>.
 <span class="r-out co"><span class="r-pr">#&gt;</span>    5%   95% </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  77.7 150.0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## 32 of the subjects run7 reads have dose records only</span></span></span>
+<span class="r-in"><span><span class="va">dfObs</span> <span class="op">&lt;-</span> <span class="fu">filterByModel</span><span class="op">(</span><span class="va">dfData</span>, <span class="va">modFile</span>, dropNoObs <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Applying IGNORE: (TYPE == 2) | (BLQ == 1) | (ID == 895)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Dropping 32 subject(s) with no observation record (585 record(s)); observations identified by EVID = 0.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Removed 35716 of 69016 record(s) and 242 subject(s).</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">dfObs</span><span class="op">$</span><span class="va">ID</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 722</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## The names $INPUT uses are not the names in this csv file</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu">filterByModel</span><span class="op">(</span><span class="va">dfData</span>, <span class="va">modFile</span>, useInputNames <span class="op">=</span> <span class="cn">TRUE</span>, quiet <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span>, <span class="fl">10</span><span class="op">)</span></span></span>
