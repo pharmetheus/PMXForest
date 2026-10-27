@@ -7,10 +7,10 @@ and empirical Forest plots no longer need PMXFrem for their row labels.
 
 `name_map` names each covariate once, and `unit_map` adds the unit:
 `name_map = c(WT = "Weight")` and `unit_map = c(WT = "kg")` label the rows
-`Weight = <value> kg`, whatever percentiles the data give. `level_map` labels the levels of the
-categorical covariates, so `label_map` no longer needs a string per percentile
-or level. `print_template = TRUE` prints `name_map`, `unit_map` and `level_map`
-to fill in.
+`Weight = <value> kg`, whatever percentiles the data give. `level_map` labels
+the levels of the categorical covariates, so `label_map` no longer needs a
+string per percentile or level. `print_template = TRUE` prints `name_map`,
+`unit_map` and `level_map` to fill in.
 
 `dummy_groups` merges a categorical covariate already coded as separate 0/1
 columns (`GENO1N`, `GENO3N`, `GENO4N`) into one group with a single reference
