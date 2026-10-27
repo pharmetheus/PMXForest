@@ -1,3 +1,54 @@
+# PMXForest 1.4.0
+
+## Forest plot labels from one set of names
+
+`generateCovNames()` has moved here from PMXFrem, which re-exports it, so SCM
+and empirical Forest plots no longer need PMXFrem for their row labels.
+
+`name_map` names each covariate once, and `unit_map` adds the unit:
+`name_map = c(WT = "Weight")` and `unit_map = c(WT = "kg")` label the rows
+`Weight = <value> kg`, whatever percentiles the data give. `level_map` labels
+the levels of the categorical covariates, so `label_map` no longer needs a
+string per percentile or level. `print_template = TRUE` prints `name_map`,
+`unit_map` and `level_map` to fill in.
+
+`dummy_groups` merges a categorical covariate already coded as separate 0/1
+columns (`GENO1N`, `GENO3N`, `GENO4N`) into one group with a single reference
+row.
+
+## Other notable additions
+
+* `filterByModel()` takes `dropNoObs = TRUE` to also remove subjects without
+  observation records.
+* `generateCovNames()` warns about map entries that match nothing;
+  `warn_unused = FALSE` silences it.
+* `startParallelWorkers()` is exported for packages that build on PMXForest,
+  such as PMXFrem, so they need not keep their own copy.
+
+## Changes to existing behaviour
+
+* **A key given twice in a `generateCovNames()` map is an error.** A named
+  vector silently used the first.
+* `verifyFilterByModel()` counts observations under the `$INPUT` names, with
+  the same rule as `dropNoObs`, and reads an empty `MDV` as 0, as NM-TRAN does.
+
+## Bug fixes
+
+* **`generateCovNames()` mislabelled one-hot covariates in two cases:** it
+  ignored the `sep` that `setupDfCovs()` was called with, and it labelled the
+  reference row from the lowest level rather than from `catRef`.
+* **Parallel runs on Windows could use another installed PMXForest.** With
+  `ncores > 1`, `getForestDFSCM()` and `getForestDFemp()` loaded the first
+  PMXForest on `.libPaths()` rather than the one the session uses. They now load
+  the session's copy, and stop with both versions named when they cannot. macOS
+  and Linux were not affected.
+* **`forestPlot()` no longer warns about `size` on ggplot2 3.4.0 or later,** and
+  still draws the width asked for on older versions.
+
+## Vignettes
+
+The walkthrough now defines the reference subject next to the covariate setup.
+
 # PMXForest 1.3.0
 
 Every bug and issue reported against PMXForest has been addressed in this

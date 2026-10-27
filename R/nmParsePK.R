@@ -97,13 +97,17 @@ nmInputNames <- function(mod) {
 #' the alternate names introduced by `SYNONYM=REAL` pairs.
 #'
 #' Returns `list(names = <character, one per position>, aliases = <named
-#' character, alternate name -> primary name>)`.
+#' character, alternate name -> primary name>, dropped = <logical, one per
+#' position, TRUE for a DROP/SKIP column>)`.
 #'
 #' @noRd
 nmInputPositions <- function(mod) {
   rec <- nmRecord(mod, "\\$INP(U(T)?)?\\b")
   if (nrow(rec) == 0) {
-    return(list(names = character(0), aliases = character(0)))
+    return(list(
+      names = character(0), aliases = character(0),
+      dropped = logical(0)
+    ))
   }
 
   items <- unlist(strsplit(trimws(paste(rec$code, collapse = " ")), "[[:space:],]+"))
@@ -119,7 +123,10 @@ nmInputPositions <- function(mod) {
       aliases[parts[2]] <- parts[1]
     }
   }
-  list(names = nms, aliases = aliases)
+  list(
+    names = nms, aliases = aliases,
+    dropped = grepl("(^|=)(DROP|SKIP)$", items, ignore.case = TRUE)
+  )
 }
 
 #' Number of THETAs declared by the $THETA records

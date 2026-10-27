@@ -5,6 +5,12 @@
 #'   them onto the structure of the provided `dfCovs`.
 #'
 #' @details
+#'   **The reference lives here, not in `dfCovs`.** `getForestDFSCM()` evaluates
+#'   each row of `dfCovs` as it stands and this row separately, as the
+#'   denominator, so the `-99` cells in `dfCovs` stay as they are. Write values
+#'   into them only to hold a row's other covariates at something other than the
+#'   model's reference, and then give this row the same values.
+#'
 #'   **Choosing the reference.** `contRef` and `catRef` both accept either a
 #'   single setting applied to every covariate, or a named list with an entry per
 #'   covariate plus an optional `default` component:

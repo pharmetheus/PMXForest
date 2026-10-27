@@ -91,15 +91,21 @@ dfCovs <- setupDfCovs(
   sep = "",
   idVar = "ID"
 )
+```
 
-covnames <- c(
-  "Fasted", "Fed",
-  "2D6 UM", "2D6 EM", "2D6 IM", "2D6 PM",
-  paste0("WT ", dfCovs$WT[7:8], " kg"),
-  "Male", "Female"
+The labels are given once per covariate, not once per row: a display
+name, a unit for the continuous covariates and a label for each
+categorical level. `generateCovNames()` applies them below, so the
+weight rows show whatever percentiles the data give.
+
+``` r
+name_map <- c(FOOD = "Food status", GENO = "2D6 Genotype", WT = "Weight", SEX = "Sex")
+unit_map <- c(WT = "kg")
+level_map <- list(
+  FOOD = c("0" = "Fasted", "1" = "Fed"),
+  GENO = c("1" = "2D6 UM", "2" = "2D6 EM", "3" = "2D6 IM", "4" = "2D6 PM"),
+  SEX  = c("1" = "Male", "2" = "Female")
 )
-
-covariateGroupNames <- c("Food status", "2D6 Genotype", "Weight", "Sex")
 ```
 
 ### Describe how the parameters are related to the covariates
@@ -145,11 +151,14 @@ dfSamples <- getSamples(covFile, extFile, n = 175)
 
 dfres <- getForestDFSCM(
   dfCovs = dfCovs,
-  cdfCovsNames = covnames,
   functionList = list(paramFunction),
   functionListName = functionListName,
   noBaseThetas = gen$noBaseThetas,
   dfParameters = dfSamples
+)
+
+dfres <- generateCovNames(dfCovs, dfres,
+  name_map = name_map, unit_map = unit_map, level_map = level_map
 )
 ```
 
@@ -158,7 +167,7 @@ dfres <- getForestDFSCM(
 With the above information is an easy task to generate the Forest plot.
 
 ``` r
-forestPlot(dfres, groupNameLabels = covariateGroupNames, size = 10)
+forestPlot(dfres, size = 10)
 ```
 
 <img src="man/figures/README-forest-plot-1.png" alt="" width="100%" />

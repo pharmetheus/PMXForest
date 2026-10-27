@@ -37,7 +37,9 @@ against NONMEM's own count (\code{rawRows} minus \verb{NO. OF DATA RECS}) and so
 independent of what \code{\link[=filterByModel]{filterByModel()}} did. On a failing check it will
 not reconcile with the filtered count, which is the point.
 \item \code{rawRows} - rows in the data set as read, before filtering.
-\item \code{obsBasis} - \code{"MDV"}, \code{"EVID"} or \code{"NONE"}.
+\item \code{obsBasis} - the column(s) observations were identified from:
+\code{"MDV"}, \code{"EVID"}, the dose items present (e.g. \code{"AMT/RATE"}), or
+\code{"NONE"} when every record is an observation.
 }
 }
 \description{
@@ -51,8 +53,11 @@ It needs nothing but artefacts already on disk - the control stream, its
 \code{.lst}, and the data file - and never re-runs anything.
 }
 \details{
-The observation count follows NONMEM: records with \code{MDV == 0}, or
-\code{EVID == 0} where the data set carries no \code{MDV} column.
+The observation count follows NONMEM, using the rule described
+under \strong{Subjects without observations} in \code{\link[=filterByModel]{filterByModel()}}: \code{MDV == 0}
+where there is an \code{MDV} column, otherwise \code{EVID == 0}, otherwise records
+with no non-zero \code{AMT}, \code{RATE} or \code{SS}. Columns are read by position under
+the \verb{$INPUT} names.
 
 The \code{.lst} describes the model NONMEM read, which is not always the model
 on disk. Where its echoed \verb{$INPUT} or \verb{$DATA} filter clauses disagree with

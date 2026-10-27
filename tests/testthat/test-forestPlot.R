@@ -407,3 +407,35 @@ test_that("forestPlot statistics table uses decimals on the relative scale by de
   d_abs <- forestPlot(df_mock, plotRelative = FALSE, noVar = TRUE, return = "data")
   expect_match(d_abs$STATISTIC[1], "^12 \\[") # POINT = 12 -> 2 sig figs
 })
+
+test_that("forestPlot gives the reference line and CI their width under the installed ggplot2's name", {
+  # ggplot2 3.4.0 renamed the line width from `size` to `linewidth`. The old
+  # name still draws on a newer ggplot2 but is deprecated (a lifecycle warning,
+  # too unreliable to assert on), and the new one is ignored by an older
+  # ggplot2. So assert on the parameter name each layer is given.
+  widthName <- if (utils::packageVersion("ggplot2") >= "3.4.0") "linewidth" else "size"
+  otherName <- setdiff(c("linewidth", "size"), widthName)
+
+  plots <- forestPlot(df_mock, ref_line_size = 1.7, ci_line_size = 0.9, return = "plotList")
+  built <- lapply(plots, ggplot2::ggplot_build)
+
+  layersOf <- function(geomClass) {
+    unlist(lapply(seq_along(plots), function(i) {
+      isGeom <- vapply(plots[[i]]$layers, function(l) inherits(l$geom, geomClass), logical(1))
+      Map(
+        function(l, d) list(params = names(l$aes_params), width = unique(d[[widthName]])),
+        plots[[i]]$layers[isGeom], built[[i]]$data[isGeom]
+      )
+    }), recursive = FALSE)
+  }
+
+  for (spec in list(list(geom = "GeomVline", width = 1.7), list(geom = "GeomErrorbarh", width = 0.9))) {
+    layers <- layersOf(spec$geom)
+    expect_gt(length(layers), 0)
+    for (l in layers) {
+      expect_true(widthName %in% l$params, label = paste(spec$geom, "is given", widthName))
+      expect_false(otherName %in% l$params, label = paste(spec$geom, "is given", otherName))
+      expect_equal(l$width, spec$width)
+    }
+  }
+})

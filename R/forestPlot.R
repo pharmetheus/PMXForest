@@ -336,17 +336,22 @@ forestPlot <- function(dfres,
         aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = "Reference area"), alpha = ref_fill_alpha,
         inherit.aes = FALSE
       ) +
-      geom_vline(
-        data = rect_data,
-        aes(
-          xintercept = ref_value,
-          linetype = "Reference subject",
-          color = "Reference subject"
+      do.call(geom_vline, c(
+        list(
+          data = rect_data,
+          mapping = aes(
+            xintercept = ref_value,
+            linetype = "Reference subject",
+            color = "Reference subject"
+          ),
+          key_glyph = "path"
         ),
-        size = ref_line_size,
-        key_glyph = "path"
-      ) +
-      geom_errorbarh(aes(color = "CI", linetype = "CI"), key_glyph = "path", height = 0, size = ci_line_size) +
+        .lineWidthArg(ref_line_size)
+      )) +
+      do.call(geom_errorbarh, c(
+        list(mapping = aes(color = "CI", linetype = "CI"), key_glyph = "path", height = 0),
+        .lineWidthArg(ci_line_size)
+      )) +
       geom_point(aes(shape = "Point estimate"), color = point_color, size = point_size) +
 
       # browser()
@@ -366,7 +371,7 @@ forestPlot <- function(dfres,
         name = NULL, values = c("Point estimate" = point_shape),
         labels = c("Point estimate" = point_label)
       ) +
-      guides(linetype = guide_legend(override.aes = list(linewidth = 1))) +
+      guides(linetype = guide_legend(override.aes = .lineWidthArg(1))) +
       facet_grid(GROUPNAMELABEL ~ PARAMETERLABEL,
         scales = "free",
         labeller = labeller(
@@ -567,5 +572,26 @@ forestPlot <- function(dfres,
     return(totList)
   } else {
     return(myPlot)
+  }
+}
+
+#' A line-width argument that the installed ggplot2 understands
+#'
+#' ggplot2 3.4.0 renamed a line's `size` aesthetic to `linewidth`. Passing
+#' `linewidth` to an older ggplot2 is not an error - it warns "Ignoring unknown
+#' parameters" and draws the default width - and passing `size` to a newer one
+#' draws correctly but warns that `size` is deprecated. Choosing the name by
+#' version keeps both silent and both correct, without requiring a ggplot2
+#' newer than the one in a given production library (CI's snapshot has 3.3.6).
+#'
+#' @param width The line width.
+#' @return A named list to splice into a geom call.
+#' @keywords internal
+#' @noRd
+.lineWidthArg <- function(width) {
+  if (utils::packageVersion("ggplot2") >= "3.4.0") {
+    list(linewidth = width)
+  } else {
+    list(size = width)
   }
 }

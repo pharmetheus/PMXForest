@@ -85,6 +85,12 @@ Generates the reference data frame (\code{dfRefRow}) required by
 them onto the structure of the provided \code{dfCovs}.
 }
 \details{
+\strong{The reference lives here, not in \code{dfCovs}.} \code{getForestDFSCM()} evaluates
+each row of \code{dfCovs} as it stands and this row separately, as the
+denominator, so the \code{-99} cells in \code{dfCovs} stay as they are. Write values
+into them only to hold a row's other covariates at something other than the
+model's reference, and then give this row the same values.
+
 \strong{Choosing the reference.} \code{contRef} and \code{catRef} both accept either a
 single setting applied to every covariate, or a named list with an entry per
 covariate plus an optional \code{default} component:

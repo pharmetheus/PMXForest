@@ -67,7 +67,10 @@ values that will be used as the reference, if NULL the typical subject is used a
 length of the vector should match the number of rows in dfCovs.
 If NULL (default) an educated guess of the grouping will be set}
 
-\item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization}
+\item{ncores}{the number of cores to use for the calculations, default = 1 which means no parallellization.
+On Windows the workers are new R sessions. They load the same package
+versions as this session, including a package loaded from a folder that
+is not on \code{.libPaths()}, and the run stops if they cannot.}
 
 \item{cstrPackages}{a character vector with package names needed to run the calculations in parallel, default = NULL}
 

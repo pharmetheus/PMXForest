@@ -52,6 +52,27 @@
 #'   way of skipping a header line, which `read.csv()` has already done, so this
 #'   is normally harmless - a warning is issued and the statement is skipped.
 #'
+#'   **Subjects without observations.** NONMEM reads a subject whose records
+#'   are all doses or other events, and counts it among its individuals, but
+#'   such a subject contributes nothing to the estimates. `dropNoObs = TRUE`
+#'   removes them after the `$DATA` filter, so they do not enter covariate
+#'   summaries either. An observation is identified as NONMEM identifies it,
+#'   from the columns `$INPUT` declares and does not drop:
+#'   \itemize{
+#'     \item `MDV == 0` where there is an `MDV` column. `MDV = 100` is ignored
+#'       during estimation and does not count.
+#'     \item Otherwise, in a `$PRED` model every record is an observation, since
+#'       `EVID` and the dose items belong to PREDPP.
+#'     \item Otherwise `EVID == 0` where there is an `EVID` column.
+#'     \item Otherwise a record is a dose if any of `AMT`, `RATE` or `SS` is
+#'       non-zero - the rule NM-TRAN uses to supply `EVID` - and an observation
+#'       if not. A steady-state infusion has `AMT = 0`, which is why `AMT` alone
+#'       is not enough.
+#'   }
+#'   A subject is a run of consecutive records with the same `ID`, as NONMEM
+#'   reads it. In a FREM data set covariates are observation records, so there a
+#'   subject with covariates but no other observations is kept.
+#'
 #' @param data A data frame holding at least the first `length($INPUT)` columns of
 #'   the model's data file, in that order.
 #' @param modFile Path to the NONMEM control stream.
@@ -63,6 +84,10 @@
 #'   how many records and subjects it removed.
 #' @param idVar The subject identifier, used only for that report. Defaults to
 #'   `"ID"`.
+#' @param dropNoObs Logical. If `TRUE`, also remove subjects left with no
+#'   observation record after filtering - subjects with only dose or other
+#'   event records. Defaults to `FALSE`, which keeps every subject NONMEM
+#'   counts. See Details.
 #'
 #' @return A data frame containing the rows the model used.
 #'
@@ -87,10 +112,14 @@
 #' getCovStats(dfData, "CRCL", idVar = "ID")
 #' getCovStats(dfUsed, "CRCL", idVar = "ID")
 #'
+#' ## 32 of the subjects run7 reads have dose records only
+#' dfObs <- filterByModel(dfData, modFile, dropNoObs = TRUE)
+#' length(unique(dfObs$ID))
+#'
 #' ## The names $INPUT uses are not the names in this csv file
 #' head(names(filterByModel(dfData, modFile, useInputNames = TRUE, quiet = TRUE)), 10)
 filterByModel <- function(data, modFile, useInputNames = FALSE, quiet = FALSE,
-                          idVar = "ID") {
+                          idVar = "ID", dropNoObs = FALSE) {
   data <- as.data.frame(data)
   mod <- nmReadModel(modFile)
   pos <- nmInputPositions(mod)
@@ -123,6 +152,30 @@ filterByModel <- function(data, modFile, useInputNames = FALSE, quiet = FALSE,
 
   keep <- nmDataFilter(mod, work, modFile, quiet)
 
+  if (dropNoObs) {
+    if (!"ID" %in% pos$names[!pos$dropped]) {
+      stop("dropNoObs = TRUE needs an ID item in $INPUT to tell subjects ",
+        "apart, and ", basename(modFile), " declares none.",
+        call. = FALSE
+      )
+    }
+    idx <- which(keep)
+    obs <- nmObsRecords(mod, work[idx, , drop = FALSE], pos)
+    ## NONMEM starts a new individual wherever ID changes from one record to
+    ## the next, so a returning ID is a new subject.
+    id <- as.character(work$ID[idx])
+    block <- cumsum(c(TRUE, id[-1] != id[-length(id)]))[seq_along(id)]
+    hasObs <- as.vector(tapply(obs$obs, block, any))
+    keep[idx[!hasObs[block]]] <- FALSE
+    if (!quiet) {
+      message(
+        "Dropping ", sum(!hasObs), " subject(s) with no observation record (",
+        sum(!hasObs[block]), " record(s)); observations identified by ",
+        obs$rule, "."
+      )
+    }
+  }
+
   if (!quiet) {
     nrRec <- nrow(data) - sum(keep)
     nrSub <- if (idVar %in% names(data)) {
@@ -137,6 +190,56 @@ filterByModel <- function(data, modFile, useInputNames = FALSE, quiet = FALSE,
   }
 
   if (useInputNames) work[keep, , drop = FALSE] else data[keep, , drop = FALSE]
+}
+
+#' Which records NONMEM treats as observations
+#'
+#' `work` carries the `$INPUT` names. Only columns `$INPUT` declares and does
+#' not drop are consulted, since NONMEM never sees the others. Returns
+#' `list(obs = <logical, one per row>, basis = <the columns used, or "NONE">,
+#' rule = <the same, in words>)`.
+#'
+#' @noRd
+nmObsRecords <- function(mod, work, pos) {
+  live <- pos$names[!pos$dropped]
+  has <- function(x) x %in% live && x %in% names(work)
+  ## NM-TRAN reads "." and an empty field as 0.
+  num <- function(x) {
+    v <- work[[x]]
+    if (!is.numeric(v)) {
+      v <- trimws(as.character(v))
+      v[v %in% c(".", "")] <- "0"
+      n <- suppressWarnings(as.numeric(v))
+      if (anyNA(n[!is.na(v)])) {
+        stop("Column ", x, " holds non-numeric values, so observation records ",
+          "cannot be identified from it.",
+          call. = FALSE
+        )
+      }
+      v <- n
+    }
+    v[is.na(v)] <- 0
+    v
+  }
+  out <- function(obs, basis, rule) list(obs = obs, basis = basis, rule = rule)
+  all <- rep(TRUE, nrow(work))
+
+  if (has("MDV")) {
+    return(out(num("MDV") == 0, "MDV", "MDV = 0"))
+  }
+  if (nrow(nmRecord(mod, "\\$PRED\\b")) > 0) {
+    return(out(all, "NONE", "every record, as a $PRED model without MDV has no other"))
+  }
+  if (has("EVID")) {
+    return(out(num("EVID") == 0, "EVID", "EVID = 0"))
+  }
+  doseItems <- Filter(has, c("AMT", "RATE", "SS"))
+  if (length(doseItems) > 0) {
+    dose <- Reduce(`|`, lapply(doseItems, function(x) num(x) != 0))
+    basis <- paste(doseItems, collapse = "/")
+    return(out(!dose, basis, paste0(basis, " all 0")))
+  }
+  out(all, "NONE", "every record, as there is no MDV, EVID or dose item")
 }
 
 #' Evaluate a $DATA record's IGNORE / ACCEPT statements

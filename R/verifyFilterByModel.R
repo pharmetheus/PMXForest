@@ -9,8 +9,11 @@
 #'   It needs nothing but artefacts already on disk - the control stream, its
 #'   `.lst`, and the data file - and never re-runs anything.
 #'
-#' @details The observation count follows NONMEM: records with `MDV == 0`, or
-#'   `EVID == 0` where the data set carries no `MDV` column.
+#' @details The observation count follows NONMEM, using the rule described
+#'   under **Subjects without observations** in [filterByModel()]: `MDV == 0`
+#'   where there is an `MDV` column, otherwise `EVID == 0`, otherwise records
+#'   with no non-zero `AMT`, `RATE` or `SS`. Columns are read by position under
+#'   the `$INPUT` names.
 #'
 #'   The `.lst` describes the model NONMEM read, which is not always the model
 #'   on disk. Where its echoed `$INPUT` or `$DATA` filter clauses disagree with
@@ -41,7 +44,9 @@
 #'       independent of what [filterByModel()] did. On a failing check it will
 #'       not reconcile with the filtered count, which is the point.
 #'     \item `rawRows` - rows in the data set as read, before filtering.
-#'     \item `obsBasis` - `"MDV"`, `"EVID"` or `"NONE"`.
+#'     \item `obsBasis` - the column(s) observations were identified from:
+#'       `"MDV"`, `"EVID"`, the dose items present (e.g. `"AMT/RATE"`), or
+#'       `"NONE"` when every record is an observation.
 #'   }
 #'
 #' @seealso [filterByModel()] for the filtering itself, and
@@ -106,7 +111,7 @@ verifyFilterByModel <- function(modFile, data = NULL, lstFile = NULL,
 
   used <- filterByModel(data, modFile, quiet = quiet, idVar = idVar)
 
-  obs <- nmObsCount(used)
+  obs <- nmObsCount(used, modFile)
   got <- c(
     RECORDS = nrow(used),
     SUBJECTS = if (idVar %in% names(used)) length(unique(used[[idVar]])) else NA_integer_,
@@ -194,17 +199,16 @@ nmFindLst <- function(modFile) {
   if (length(cand)) cand[1] else NULL
 }
 
-## NONMEM counts an observation as MDV == 0, falling back to EVID == 0 where
-## the data set declares no MDV.
+## NONMEM's observation records in the filtered data, read by position under
+## the $INPUT names - the file's own names need not agree.
 ## @noRd
-nmObsCount <- function(d) {
-  if ("MDV" %in% names(d)) {
-    return(list(n = sum(d$MDV == 0, na.rm = TRUE), basis = "MDV"))
-  }
-  if ("EVID" %in% names(d)) {
-    return(list(n = sum(d$EVID == 0, na.rm = TRUE), basis = "EVID"))
-  }
-  list(n = NA_integer_, basis = "NONE")
+nmObsCount <- function(used, modFile) {
+  mod <- nmReadModel(modFile)
+  pos <- nmInputPositions(mod)
+  inp <- used[, seq_along(pos$names), drop = FALSE]
+  names(inp) <- pos$names
+  obs <- nmObsRecords(mod, inp, pos)
+  list(n = sum(obs$obs), basis = obs$basis)
 }
 
 ## Does the .lst describe the control stream on disk?
