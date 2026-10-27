@@ -6,8 +6,8 @@
 and empirical Forest plots no longer need PMXFrem for their row labels.
 
 `name_map` names each covariate once, and `unit_map` adds the unit:
-`name_map = c(WT = "Weight")` and `unit_map = c(WT = "kg")` give the rows
-`Weight = 58.3 kg` and `Weight = 126 kg`. `level_map` labels the levels of the
+`name_map = c(WT = "Weight")` and `unit_map = c(WT = "kg")` label the rows
+`Weight = <value> kg`, whatever percentiles the data give. `level_map` labels the levels of the
 categorical covariates, so `label_map` no longer needs a string per percentile
 or level. `print_template = TRUE` prints `name_map`, `unit_map` and `level_map`
 to fill in.
@@ -22,8 +22,8 @@ row.
   observation records.
 * `generateCovNames()` warns about map entries that match nothing;
   `warn_unused = FALSE` silences it.
-* `startParallelWorkers()` is exported for packages that build on PMXForest;
-  PMXFrem now uses it.
+* `startParallelWorkers()` is exported for packages that build on PMXForest,
+  such as PMXFrem, so they need not keep their own copy.
 
 ## Changes to existing behaviour
 
