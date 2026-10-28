@@ -87,8 +87,6 @@ jobs:
             git update-ref -d "$ref"
           done
 
-          git push --mirror
-
           git remote set-url --push origin "https://x-access-token:${SYNC_TOKEN}@github.com/${OWNER}/${PUBLIC_REPO}.git"
           git push --mirror
 
