@@ -2,33 +2,38 @@
 
 ## Checking parameters with additive between-subject variability
 
-`createParamFunction()` now recognises a parameter written
-`P = <expr> + ETA(n)` as well as the exponential forms, and records which form
-each parameter uses in the new `etaScale`. `verifyParamFunction()` subtracts
-the eta for such a parameter, where it divides by `exp(ETA(n))` for the others,
-so a model with additive variability can be checked against its `$TABLE` in
-full.
+`verifyParamFunction()` now checks a parameter written `P = <expr> + ETA(n)`,
+such as `V = TVV + ETA(2)`. It subtracts the eta from the tabled value to get
+the typical value, as it divides by `exp(ETA(n))` for a parameter written
+`P = <expr> * EXP(ETA(n))`. Until now such a parameter was reported as not
+checkable, with a warning, so earlier results are incomplete rather than wrong.
 
-## Other notable additions
+`createParamFunction()` records the form in a new element of its result,
+`etaScale`: `"add"` or `"exp"` for each parameter with an eta.
 
-* The walkthrough says how to choose the source of parameter uncertainty, and
-  when a parametric or an empirical Forest plot answers the question. It prints
-  the label template and the effect of `filterByModel()` instead of describing
-  them.
+## Documentation
+
+* The walkthrough says how to choose between the covariance matrix, a
+  bootstrap and SIR as the source of parameter uncertainty, and when a
+  parametric or an empirical Forest plot answers the question.
 * `getForestDFSCM()` and the walkthrough say what a row of a parametric Forest
-  plot shows: the reference subject with one covariate changed.
-* `filterByModel()` says how it checks data prepared elsewhere, for example
-  with pmxdata.
+  plot shows: the reference subject, with only the covariate of that row
+  changed.
+* `filterByModel()` says how to use it on data that were prepared, and records
+  excluded, by another tool: as a check that the subjects it keeps are the ones
+  the model used.
 
 ## Bug fixes
 
-* **`forestPlot()` passed `statisticsLabel` to `setupForestPlotData()` by a
-  partial name.** The labels are unchanged, but the call would have broken as
-  soon as another argument began with the same letters.
-* **The walkthrough was wrong about two things.** `catRef` and `sep` do not
-  have to be repeated in `setupDfRefRow()`, which has read them from
-  `setupDfCovs()` since 1.4.0. `noVar = TRUE` in `forestPlot()` does not drop
-  the interval: it leaves out the uncertainty in the reference value.
+* **The walkthrough was wrong about `noVar` in `forestPlot()`.** `noVar = TRUE`,
+  the default, still draws an interval: it shows the uncertainty in the
+  covariate effect alone, and `noVar = FALSE` adds the uncertainty in the
+  reference value.
+* **The walkthrough said `catRef` and `sep` had to be repeated in
+  `setupDfRefRow()`.** They do not: it takes them from the `setupDfCovs()`
+  result.
+* `forestPlot()` passed its `statisticsLabel` argument on under an abbreviated
+  name. The labels were right, but a later change could have broken them.
 
 # PMXForest 1.4.0
 
