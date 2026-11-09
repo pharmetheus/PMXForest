@@ -78,8 +78,11 @@ or every assigned variable when \code{NULL}.
 \item \code{etaMap} - a named integer vector: for each parameter whose
 between-subject variability separates out as a factor, the ETA index
 \code{n}. Both \verb{P = <expr> * EXP(ETA(n))} and the MU-referenced
-\code{P = EXP(MU_n + ETA(n))} qualify; an eta scaled inside the exponent,
-or sharing it with a second source of randomness, does not.
+\code{P = EXP(MU_n + ETA(n))} qualify, and so does the additive
+\verb{P = <expr> + ETA(n)}; an eta that is scaled, or that shares its
+expression with a second source of randomness, does not.
+\item \code{etaScale} - a named character vector over the \code{etaMap} entries,
+\code{"exp"} or \code{"add"}.
 \item \code{tvMap} - a named character vector: for each parameter assigned
 \verb{P = <sym> * EXP(ETA(n))} or plainly \verb{P = <sym>}, the name of \verb{<sym>}
 - the symbol the control stream itself treats as \code{P}'s typical value.

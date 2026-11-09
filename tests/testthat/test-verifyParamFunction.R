@@ -448,3 +448,57 @@ test_that("a covariate in arithmetic at missVal is dropped, and flagged as a mod
   v <- suppressWarnings(verifyParamFunction(out, f, thetas, quiet = TRUE))
   expect_true(all(attr(v, "checks")$N < nrow(df)))
 })
+
+test_that("an additive eta is subtracted, not divided out", {
+  ## V = TVV + ETA(2): the tabled V is the typical value plus ETA2, so the
+  ## check has to subtract it. Dividing by exp(ETA2) would fail a faithful
+  ## function.
+  mf <- withr::local_tempfile(fileext = ".mod")
+  writeLines(c(
+    "$PROBLEM add", "$INPUT ID TIME DV AMT WT",
+    "$DATA d.csv IGNORE=@", "$PK",
+    "TVCL = THETA(1)*(WT/70)**0.75", "TVV = THETA(2)",
+    "CL = TVCL*EXP(ETA(1))",
+    "V  = TVV + ETA(2)",
+    "$THETA (0,7) (0,30)"
+  ), mf)
+  out <- suppressWarnings(
+    createParamFunction(mf, parameters = c("CL", "V"), quiet = TRUE)
+  )
+  thetas <- c(7, 30)
+  fun <- eval(parse(text = out$code))
+  wt <- seq(50, 110, length.out = 12)
+  tv <- do.call(rbind, lapply(wt, function(w) unlist(fun(thetas, data.frame(WT = w)))))
+  set.seed(1)
+  eta1 <- stats::rnorm(12, sd = 0.2)
+  eta2 <- stats::rnorm(12, sd = 3)
+  tab <- data.frame(
+    ID = seq_along(wt), WT = wt,
+    CL = tv[, "CL"] * exp(eta1), ETA1 = eta1,
+    V = tv[, "V"] + eta2, ETA2 = eta2
+  )
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(tab, f)
+
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  d <- attr(v, "checks")
+  expect_true(as.logical(v))
+  expect_equal(d$TABLECOLUMN, c("CL / exp(ETA1)", "V - ETA2"))
+
+  broken <- eval(parse(text = sub("thetas[[]2[]]", "1.01 * thetas[2]", paste(out$code, collapse = "\n"))))
+  vb <- verifyParamFunction(out, f, thetas, fun = broken, quiet = TRUE)
+  expect_false(as.logical(vb))
+  expect_false(attr(vb, "checks")$PASS[2])
+})
+
+test_that("an object without etaScale is read as exponential throughout", {
+  out <- suppressWarnings(
+    createParamFunction(modFile, parameters = c("CL", "V"), quiet = TRUE)
+  )
+  thetas <- run7Thetas()
+  f <- withr::local_tempfile(fileext = ".tab")
+  writeNmTable(makeTable(out, thetas), f)
+  out$etaScale <- NULL
+  v <- verifyParamFunction(out, f, thetas, quiet = TRUE)
+  expect_true(as.logical(v))
+})

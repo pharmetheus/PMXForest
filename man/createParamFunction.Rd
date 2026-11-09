@@ -94,8 +94,14 @@ and IMP models are normally written with. An eta that is scaled inside
 the exponent does not separate and gets no entry, nor does one that
 shares the exponent with a second source of randomness - the IOV
 idiom, \code{EXP(ETA(1) + IOV)} where \code{IOV} is itself assigned from an
-\code{ETA()}. A parameter with no entry simply has no typical value for
+\code{ETA()}. An additive eta, \verb{P = <expr> + ETA(n)}, qualifies too when
+it is the only eta in the expression and is neither scaled nor
+subtracted. A parameter with no entry simply has no typical value for
 \code{\link[=verifyParamFunction]{verifyParamFunction()}} to compare against.
+\item \code{etaScale} - a named character vector over the \code{etaMap} entries:
+\code{"exp"} for an exponential eta, \code{"add"} for an additive one.
+\code{\link[=verifyParamFunction]{verifyParamFunction()}} divides the tabled value by \code{exp(ETA(n))} or
+subtracts \code{ETA(n)} accordingly.
 \item \code{tvMap} - for each returned parameter assigned as
 \verb{P = <sym> * EXP(ETA(n))}, or plainly \verb{P = <sym>}, the name of \verb{<sym>}
 - the symbol the control stream itself treats as \code{P}'s typical value.

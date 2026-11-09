@@ -69,8 +69,10 @@ values, but NONMEM tables individual ones. Where a parameter is written
 \verb{P = <expr> * EXP(ETA(n))} in \verb{$PK}, \code{\link[=createParamFunction]{createParamFunction()}} records the ETA
 index in its \code{etaMap}, and this function divides the tabled value by
 \code{exp(ETA(n))} to recover the typical value - so the ETA column must also be
-in the table. A column named \code{TVP} is used directly when present and needs
-no ETA. Parameters that can be reconciled in neither way are reported with
+in the table. Where a parameter is written \verb{P = <expr> + ETA(n)}, the
+\code{etaScale} of the object says so and the ETA is subtracted instead. A
+column named \code{TVP} is used directly when present and needs no ETA.
+Parameters that can be reconciled in neither way are reported with
 \code{PASS = NA} and a warning rather than being silently compared.
 
 \strong{Tolerance.} NONMEM's default table format carries about five significant

@@ -22,7 +22,7 @@ test_that("the return value has the documented shape", {
   expect_named(out, c(
     "code", "functionListName", "primaryNames",
     "secondaryNames", "noBaseThetas", "covRef",
-    "etaMap", "tvMap", "modFile", "missVal"
+    "etaMap", "etaScale", "tvMap", "modFile", "missVal"
   ))
   expect_s3_class(out$code, "pmxParamFunction")
   expect_type(out$code, "character")
@@ -970,6 +970,24 @@ test_that("MU-referenced parameters get an etaMap entry", {
   )
   expect_equal(unname(out$etaMap[["CL"]]), 6L)
   expect_equal(unname(out$etaMap[["V"]]), 7L)
+  expect_equal(out$etaScale, c(CL = "exp", V = "exp"))
+})
+
+test_that("an additive eta gets an etaMap entry with scale \"add\"", {
+  ## V = TVV + ETA(2): the tabled V minus ETA2 is the typical value.
+  mod <- c(
+    "$PROBLEM add", "$INPUT ID TIME DV AMT WT",
+    "$DATA d.csv IGNORE=@", "$PK",
+    "TVCL = THETA(1)*(WT/70)**0.75", "TVV = THETA(2)",
+    "CL = TVCL*EXP(ETA(1))",
+    "V  = TVV + ETA(2)",
+    "$THETA (0,7) (0,30)"
+  )
+  out <- suppressWarnings(
+    createParamFunction(tempMod(mod), parameters = c("CL", "V"), quiet = TRUE)
+  )
+  expect_equal(out$etaMap, c(CL = 1L, V = 2L))
+  expect_equal(out$etaScale, c(CL = "exp", V = "add"))
 })
 
 test_that("an eta that is scaled inside EXP() is not treated as separable", {
