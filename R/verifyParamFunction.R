@@ -19,8 +19,10 @@
 #'   `P = <expr> * EXP(ETA(n))` in `$PK`, [createParamFunction()] records the ETA
 #'   index in its `etaMap`, and this function divides the tabled value by
 #'   `exp(ETA(n))` to recover the typical value - so the ETA column must also be
-#'   in the table. A column named `TVP` is used directly when present and needs
-#'   no ETA. Parameters that can be reconciled in neither way are reported with
+#'   in the table. Where a parameter is written `P = <expr> + ETA(n)`, the
+#'   `etaScale` of the object says so and the ETA is subtracted instead. A
+#'   column named `TVP` is used directly when present and needs no ETA.
+#'   Parameters that can be reconciled in neither way are reported with
 #'   `PASS = NA` and a warning rather than being silently compared.
 #'
 #'   **Tolerance.** NONMEM's default table format carries about five significant
@@ -248,7 +250,13 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
     } else if (p %in% names(rows)) {
       etaIdx <- if (p %in% names(x$etaMap)) x$etaMap[[p]] else NULL
       etaCol <- if (!is.null(etaIdx)) paste0("ETA", etaIdx) else NULL
-      if (!is.null(etaCol) && etaCol %in% names(rows)) {
+      ## Objects from before `etaScale` existed mapped exponential IIV only.
+      etaAdd <- !is.null(x$etaScale) && identical(unname(x$etaScale[p]), "add")
+      if (!is.null(etaCol) && etaCol %in% names(rows) && etaAdd) {
+        # Tabled value is individual; subtract the additive IIV.
+        ref <- rows[[p]] - rows[[etaCol]]
+        colUse <- paste0(p, " - ", etaCol)
+      } else if (!is.null(etaCol) && etaCol %in% names(rows)) {
         # Tabled value is individual; divide out the exponential IIV.
         ref <- rows[[p]] / exp(rows[[etaCol]])
         colUse <- paste0(p, " / exp(", etaCol, ")")
@@ -265,7 +273,7 @@ verifyParamFunction <- function(x, tabFile, thetas, fun = NULL,
           },
           "neither a '", tvCol, "' column nor the ",
           if (is.null(etaIdx)) {
-            "exponential-IIV pattern in $PK"
+            "exponential or additive IIV pattern in $PK"
           } else {
             paste0("'", etaCol, "' column")
           },

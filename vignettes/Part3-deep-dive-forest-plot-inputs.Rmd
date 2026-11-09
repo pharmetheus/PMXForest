@@ -668,12 +668,13 @@ parameter:
 | --- | --- | --- |
 | `TVCL` | `TVCL` directly | already a typical value, no ETA needed |
 | `CL` and `ETA3` | `CL / exp(ETA3)` | the tabled `CL` is the *individual* value; divide the IIV out |
+| `V` and `ETA4`, with `V = TVV + ETA(4)` in `$PK` | `V - ETA4` | an additive eta is subtracted rather than divided out |
 | `CL` but no `ETA3` | nothing — warning, `PASS = NA` | the individual value cannot be reduced to a typical one |
 
 **If both `CL` and `TVCL` are present, `TVCL` wins.** It is checked first and
 used as it stands, so the `ETA` column is not consulted at all. That is the
 cheaper and more direct comparison, and it does not depend on the parameter
-being written in the exponential-IIV form the `etaMap` recognises — so tabling
+being written in an IIV form the `etaMap` recognises — so tabling
 `TV`-prefixed values is the more robust choice if you are adding columns
 specifically for this check.
 
