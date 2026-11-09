@@ -158,15 +158,37 @@ test_that("the highest THETA index is found, including inside IF blocks", {
   expect_equal(nmMaxTheta(s), 9)
 })
 
-test_that("the exponential-IIV pattern is recorded, other forms are not", {
+test_that("the exponential and the additive IIV patterns are recorded with their scale", {
   s <- stmts_of(c(
     "CL = TVCL*EXP(ETA(3))", "V = EXP(ETA(4))*TVV",
-    "MAT = TVMAT+ETA(5)"
+    "MAT = TVMAT+ETA(5)", "D1 = ETA(6) + TVD1"
   ))
   m <- nmEtaMap(s)
   expect_equal(m[["CL"]], 3L)
   expect_equal(m[["V"]], 4L)
-  expect_false("MAT" %in% names(m))
+  expect_equal(m[["MAT"]], 5L)
+  expect_equal(m[["D1"]], 6L)
+  expect_equal(
+    attr(m, "scale"),
+    c(CL = "exp", V = "exp", MAT = "add", D1 = "add")
+  )
+})
+
+test_that("an additive eta is recorded only when subtracting it gives the typical value", {
+  s <- stmts_of(c(
+    "IOV = ETA(9)",
+    "A = TVA + 2*ETA(1)", # scaled
+    "B = TVB - ETA(2)", # wrong sign
+    "C = TVC + ETA(3) + ETA(4)", # two etas
+    "D = TVD + ETA(5) + IOV", # randomness through a symbol
+    "F = TVF*EXP(ETA(7)) + ETA(8)", # a second eta inside a sibling term
+    "G = ETA(10)", # no typical value to recover
+    "H = TVH + ETA(11)" # the one that qualifies
+  ))
+  ## An EPS() next to the eta is tested on a $PRED model in
+  ## test-predModels.R: $PK refuses EPS() before this check is reached.
+  m <- nmEtaMap(s)
+  expect_equal(names(m), "H")
 })
 
 test_that("$THETA records are counted by theta, not by line", {

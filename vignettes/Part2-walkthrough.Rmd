@@ -120,13 +120,35 @@ cat(nmLines[dataRec:(nextRec[nextRec > dataRec][1] - 1)], sep = "\n")
 NONMEM actually used — is the **analysis data**:
 
 ```{r, message = TRUE}
-dfData <- filterByModel(dfData, modFile)
+dfFile <- dfData
+dfData <- filterByModel(dfFile, modFile)
 ```
 
-The difference is not cosmetic. Here it removes 210 of 964 subjects, and the 5th
-percentile of creatinine clearance — one of the values that becomes a Forest plot
-row in the next section — moves from 74.9 to 77.7 mL/min. Every covariate summary
-below is computed on the analysis data for that reason.
+The difference is not cosmetic. Compare the number of subjects, and the 5th
+percentile of creatinine clearance, which becomes a Forest plot row in the next
+section, before and after:
+
+```{r}
+firstRecord <- function(d) distinct(d, ID, .keep_all = TRUE)
+c(file = n_distinct(dfFile$ID), analysis = n_distinct(dfData$ID))
+c(
+  file     = quantile(firstRecord(dfFile)$CRCL, 0.05),
+  analysis = quantile(firstRecord(dfData)$CRCL, 0.05)
+)
+```
+
+Every covariate summary below is computed on the analysis data for that reason.
+
+A report often reads its data through a data-preparation package such as
+pmxdata, which applies exclusions of its own. `filterByModel()` does not replace
+that step but checks it. Apply it to the prepared data: the message it prints
+says how many records and subjects it removed. Records the preparation kept and
+the model ignores can be intended, such as BLQ records. A subject removed
+altogether is different: the covariate summaries are per subject, so the
+preparation and the model then describe different populations. Fix the one
+that is wrong rather than choosing between them.
+`verifyFilterByModel()` in turn checks `filterByModel()` against the record and
+subject counts NONMEM printed in the `.lst` file.
 
 # 1. Build the covariate structure
 
@@ -184,12 +206,8 @@ Together they decide what the columns are called:
 
 The last row is the one that matters here: those are the names `run7`'s `$PK`
 uses, so a parameter function generated from it reads exactly these columns.
-
-::: {.callout-note}
-Pass the same `catRef` and `sep` to `setupDfRefRow()` in Section 2. They have to
-agree, or the reference row's columns will not line up with `dfCovs` and the
-reference values are silently dropped.
-:::
+`setupDfCovs()` records both choices in `dfCovs`, and `setupDfRefRow()` in
+Section 2 reads them from there.
 
 The row labels and covariate-group labels are described once per covariate,
 not once per row, and `generateCovNames()` applies them to the results in
@@ -200,6 +218,15 @@ value from `dfCovs`, so the labels cannot drift away from the percentiles
 `setupDfCovs()` computed. `group_map` is only needed where the group header
 should differ from the name in the row labels - here, a header broken over two
 lines.
+
+`generateCovNames(dfCovs, print_template = TRUE)` prints the maps with a blank
+entry for every covariate and level in `dfCovs`, ready to copy into the script:
+
+```{r}
+generateCovNames(dfCovs, print_template = TRUE)
+```
+
+Filled in for this example:
 
 ```{r}
 name_map <- c(
@@ -217,8 +244,7 @@ level_map <- list(
 group_map <- c(CRCL = "Creatinine\nclearance")
 ```
 
-`generateCovNames(dfCovs, print_template = TRUE)` prints these maps with a blank
-entry for every covariate and level in `dfCovs`, ready to fill in. The
+The
 [Forest plot inputs deep dive, Section 9](Part3-deep-dive-forest-plot-inputs.html)
 covers the rest: merging 0/1 dummy covariates into one group, dropping rows, and the
 checks made on the maps.
@@ -244,6 +270,18 @@ works through both.
 Without a reference, `getForestDFSCM()` uses the model with every covariate effect
 switched off (all cells `-99`). To make the reference a typical subject instead,
 pass `dfRefRow`.
+
+**Every row is conditioned on the reference subject.** A row of a parametric
+Forest plot changes one covariate and leaves the others at the values of the
+reference subject. The 5th percentile weight row therefore shows how the
+parameter of the reference subject changes when only the weight changes, with
+sex, genotype and the rest held at the reference. It is not the parameter of a
+typical subject of that weight, who might differ in other covariates as well;
+the empirical Forest plot in Section 6 shows that instead. To condition every
+row on another value, for example fed instead of fasted, hold that covariate at
+that value on every row of `dfCovs` and give the reference row the same value.
+Edit the result of `setupDfCovs()` for a value of your choice, or use its
+`conditionalCovs` argument for a value taken from the data.
 
 The reference goes in `dfRefRow` only. `getForestDFSCM()` evaluates each row of
 `dfCovs` as it stands and the reference row separately, as the denominator, so
@@ -279,7 +317,6 @@ dfRefRow <- setupDfRefRow(
     GENO = 2, default = "mode"
   ),
   model = modFile,
-  sep = "",
   idVar = "ID"
 )
 dfRefRow
@@ -287,10 +324,25 @@ dfRefRow
 
 Three things about that call are worth stating, because each is a trap:
 
-**`catRef` and `sep` are repeated from Section 1 and are not optional.**
-`setupDfRefRow()` keys its result by the column names `setupDfCovs()` produced,
-so a different `sep` gives `GENO_1` where `dfCovs` has `GENO1`, and the reference
-value for that covariate is quietly lost.
+**`sep` comes from `dfCovs`, and so does `catRef` unless you give one.**
+`setupDfRefRow()` names its one-hot columns with the `catRef` and `sep` that
+`setupDfCovs()` recorded in `dfCovs`. The call above gives a `catRef` of its
+own, to ask for model references, and that replaces the recorded one as a
+whole, so it names `GENO = 2` again. A `sep` given here overrides the recorded
+one too, and a different one breaks the match. The reference row then has no
+value for those columns:
+
+```{r, message = TRUE}
+setupDfRefRow(
+  dfCovs = dfCovs, data = dfData, covariates = refCovs,
+  contRef = list(WT = "model", default = "median"),
+  catRef = list(SEX = "model", FORM = "model", FOOD = "model", GENO = 2, default = "mode"),
+  model = modFile, sep = "_", idVar = "ID"
+)
+```
+
+`GENO1`, `GENO3` and `GENO4` are `-99` in that row, so the reference genotype
+is whatever the parameter function falls back to, not level 2 as asked.
 
 **`"model"` is given per covariate, not as a bare scalar.** As a scalar it
 applies to everything, and the first covariate `$PK` does not mention — `AGE`
@@ -425,6 +477,16 @@ dfSamplesSIR <- getSamples(sirFile, extFile = extFile)
 dfSamplesBSsmall <- getSamples(bsFile, extFile = extFile, n = 200)
 ```
 
+Which one to use depends on what the run produced and on how far the estimates
+are from normally distributed:
+
+| Source | The samples are | Fits when |
+| --- | --- | --- |
+| Covariance matrix | draws from a multivariate normal around the estimates | the covariance step succeeded and the estimates are close to normal |
+| Bootstrap | the resampled estimates themselves | a PsN bootstrap has enough successful runs for the percentiles of the interval |
+| Small bootstrap | draws from a multivariate normal with the covariance of the bootstrap | a bootstrap has too few runs for percentiles of its own, but enough to estimate a covariance |
+| SIR | the importance-resampled estimates | a PsN SIR run is available, for example where a bootstrap is too slow |
+
 Sampling from the covariance matrix or from a small bootstrap produces symmetric
 intervals. A full bootstrap or SIR file lets the interval be asymmetric.
 
@@ -439,7 +501,9 @@ can be encoded on the fly with `oneHot = list(GENO = list(ref = 2))` and
 
 `generateCovNames()` then labels the rows with the maps from Section 1. It
 matches them to `dfresBS` through `COVNUM`, the row of `dfCovs` each result
-came from.
+came from. `Q1` and `Q2` are the 5th and 95th percentiles of the parameter over
+the samples, set by `getForestDFSCM(probs = )`; they are the interval the plot
+draws.
 
 ```{r}
 dfresBS <- getForestDFSCM(
@@ -497,6 +561,19 @@ forestPlot(dfresBS, parameters = "CL")
 An empirical Forest plot reads each covariate effect from the analysis data. The
 covariate structure is a list of expressions that subset the data, and the
 parameter function is the same one used above.
+
+A parametric and an empirical Forest plot answer different questions. A parametric
+row changes one covariate of the reference subject and keeps the rest, so it
+isolates the effect the model gives that covariate. An empirical row takes the
+subjects in the analysis data who match the row, evaluates the parameter
+function for each of them with all their own covariate values, and summarises
+the results. It shows what the model predicts for that part of the population,
+including the effects of the other covariates that come with it: if heavier
+subjects are more often male, the weight row carries part of the sex effect. A
+covariate the model does not contain can have a row too, and it moves only
+through such correlated covariates. Use the parametric plot to report the
+covariate effects of the model, and the empirical plot to show how they combine
+in the population that was studied.
 
 The parameter function needs the `GENO1`/`GENO3`/`GENO4` columns. This analysis
 data set already contains them, but passing `oneHot = list(GENO = list(ref = 2))`
@@ -575,8 +652,11 @@ dfresEmp <- getForestDFemp(
 forestPlot(dfresEmp, parameters = "CL", noVar = FALSE)
 ```
 
-`noVar = FALSE` keeps the parameter-uncertainty interval. `noVar = TRUE`,
-`forestPlot()`'s default, drops it and shows only the covariate effect.
+With `noVar = TRUE`, the default of `forestPlot()`, each parameter sample is
+divided by the reference computed from the same sample, so the interval shows
+the uncertainty in the covariate effect only. `noVar = FALSE` divides by one
+fixed reference instead, so the interval also carries the uncertainty in the
+reference value itself.
 
 # 7. Customise the plot
 
@@ -587,7 +667,7 @@ forestPlot(dfresEmp, parameters = "CL", noVar = FALSE)
 | `parameters` | which of `functionListName` to draw, and in what order |
 | `groupNameLabels` | replace the covariate-group strip labels |
 | `plotRelative` | `TRUE` (default) plots relative to the reference; `FALSE` plots the absolute value |
-| `noVar` | drop the parameter-uncertainty interval |
+| `noVar` | `TRUE` (default): the interval shows the uncertainty in the covariate effect only; `FALSE`: it also carries the uncertainty in the reference value |
 | `xlim` | x-axis limits |
 | `statisticsLabel` | prefix for the statistics-panel strip labels, prepended verbatim — include the space |
 | `return` | `"plot"` (default) or `"plotList"` for the panel list |

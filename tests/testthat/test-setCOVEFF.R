@@ -113,7 +113,7 @@ test_that("setCOVEFF works properly", {
 
 
   lsTrue <- data.frame()
-  expect_error(setCOVEFF(dfresSCM, lsTrue))
+  expect_error(setCOVEFF(dfresSCM, lsTrue), "lsTrue must be a list")
 
   lsTrue <- list()
   expect_equal(nrow(setCOVEFF(dfresSCM, lsTrue) %>% filter(COVEFF)), 0)
@@ -134,4 +134,8 @@ test_that("setCOVEFF works properly", {
   )
 
   expect_equal(nrow(setCOVEFF(dfresSCM, lsTrue) %>% filter(COVEFF)), 28)
+})
+
+test_that("setCOVEFF() says so when lsTrue is not a list", {
+  expect_error(setCOVEFF(data.frame(), c("CL", "WT")), "lsTrue must be a list")
 })

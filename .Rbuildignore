@@ -14,3 +14,4 @@ RawExampleFiles
 ^\.claude$
 ^TODO\.md$
 ^inst/.*README\.html$
+^CLAUDE\.md$

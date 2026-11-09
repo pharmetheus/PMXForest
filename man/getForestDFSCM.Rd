@@ -100,6 +100,18 @@ Get a data frame with Forest border for each univariate or multivariate covariat
 (and value(s)) in the input data frame. If a list a data frame will be created from the list,
 see function dfCreateInputForestData
 }
+\details{
+\strong{Every row is conditioned on the reference subject.} A row of \code{dfCovs}
+changes the covariates it sets and leaves the others at \code{-99}, which a
+generated parameter function reads as the reference of the model. Each row
+is divided by the value for \code{dfRefRow}. A row therefore shows how the
+parameter of the reference subject changes when only that covariate
+changes, not the parameter of a typical subject with that covariate value.
+To condition every row on another value, set that covariate on every row of
+\code{dfCovs} and give \code{dfRefRow} the same value. \code{\link[=getForestDFemp]{getForestDFemp()}} instead
+evaluates the subjects in the data who match each row, with all their own
+covariate values.
+}
 \examples{
 dfData <- read.csv(
   system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")

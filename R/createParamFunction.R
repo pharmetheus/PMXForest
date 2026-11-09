@@ -136,8 +136,14 @@
 #'       the exponent does not separate and gets no entry, nor does one that
 #'       shares the exponent with a second source of randomness - the IOV
 #'       idiom, `EXP(ETA(1) + IOV)` where `IOV` is itself assigned from an
-#'       `ETA()`. A parameter with no entry simply has no typical value for
+#'       `ETA()`. An additive eta, `P = <expr> + ETA(n)`, qualifies too when
+#'       it is the only eta in the expression and is neither scaled nor
+#'       subtracted. A parameter with no entry simply has no typical value for
 #'       [verifyParamFunction()] to compare against.
+#'     \item `etaScale` - a named character vector over the `etaMap` entries:
+#'       `"exp"` for an exponential eta, `"add"` for an additive one.
+#'       [verifyParamFunction()] divides the tabled value by `exp(ETA(n))` or
+#'       subtracts `ETA(n)` accordingly.
 #'     \item `tvMap` - for each returned parameter assigned as
 #'       `P = <sym> * EXP(ETA(n))`, or plainly `P = <sym>`, the name of `<sym>`
 #'       - the symbol the control stream itself treats as `P`'s typical value.
@@ -261,6 +267,7 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
     secondaryNames = secNames,
     noBaseThetas = p$noBaseThetas, covRef = p$covRef,
     etaMap = p$etaMap[intersect(names(p$etaMap), p$parameters)],
+    etaScale = p$etaScale[intersect(names(p$etaScale), p$parameters)],
     tvMap = p$tvMap[intersect(names(p$tvMap), p$parameters)],
     modFile = modFile, missVal = missVal
   )
@@ -309,8 +316,11 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
 #'     \item `etaMap` - a named integer vector: for each parameter whose
 #'       between-subject variability separates out as a factor, the ETA index
 #'       `n`. Both `P = <expr> * EXP(ETA(n))` and the MU-referenced
-#'       `P = EXP(MU_n + ETA(n))` qualify; an eta scaled inside the exponent,
-#'       or sharing it with a second source of randomness, does not.
+#'       `P = EXP(MU_n + ETA(n))` qualify, and so does the additive
+#'       `P = <expr> + ETA(n)`; an eta that is scaled, or that shares its
+#'       expression with a second source of randomness, does not.
+#'     \item `etaScale` - a named character vector over the `etaMap` entries,
+#'       `"exp"` or `"add"`.
 #'     \item `tvMap` - a named character vector: for each parameter assigned
 #'       `P = <sym> * EXP(ETA(n))` or plainly `P = <sym>`, the name of `<sym>`
 #'       - the symbol the control stream itself treats as `P`'s typical value.
@@ -380,6 +390,8 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   }
   # Recorded while the ETA() references are still in the tree.
   etaMap <- nmEtaMap(stmts)
+  etaScale <- attr(etaMap, "scale")
+  attr(etaMap, "scale") <- NULL
   # A folded copy (ETA()/EPS() -> 0, constants collapsed) for the analyses
   # below; the raw tree is what we return so a downstream emitter keeps them.
   folded <- nmSimplifyStmts(stmts)
@@ -591,7 +603,7 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
   list(
     statements = stmts, covariates = covariates, covRef = derived,
     parameters = parameters, noBaseThetas = noBaseThetas, etaMap = etaMap,
-    tvMap = tvMap, inputNames = inputNames, modFile = modFile,
+    etaScale = etaScale, tvMap = tvMap, inputNames = inputNames, modFile = modFile,
     missVal = missVal
   )
 }

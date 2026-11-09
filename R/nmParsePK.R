@@ -1104,12 +1104,15 @@ nmFirstUnboundUse <- function(stmts, bound, everAssigned) {
 
 #' Map parameters onto the ETA that carries their between-subject variability
 #'
-#' Detects the exponential-IIV idiom `P = <expr> * EXP(ETA(n))` at the top level
-#' of an assignment and returns a named integer vector `P -> n`. NONMEM tables
-#' write individual values, so this is what lets [verifyParamFunction()] divide
-#' the tabled value by `exp(ETA)` and recover the typical value.
+#' Detects the exponential-IIV idiom `P = <expr> * EXP(ETA(n))` and the
+#' additive one `P = <expr> + ETA(n)` at the top level of an assignment and
+#' returns a named integer vector `P -> n`, with a named character attribute
+#' `scale` (`"exp"` or `"add"`) over the same names. NONMEM tables write
+#' individual values, so this is what lets [verifyParamFunction()] divide the
+#' tabled value by `exp(ETA)`, or subtract the ETA, and recover the typical
+#' value.
 #'
-#' Only this one pattern is recognised; parameters written any other way are
+#' Only these patterns are recognised; parameters written any other way are
 #' absent from the result and are reported as unverifiable.
 #'
 #' @noRd
@@ -1296,11 +1299,46 @@ nmEtaMap <- function(stmts) {
     NA_integer_
   }
 
+  ## P = <expr> + ETA(n): the eta is a bare additive term of the whole right
+  ## hand side, so the tabled individual value minus ETA(n) is the typical
+  ## value. The same guards as inside EXP(), and the eta must be the only one
+  ## in the expression: in TVF*EXP(ETA(7)) + ETA(8) a sibling term carries a
+  ## second. A bare P = ETA(n) is left out - it has no typical value, and is
+  ## usually a helper that a later statement uses.
+  fromAdd <- function(e) {
+    if (length(etasIn(e)) != 1L || epsIn(e)) {
+      return(NA_integer_)
+    }
+    terms <- addTerms(e)
+    bare <- Filter(function(t) identical(t$type, "eta"), terms)
+    others <- Filter(function(t) !identical(t$type, "eta"), terms)
+    if (length(bare) != 1L || length(others) == 0L) {
+      return(NA_integer_)
+    }
+    for (t in others) {
+      if (any(nmExprSyms(t) %in% etaDerived)) {
+        return(NA_integer_)
+      }
+    }
+    bare[[1]]$index
+  }
+
+  scale <- character(0)
   for (s in stmts) {
     if (s$type != "assign") next
     idx <- etaInExp(s$rhs)
-    if (!is.na(idx)) map[s$lhs] <- idx
+    if (!is.na(idx)) {
+      map[s$lhs] <- idx
+      scale[s$lhs] <- "exp"
+      next
+    }
+    idx <- fromAdd(s$rhs)
+    if (!is.na(idx)) {
+      map[s$lhs] <- idx
+      scale[s$lhs] <- "add"
+    }
   }
+  attr(map, "scale") <- scale
   map
 }
 

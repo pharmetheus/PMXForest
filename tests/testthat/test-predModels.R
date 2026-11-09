@@ -111,11 +111,14 @@ test_that("an eta sharing the exponent with an EPS is not claimed separable", {
     "TVCL = THETA(1)",
     "CL = TVCL*EXP(ETA(1) + EPS(1))",
     "V  = THETA(2)*EXP(ETA(2))",
+    "KA = THETA(3) + ETA(3) + EPS(3)",
     "Y  = CL + EPS(2)",
-    "$THETA (0,7) (0,30)"
-  )), parameters = c("CL", "V"), quiet = TRUE)
+    "$THETA (0,7) (0,30) (0,1)"
+  )), parameters = c("CL", "V", "KA"), quiet = TRUE)
 
   expect_false("CL" %in% names(out$etaMap))
+  ## the same for an additive eta: KA - ETA3 still carries EPS(3)
+  expect_false("KA" %in% names(out$etaMap))
   ## the ordinary one alongside it still is, so this is not a blanket refusal
   expect_equal(unname(out$etaMap[["V"]]), 2L)
 })
