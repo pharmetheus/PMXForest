@@ -439,3 +439,21 @@ test_that("forestPlot gives the reference line and CI their width under the inst
     }
   }
 })
+
+test_that("forestPlot() passes setupForestPlotData() its arguments by their full names", {
+  ## A name that is only a prefix of a formal still works through partial
+  ## matching, until a second formal with the same prefix is added.
+  calls <- list()
+  find <- function(e) {
+    if (is.call(e)) {
+      if (identical(e[[1]], as.name("setupForestPlotData"))) calls[[length(calls) + 1]] <<- e
+      for (a in as.list(e)[-1]) if (!missing(a)) find(a)
+    }
+  }
+  find(body(forestPlot))
+  expect_gt(length(calls), 0)
+  for (cl in calls) {
+    nms <- setdiff(names(as.list(cl))[-1], "")
+    expect_equal(setdiff(nms, names(formals(setupForestPlotData))), character(0))
+  }
+})
