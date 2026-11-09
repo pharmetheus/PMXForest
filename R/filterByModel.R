@@ -7,6 +7,15 @@
 #'   the model never saw.
 #'
 #' @details
+#'   **Data prepared elsewhere.** When the data already went through exclusions
+#'   of their own, for example in pmxdata, this function does not replace that
+#'   step but checks it: apply it to the prepared data and see what it still
+#'   removes. Records the model ignores on purpose, such as BLQ records, can
+#'   remain. A subject it removes altogether means the preparation and the
+#'   `$DATA` record describe different populations, and the one that is wrong
+#'   should be fixed. [verifyFilterByModel()] checks this
+#'   function against the counts NONMEM printed in the `.lst` file.
+#'
 #'   **Columns are matched by position, not by name.** NONMEM skips the header
 #'   line and takes its column names from `$INPUT`, so the names in the data file
 #'   need not agree with the names the model uses - and where they disagree,
