@@ -29,7 +29,7 @@
 #' newDfres <- setCOVEFF(dfresCOVscm, lsTrue)
 #' }
 setCOVEFF <- function(dfres, lsTrue) {
-  if (!class(lsTrue) == "list") strop("lsTrue must be a list")
+  if (!is.list(lsTrue) || is.data.frame(lsTrue)) stop("lsTrue must be a list", call. = FALSE)
 
   ## Set all COVEFF to FALSE before specifying the true ones
   dfres$COVEFF <- FALSE

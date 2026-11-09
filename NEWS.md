@@ -32,6 +32,8 @@ checkable, with a warning, so earlier results are incomplete rather than wrong.
 * **The walkthrough said `catRef` and `sep` had to be repeated in
   `setupDfRefRow()`.** They do not: it takes them from the `setupDfCovs()`
   result.
+* **`setCOVEFF()` stopped with "could not find function" when `lsTrue` was not
+  a list.** It now says that `lsTrue` must be a list.
 * `forestPlot()` passed its `statisticsLabel` argument on under an abbreviated
   name. The labels were right, but a later change could have broken them.
 
