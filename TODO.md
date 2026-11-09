@@ -22,7 +22,25 @@ SIR) and parametric vs empirical plots; show `print_template`'s output and
 what a mismatched reference row looks like rather than describing them; the
 `catRef`/`sep` warning is given twice (Sections 1 and 2) without showing the
 failure; and the subject and percentile numbers in Section 0 are asserted, not
-printed.
+printed. Done in item 2, which also corrected what `noVar` does.
+
+## Walkthrough: second cold read (2026-11-09), left for later
+
+Not addressed in 1.4.1:
+
+- Where `"model"` references come from (the `WT/75` constant, the
+  `; Most common` comments) is left implicit, and the displacement a
+  data-median reference causes is asserted, not shown.
+- `covRef` for `GENO1`/`GENO3`: "no `IF()` tests directly" does not match the
+  `IF(GENO1.EQ.1)` lines in `$PK`; the warning it refers to is not shown.
+- `POINT`: which parameter vector gives it is not said; `noBaseThetas` reads as
+  "base thetas" but is all of them.
+- Section 6: one record per subject drops time-varying covariates such as
+  FOOD; the empirical cut points differ from the parametric ones without
+  comment; `probs` and `cstrPackages` are not introduced.
+- `thetas` in the `verifyParamFunction()` example is never defined.
+- Style: em-dashes and possessives on things throughout the older text;
+  "Section n" cross-references; NCI, FDC and the 2D6 levels undefined.
 
 ## Old branches on the public mirror
 
