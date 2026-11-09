@@ -1,3 +1,35 @@
+# PMXForest 1.4.1
+
+## Checking parameters with additive between-subject variability
+
+`createParamFunction()` now recognises a parameter written
+`P = <expr> + ETA(n)` as well as the exponential forms, and records which form
+each parameter uses in the new `etaScale`. `verifyParamFunction()` subtracts
+the eta for such a parameter, where it divides by `exp(ETA(n))` for the others,
+so a model with additive variability can be checked against its `$TABLE` in
+full.
+
+## Other notable additions
+
+* The walkthrough says how to choose the source of parameter uncertainty, and
+  when a parametric or an empirical Forest plot answers the question. It prints
+  the label template and the effect of `filterByModel()` instead of describing
+  them.
+* `getForestDFSCM()` and the walkthrough say what a row of a parametric Forest
+  plot shows: the reference subject with one covariate changed.
+* `filterByModel()` says how it checks data prepared elsewhere, for example
+  with pmxdata.
+
+## Bug fixes
+
+* **`forestPlot()` passed `statisticsLabel` to `setupForestPlotData()` by a
+  partial name.** The labels are unchanged, but the call would have broken as
+  soon as another argument began with the same letters.
+* **The walkthrough was wrong about two things.** `catRef` and `sep` do not
+  have to be repeated in `setupDfRefRow()`, which has read them from
+  `setupDfCovs()` since 1.4.0. `noVar = TRUE` in `forestPlot()` does not drop
+  the interval: it leaves out the uncertainty in the reference value.
+
 # PMXForest 1.4.0
 
 ## Forest plot labels from one set of names

@@ -9,12 +9,14 @@ Agreed 2026-11-09. Development on `epic/1.4.1`, released through #71. In
 scope:
 
 1. `forestPlot()` passes `statisticsLabels` by its full name; `Title` without
-   the full stop that `R CMD check` notes. Done in this PR.
-2. The walkthrough content from the 2026-10-26 cold read (below).
+   the full stop that `R CMD check` notes. Done in #72.
+2. The walkthrough content from the 2026-10-26 cold read (below). Done in #74.
 3. Reference conditioning of SCM Forest plots, and `filterByModel()` as a
-   check on exclusions made elsewhere (friction item 3).
+   check on exclusions made elsewhere (friction item 3). Done in #74.
 4. Additive etas in `nmEtaMap()`, so `createParamFunction()` maps
    `P = TVP + ETA(n)` and `verifyParamFunction()` checks it (PMXFrem T28).
+   Done in #73. PMXFrem can now test the scale gate in
+   `verifyFREMParamFunction()` once it requires 1.4.1.
 
 Cold read of the walkthrough (2026-10-26), to be done in item 2: guidance
 on choosing the uncertainty source (covariance, bootstrap, small bootstrap,
@@ -57,7 +59,7 @@ item 5 was praise.
    already imports data and excludes records through pmxdata and record types;
    a second route risks two answers. Positioning `filterByModel()` as a check
    on the pmxdata result (where they differ, the modeller fixes it) may answer
-   it. *1.4.1, item 3.*
+   it. Answered in 1.4.1 (#74): the walkthrough and the help say so.
 4. **Why `createParamFunction()` when the report already has an mrgsolve
    translation?** A second translation doubles the checking, and the
    `secondary-parameters.R` hook is hard to understand and to debug. Asks for a
