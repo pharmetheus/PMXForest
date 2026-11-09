@@ -28,7 +28,7 @@ emitter can decide what to do with them."><!-- mathjax --><script src="https://c
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -183,8 +183,11 @@ or every assigned variable when <code>NULL</code>.</p></li>
 <li><p><code>etaMap</code> - a named integer vector: for each parameter whose
 between-subject variability separates out as a factor, the ETA index
 <code>n</code>. Both <code>P = &lt;expr&gt; * EXP(ETA(n))</code> and the MU-referenced
-<code>P = EXP(MU_n + ETA(n))</code> qualify; an eta scaled inside the exponent,
-or sharing it with a second source of randomness, does not.</p></li>
+<code>P = EXP(MU_n + ETA(n))</code> qualify, and so does the additive
+<code>P = &lt;expr&gt; + ETA(n)</code>; an eta that is scaled, or that shares its
+expression with a second source of randomness, does not.</p></li>
+<li><p><code>etaScale</code> - a named character vector over the <code>etaMap</code> entries,
+<code>"exp"</code> or <code>"add"</code>.</p></li>
 <li><p><code>tvMap</code> - a named character vector: for each parameter assigned
 <code>P = &lt;sym&gt; * EXP(ETA(n))</code> or plainly <code>P = &lt;sym&gt;</code>, the name of <code>&lt;sym&gt;</code>
 - the symbol the control stream itself treats as <code>P</code>'s typical value.</p></li>

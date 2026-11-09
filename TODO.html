@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,18 +62,46 @@
 <div id="pmxforest-design-backlog" class="section level1">
 <p>Items parked for future consideration. Not a substitute for GitHub issues; move an item there when it becomes active work.</p>
 <div class="section level2">
-<h2 id="refmodelvalues-uses-a-weaker-covariate-rule-than-the-generator">
-<code>refModelValues()</code> uses a weaker covariate rule than the generator<a class="anchor" aria-label="anchor" href="#refmodelvalues-uses-a-weaker-covariate-rule-than-the-generator"></a></h2>
-<p><code><a href="reference/createParamFunction.html">createParamFunction()</a></code> discovers covariates as “read before assigned, therefore a data item”, which is what NONMEM does — data items are populated before the block runs. That is what makes <code>IF(WT.EQ.-99) WT = 75</code> a covariate carrying its own reference value rather than a local.</p>
-<p><code>refModelValues()</code> (<code>R/refValues.R</code>), reached through <code>setupDfRefRow(contRef = "model")</code>, instead uses “used anywhere <strong>and</strong> never assigned anywhere”:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">covs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">intersect</a></span><span class="op">(</span><span class="va">syms</span><span class="op">$</span><span class="va">used</span>, <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu">nmInputNames</span><span class="op">(</span><span class="va">mod</span><span class="op">)</span>, <span class="va">syms</span><span class="op">$</span><span class="va">assigned</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>So a covariate the model guards — the exact idiom the primary reference rule exists to read — is excluded before the rules are consulted, and <code><a href="reference/setupDfRefRow.html">setupDfRefRow()</a></code> silently falls back to the data median. Confirmed while adding <code>$PRED</code> support: a model with <code>IF(WT.EQ.-99) WT = 75</code> and <code>CL = THETA(1)*(WT/75)</code> gives <code>contRef = "model"</code> the median (69 on the test data) rather than 75.</p>
-<p>The fix is to use <code>nmFirstUnboundUse()</code> as the main path does. It is not a one-liner: <code>refModelValues()</code> parses the block itself and does not build the <code>seen</code>/<code>assigned</code> sets that walk needs, and changing which covariates it returns changes <code><a href="reference/setupDfRefRow.html">setupDfRefRow()</a></code> output for existing users. Worth doing deliberately, with the before/after on a real model.</p>
+<h2 id="release-plan-1-4-1">Release plan: 1.4.1<a class="anchor" aria-label="anchor" href="#release-plan-1-4-1"></a></h2>
+<p>Agreed 2026-11-09. Development on <code>epic/1.4.1</code>, released through #71. In scope:</p>
+<ol style="list-style-type: decimal"><li>
+<code><a href="reference/forestPlot.html">forestPlot()</a></code> passes <code>statisticsLabels</code> by its full name; <code>Title</code> without the full stop that <code>R CMD check</code> notes. Done in #72.</li>
+<li>The walkthrough content from the 2026-10-26 cold read (below). Done in #74.</li>
+<li>Reference conditioning of SCM Forest plots, and <code><a href="reference/filterByModel.html">filterByModel()</a></code> as a check on exclusions made elsewhere (friction item 3). Done in #74.</li>
+<li>Additive etas in <code>nmEtaMap()</code>, so <code><a href="reference/createParamFunction.html">createParamFunction()</a></code> maps <code>P = TVP + ETA(n)</code> and <code><a href="reference/verifyParamFunction.html">verifyParamFunction()</a></code> checks it (PMXFrem T28). Done in #73. PMXFrem can now test the scale gate in <code>verifyFREMParamFunction()</code> once it requires 1.4.1.</li>
+</ol><p>Cold read of the walkthrough (2026-10-26), to be done in item 2: guidance on choosing the uncertainty source (covariance, bootstrap, small bootstrap, SIR) and parametric vs empirical plots; show <code>print_template</code>’s output and what a mismatched reference row looks like rather than describing them; the <code>catRef</code>/<code>sep</code> warning is given twice (Sections 1 and 2) without showing the failure; and the subject and percentile numbers in Section 0 are asserted, not printed. Done in item 2, which also corrected what <code>noVar</code> does.</p>
 </div>
+<div class="section level2">
+<h2 id="walkthrough-second-cold-read-2026-11-09-left-for-later">Walkthrough: second cold read (2026-11-09), left for later<a class="anchor" aria-label="anchor" href="#walkthrough-second-cold-read-2026-11-09-left-for-later"></a></h2>
+<p>Not addressed in 1.4.1:</p>
+<ul><li>Where <code>"model"</code> references come from (the <code>WT/75</code> constant, the <code>; Most common</code> comments) is left implicit, and the displacement a data-median reference causes is asserted, not shown.</li>
+<li>
+<code>covRef</code> for <code>GENO1</code>/<code>GENO3</code>: “no <code>IF()</code> tests directly” does not match the <code>IF(GENO1.EQ.1)</code> lines in <code>$PK</code>; the warning it refers to is not shown.</li>
+<li>
+<code>POINT</code>: which parameter vector gives it is not said; <code>noBaseThetas</code> reads as “base thetas” but is all of them.</li>
+<li>Section 6: one record per subject drops time-varying covariates such as FOOD; the empirical cut points differ from the parametric ones without comment; <code>probs</code> and <code>cstrPackages</code> are not introduced.</li>
+<li>
+<code>thetas</code> in the <code><a href="reference/verifyParamFunction.html">verifyParamFunction()</a></code> example is never defined.</li>
+<li>Style: em-dashes and possessives on things throughout the older text; “Section n” cross-references; NCI, FDC and the 2D6 levels undefined.</li>
+</ul></div>
+<div class="section level2">
+<h2 id="old-branches-on-the-public-mirror">Old branches on the public mirror<a class="anchor" aria-label="anchor" href="#old-branches-on-the-public-mirror"></a></h2>
+<p><code>Test3.5.3</code> and <code>miscMinorFixes</code> held nothing that <code>main</code> lacks and were deleted on 2026-11-09. <code>noVarIssue</code> (1 commit, 2025-12-19) and <code>master</code> (203 commits, 2023-06-25) are kept until someone reviews their commits.</p>
+</div>
+<div class="section level2">
+<h2 id="friction-log-for-1-3-x---user-feedback-october-2026">Friction log for 1.3.x - user feedback, October 2026<a class="anchor" aria-label="anchor" href="#friction-log-for-1-3-x---user-feedback-october-2026"></a></h2>
+<p>From the internal friction log. Items 1, 2 and 6 were answered in 1.4.0; item 5 was praise.</p>
+<ol start="3" style="list-style-type: decimal"><li>
+<strong>Why <code><a href="reference/filterByModel.html">filterByModel()</a></code> when pmxdata already excludes records?</strong> The report already imports data and excludes records through pmxdata and record types; a second route risks two answers. Positioning <code><a href="reference/filterByModel.html">filterByModel()</a></code> as a check on the pmxdata result (where they differ, the modeller fixes it) may answer it. Answered in 1.4.1 (#74): the walkthrough and the help say so.</li>
+<li>
+<strong>Why <code><a href="reference/createParamFunction.html">createParamFunction()</a></code> when the report already has an mrgsolve translation?</strong> A second translation doubles the checking, and the <code>secondary-parameters.R</code> hook is hard to understand and to debug. Asks for a vignette: building the parameter function from an existing mrgsolve model, fed <code>thetas</code> and <code>dfCovs</code>; the reporter offered code. Waits for that code.</li>
+<li>
+<strong>Figure captions should be quicker to edit</strong>, e.g. built with <code><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0()</a></code> from the covariate and parameter names. Concerns the report template, not the package; pass it on.</li>
+</ol></div>
 </div>
 
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

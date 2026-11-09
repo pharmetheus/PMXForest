@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -783,6 +783,13 @@
 </tr>
 <tr class="odd">
 <td>
+<code>V</code> and <code>ETA4</code>, with <code>V = TVV + ETA(4)</code> in <code>$PK</code>
+</td>
+<td><code>V - ETA4</code></td>
+<td>an additive eta is subtracted rather than divided out</td>
+</tr>
+<tr class="even">
+<td>
 <code>CL</code> but no <code>ETA3</code>
 </td>
 <td>nothing — warning, <code>PASS = NA</code>
@@ -791,7 +798,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>If both <code>CL</code> and <code>TVCL</code> are present, <code>TVCL</code> wins.</strong> It is checked first and used as it stands, so the <code>ETA</code> column is not consulted at all. That is the cheaper and more direct comparison, and it does not depend on the parameter being written in the exponential-IIV form the <code>etaMap</code> recognises — so tabling <code>TV</code>-prefixed values is the more robust choice if you are adding columns specifically for this check.</p>
+<p><strong>If both <code>CL</code> and <code>TVCL</code> are present, <code>TVCL</code> wins.</strong> It is checked first and used as it stands, so the <code>ETA</code> column is not consulted at all. That is the cheaper and more direct comparison, and it does not depend on the parameter being written in an IIV form the <code>etaMap</code> recognises — so tabling <code>TV</code>-prefixed values is the more robust choice if you are adding columns specifically for this check.</p>
 <p><strong>If <code>CL</code> is tabled with no <code>ETA3</code>, that parameter is not checked.</strong> The function does not fall back to comparing the individual value against a typical one, which would fail for every subject with a non-zero <code>ETA</code> and tell you nothing. It warns, naming the column it wanted, and reports <code>PASS = NA</code> for that parameter — so the overall result is <code>NA</code> rather than <code>TRUE</code>, and a parameter that was never checked cannot be mistaken for one that passed.</p>
 <div class="callout-note">
 <p>The residual above is not error, it is the table’s precision: NONMEM’s default format carries about five significant digits, so agreement closer than roughly <code>1e-5</code> relative cannot be observed. <code>tol</code> defaults to <code>1e-4</code>, just above that floor.</p>

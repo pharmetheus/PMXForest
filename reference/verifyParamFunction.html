@@ -16,7 +16,7 @@ pass/fail check per parameter.'><!-- mathjax --><script src="https://cdnjs.cloud
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -155,8 +155,10 @@ values, but NONMEM tables individual ones. Where a parameter is written
 <code>P = &lt;expr&gt; * EXP(ETA(n))</code> in <code>$PK</code>, <code><a href="createParamFunction.html">createParamFunction()</a></code> records the ETA
 index in its <code>etaMap</code>, and this function divides the tabled value by
 <code>exp(ETA(n))</code> to recover the typical value - so the ETA column must also be
-in the table. A column named <code>TVP</code> is used directly when present and needs
-no ETA. Parameters that can be reconciled in neither way are reported with
+in the table. Where a parameter is written <code>P = &lt;expr&gt; + ETA(n)</code>, the
+<code>etaScale</code> of the object says so and the ETA is subtracted instead. A
+column named <code>TVP</code> is used directly when present and needs no ETA.
+Parameters that can be reconciled in neither way are reported with
 <code>PASS = NA</code> and a warning rather than being silently compared.</p>
 <p><strong>Tolerance.</strong> NONMEM's default table format carries about five significant
 digits, so agreement closer than roughly <code>1e-5</code> relative cannot be observed.

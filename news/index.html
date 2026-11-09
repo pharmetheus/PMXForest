@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,6 +59,33 @@
       
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.4.1" id="pmxforest-1-4-1">PMXForest 1.4.1<a class="anchor" aria-label="anchor" href="#pmxforest-1-4-1"></a></h2>
+<div class="section level3">
+<h3 id="checking-parameters-with-additive-between-subject-variability-1-4-1">Checking parameters with additive between-subject variability<a class="anchor" aria-label="anchor" href="#checking-parameters-with-additive-between-subject-variability-1-4-1"></a></h3>
+<p><code><a href="../reference/verifyParamFunction.html">verifyParamFunction()</a></code> now checks a parameter written <code>P = &lt;expr&gt; + ETA(n)</code>, such as <code>V = TVV + ETA(2)</code>. It subtracts the eta from the tabled value to get the typical value, as it divides by <code>exp(ETA(n))</code> for a parameter written <code>P = &lt;expr&gt; * EXP(ETA(n))</code>. Until now such a parameter was reported as not checkable, with a warning, so earlier results are incomplete rather than wrong.</p>
+<p><code><a href="../reference/createParamFunction.html">createParamFunction()</a></code> records the form in a new element of its result, <code>etaScale</code>: <code>"add"</code> or <code>"exp"</code> for each parameter with an eta.</p>
+</div>
+<div class="section level3">
+<h3 id="documentation-1-4-1">Documentation<a class="anchor" aria-label="anchor" href="#documentation-1-4-1"></a></h3>
+<ul><li>The walkthrough says how to choose between the covariance matrix, a bootstrap and SIR as the source of parameter uncertainty, and when a parametric or an empirical Forest plot answers the question.</li>
+<li>
+<code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> and the walkthrough say what a row of a parametric Forest plot shows: the reference subject, with only the covariate of that row changed.</li>
+<li>
+<code><a href="../reference/filterByModel.html">filterByModel()</a></code> says how to use it on data that were prepared, and records excluded, by another tool: as a check that the subjects it keeps are the ones the model used.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-1-4-1">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-4-1"></a></h3>
+<ul><li>
+<strong>The walkthrough was wrong about <code>noVar</code> in <code><a href="../reference/forestPlot.html">forestPlot()</a></code>.</strong> <code>noVar = TRUE</code>, the default, still draws an interval: it shows the uncertainty in the covariate effect alone, and <code>noVar = FALSE</code> adds the uncertainty in the reference value.</li>
+<li>
+<strong>The walkthrough said <code>catRef</code> and <code>sep</code> had to be repeated in <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code>.</strong> They do not: it takes them from the <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> result.</li>
+<li>
+<strong><code><a href="../reference/setCOVEFF.html">setCOVEFF()</a></code> stopped with “could not find function” when <code>lsTrue</code> was not a list.</strong> It now says that <code>lsTrue</code> must be a list.</li>
+<li>
+<code><a href="../reference/forestPlot.html">forestPlot()</a></code> passed its <code>statisticsLabel</code> argument on under an abbreviated name. The labels were right, but a later change could have broken them.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.4.0" id="pmxforest-1-4-0">PMXForest 1.4.0<a class="anchor" aria-label="anchor" href="#pmxforest-1-4-0"></a></h2>
 <div class="section level3">

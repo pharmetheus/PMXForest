@@ -18,7 +18,7 @@ the model never saw."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -131,7 +131,15 @@ counts. See Details.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><strong>Columns are matched by position, not by name.</strong> NONMEM skips the header
+    <p><strong>Data prepared elsewhere.</strong> When the data already went through exclusions
+of their own, for example in pmxdata, this function does not replace that
+step but checks it: apply it to the prepared data and see what it still
+removes. Records the model ignores on purpose, such as BLQ records, can
+remain. A subject it removes altogether means the preparation and the
+<code>$DATA</code> record describe different populations, and the one that is wrong
+should be fixed. <code><a href="verifyFilterByModel.html">verifyFilterByModel()</a></code> checks this
+function against the counts NONMEM printed in the <code>.lst</code> file.</p>
+<p><strong>Columns are matched by position, not by name.</strong> NONMEM skips the header
 line and takes its column names from <code>$INPUT</code>, so the names in the data file
 need not agree with the names the model uses - and where they disagree,
 filtering by name reads the wrong column. This function maps the first

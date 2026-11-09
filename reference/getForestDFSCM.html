@@ -14,7 +14,7 @@ see function dfCreateInputForestData"><!-- mathjax --><script src="https://cdnjs
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -205,6 +205,19 @@ dummy column names created when <code>oneHot</code> is used. Defaults to <code>"
 <p>A data frame with summary statistics for each parameters and covariate combinations:</p>
     </div>
     <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><strong>Every row is conditioned on the reference subject.</strong> A row of <code>dfCovs</code>
+changes the covariates it sets and leaves the others at <code>-99</code>, which a
+generated parameter function reads as the reference of the model. Each row
+is divided by the value for <code>dfRefRow</code>. A row therefore shows how the
+parameter of the reference subject changes when only that covariate
+changes, not the parameter of a typical subject with that covariate value.
+To condition every row on another value, set that covariate on every row of
+<code>dfCovs</code> and give <code>dfRefRow</code> the same value. <code><a href="getForestDFemp.html">getForestDFemp()</a></code> instead
+evaluates the subjects in the data who match each row, with all their own
+covariate values.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="../articles/Part2-walkthrough.html">vignette("Part2-walkthrough", package = "PMXForest")</a></code> for how this fits the whole workflow.</p></div>
     </div>
@@ -245,12 +258,12 @@ dummy column names created when <code>oneHot</code> is used. Defaults to <code>"
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dfres</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"COVNAME"</span>, <span class="st">"GROUPNAME"</span>, <span class="st">"PARAMETER"</span>, <span class="st">"POINT"</span>, <span class="st">"Q1"</span>, <span class="st">"Q2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     COVNAME GROUPNAME PARAMETER     POINT        Q1       Q2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   WT=58.5        WT        CL  9.801393  9.491248 10.42678</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2    WT=126        WT        CL 17.426045 16.874633 18.53793</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    AGE=22       AGE        CL 11.809102 11.435427 12.56259</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4    AGE=65       AGE        CL 11.809102 11.435427 12.56259</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5 CRCL=74.9      CRCL        CL 11.809102 11.435427 12.56259</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  CRCL=150      CRCL        CL 11.809102 11.435427 12.56259</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   WT=58.5        WT        CL  9.888293  9.502889 10.34186</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    WT=126        WT        CL 17.580544 16.895330 18.38695</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3    AGE=22       AGE        CL 11.913801 11.449453 12.46028</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4    AGE=65       AGE        CL 11.913801 11.449453 12.46028</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 CRCL=74.9      CRCL        CL 11.913801 11.449453 12.46028</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  CRCL=150      CRCL        CL 11.913801 11.449453 12.46028</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

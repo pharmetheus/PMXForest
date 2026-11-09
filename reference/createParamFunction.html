@@ -24,7 +24,7 @@ a silent error."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -199,8 +199,14 @@ and IMP models are normally written with. An eta that is scaled inside
 the exponent does not separate and gets no entry, nor does one that
 shares the exponent with a second source of randomness - the IOV
 idiom, <code>EXP(ETA(1) + IOV)</code> where <code>IOV</code> is itself assigned from an
-<code>ETA()</code>. A parameter with no entry simply has no typical value for
+<code>ETA()</code>. An additive eta, <code>P = &lt;expr&gt; + ETA(n)</code>, qualifies too when
+it is the only eta in the expression and is neither scaled nor
+subtracted. A parameter with no entry simply has no typical value for
 <code><a href="verifyParamFunction.html">verifyParamFunction()</a></code> to compare against.</p></li>
+<li><p><code>etaScale</code> - a named character vector over the <code>etaMap</code> entries:
+<code>"exp"</code> for an exponential eta, <code>"add"</code> for an additive one.
+<code><a href="verifyParamFunction.html">verifyParamFunction()</a></code> divides the tabled value by <code>exp(ETA(n))</code> or
+subtracts <code>ETA(n)</code> accordingly.</p></li>
 <li><p><code>tvMap</code> - for each returned parameter assigned as
 <code>P = &lt;sym&gt; * EXP(ETA(n))</code>, or plainly <code>P = &lt;sym&gt;</code>, the name of <code>&lt;sym&gt;</code>
 - the symbol the control stream itself treats as <code>P</code>'s typical value.
