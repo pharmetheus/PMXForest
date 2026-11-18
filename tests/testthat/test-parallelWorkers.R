@@ -127,7 +127,8 @@ test_that("an older copy of a dependency next to a package in pkgs is not loaded
   cl <- parallel::makePSOCKcluster(1)
   plain <- parallel::clusterCall(cl, tryLoad, c(paths$top, paths$newer))[[1]]
   parallel::stopCluster(cl)
-  expect_match(plain, "'forestToyPkg' 1.0.0 is being loaded, but >= 2.0.0 is required", fixed = TRUE)
+  ## R quotes the name with ' or with curly quotes, depending on the locale.
+  expect_match(plain, "forestToyPkg\\S* 1\\.0\\.0 is being loaded, but >= 2\\.0\\.0 is required")
 
   ## With startParallelWorkers() the workers load forestToyPkg 2.0.0, which
   ## this session uses, and then forestToyTop.
