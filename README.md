@@ -86,7 +86,7 @@ does.
 ``` r
 dfCovs <- setupDfCovs(
   data = dfData,
-  covariates = c("FOOD", "GENO", "WT", "SEX"),
+  covariates = c("FOOD", "FORM", "GENO", "WT", "SEX"),
   catRef = list(GENO = 2),
   sep = "",
   idVar = "ID"
@@ -99,10 +99,14 @@ categorical level. `generateCovNames()` applies them below, so the
 weight rows show whatever percentiles the data give.
 
 ``` r
-name_map <- c(FOOD = "Food status", GENO = "2D6 Genotype", WT = "Weight", SEX = "Sex")
+name_map <- c(
+  FOOD = "Food status", FORM = "Formulation", GENO = "2D6 Genotype",
+  WT = "Weight", SEX = "Sex"
+)
 unit_map <- c(WT = "kg")
 level_map <- list(
   FOOD = c("0" = "Fasted", "1" = "Fed"),
+  FORM = c("0" = "Oral tablet", "1" = "FDC"),
   GENO = c("1" = "2D6 UM", "2" = "2D6 EM", "3" = "2D6 IM", "4" = "2D6 PM"),
   SEX  = c("1" = "Male", "2" = "Female")
 )
@@ -170,7 +174,7 @@ With the above information is an easy task to generate the Forest plot.
 forestPlot(dfres, size = 10)
 ```
 
-<img src="man/figures/README-forest-plot-1.png" alt="" width="100%" />
+<img src="man/figures/README-forest-plot-1.png" width="100%" />
 
 ## Further information
 

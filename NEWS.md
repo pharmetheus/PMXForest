@@ -2,13 +2,14 @@
 
 ## Checking covariate names against the parameter function
 
-`getForestDFSCM()` warns when the covariate columns of `dfCovs` do not match
-the covariates that a parameter function from `createParamFunction()` reads.
-Until now, with an indicator column named `GENO_1` in `dfCovs` for `GENO1` in
-`$PK`, every GENO row of the Forest plot had no effect, and no message was
-given. A covariate left out of `dfCovs` on purpose is listed in the warning
-too; the warning has the class `pmxCovariateMismatch`, so that it can be
-silenced on its own.
+`getForestDFSCM()` warns when `dfCovs` has a column that a parameter function
+from `createParamFunction()` does not read and also lacks a covariate that the
+function reads. That pair always occurs when a name is misspelled. Until now,
+with an indicator column named `GENO_1` in `dfCovs` for `GENO1` in `$PK`, every
+GENO row of the Forest plot had no effect, and no message was given. When only
+one of the two differences occurs, such as a covariate left out of `dfCovs` on
+purpose, no warning is given. The warning has the class
+`pmxCovariateMismatch`, so that it can be silenced on its own.
 
 The function from `createParamFunction()` carries the names of the columns it
 reads, set with `structure()` in the generated source. A function written by

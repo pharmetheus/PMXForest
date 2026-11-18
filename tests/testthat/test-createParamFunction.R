@@ -325,16 +325,15 @@ test_that("the generated function drives getForestDFSCM()", {
     n = 10
   )
 
-  ## GENO is left out of the plot, so the GENO indicators the function reads
-  ## are reported as absent from dfCovs.
-  expect_warning(
+  ## GENO is left out of the plot and no column is unread, so the absent GENO
+  ## indicators alone give no warning.
+  expect_no_warning(
     res <- getForestDFSCM(
       dfCovs,
       functionList = list(fun),
       functionListName = out$functionListName,
       noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
-    ),
-    class = "pmxCovariateMismatch"
+    )
   )
   expect_s3_class(res, "data.frame")
   expect_setequal(as.character(unique(res$PARAMETER)), c("CL", "V"))
@@ -628,13 +627,12 @@ test_that("the generated function with secondaries drives getForestDFSCM()", {
     system.file("extdata", "SimVal/run7.ext", package = "PMXForest"),
     n = 10
   )
-  expect_warning(
+  expect_no_warning(
     res <- getForestDFSCM(
       dfCovs,
       functionList = list(fun), functionListName = out$functionListName,
       noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
-    ),
-    class = "pmxCovariateMismatch"
+    )
   )
   expect_setequal(as.character(unique(res$PARAMETER)), c("CL", "V", "AUC"))
   expect_true(all(is.finite(res$POINT)))

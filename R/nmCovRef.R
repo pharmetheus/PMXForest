@@ -714,8 +714,8 @@ nmEmit <- function(stmts, covRef, covariates, parameters, functionName,
   } else {
     add(
       "},",
-      "## The columns of df read above. getForestDFSCM() warns when the covariate",
-      "## columns of dfCovs differ; edit this too if you edit what is read.",
+      "## The columns of df read above. getForestDFSCM() checks the columns of",
+      "## dfCovs against this list; edit it too if you edit what is read.",
       paste0(
         "pmxCovariates = ",
         if (length(reads) == 0) {
