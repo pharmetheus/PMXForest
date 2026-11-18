@@ -111,6 +111,23 @@ To condition every row on another value, set that covariate on every row of
 \code{dfCovs} and give \code{dfRefRow} the same value. \code{\link[=getForestDFemp]{getForestDFemp()}} instead
 evaluates the subjects in the data who match each row, with all their own
 covariate values.
+
+\strong{Covariate names are checked against a generated parameter function.} A
+function made by \code{\link[=createParamFunction]{createParamFunction()}} carries the names of the data
+columns it reads, as the attribute \code{pmxCovariates}. \code{getForestDFSCM()}
+compares them with the columns of \code{dfCovs}, after the encoding set by
+\code{oneHot} and without \code{COVARIATEGROUPS}, and warns about two cases. For a
+column that no function in \code{functionList} reads, the rows on which only
+that column is set have no effect. A covariate that a function reads and
+\code{dfCovs} lacks is held at the reference of the function on every row.
+Either case can be deliberate, which is why this is a warning and not an
+error. Both cases occur together when an indicator column is named
+differently from \verb{$PK}, such as \code{GENO_1} in \code{dfCovs} for \code{GENO1} in the
+model. A hand-written function carries no names and is not checked; when
+\code{functionList} holds one, no column is reported as unread. The warning
+has the class \code{pmxCovariateMismatch}, so a deliberate difference can be
+silenced alone:
+\code{withCallingHandlers(getForestDFSCM(...), pmxCovariateMismatch = function(w) invokeRestart("muffleWarning"))}.
 }
 \examples{
 dfData <- read.csv(

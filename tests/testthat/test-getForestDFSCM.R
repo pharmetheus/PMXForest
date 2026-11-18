@@ -377,3 +377,124 @@ test_that("getForestDFSCM works with a single covariate (old ticket: column name
   )
   expect_setequal(res2$COVNAME, c("Normal", "Impaired"))
 })
+
+# --- dfCovs against the covariates a generated parameter function reads ----
+
+## run7, reduced to CL, FREL and V. $PK reads SEX, GENO4, FORM, FOOD, WT, GENO1
+## and GENO3; GENO2 is the reference genotype.
+run7Gen <- function() {
+  createParamFunction(
+    system.file("extdata", "SimVal/run7.mod", package = "PMXForest"),
+    parameters = c("CL", "FREL", "V"),
+    covRef = list(GENO1 = 0, GENO3 = 0), quiet = TRUE
+  )
+}
+run7Fun <- function() eval(parse(text = paste(run7Gen()$code, collapse = "\n")))
+
+## The final estimates of run7, twice: getForestDFSCM() needs a sample.
+run7Final <- function() {
+  ext <- getExt(system.file("extdata", "SimVal/run7.ext", package = "PMXForest"))
+  fin <- ext[ext$ITERATION == -1000000000, grep("^THETA", names(ext))]
+  fin[c(1, 1), ]
+}
+
+run7Covs <- function(...) {
+  dfData <- read.csv(
+    system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+  )
+  setupDfCovs(dfData,
+    covariates = c("WT", "SEX", "FOOD", "FORM", "GENO"),
+    idVar = "ID", ...
+  )
+}
+
+forestRun7 <- function(dfCovs, functionList = list(run7Fun()),
+                       functionListName = c("CL", "FREL", "V"), ...) {
+  getForestDFSCM(
+    dfCovs = dfCovs, functionList = functionList,
+    functionListName = functionListName, noBaseThetas = 14,
+    dfParameters = run7Final(), ...
+  )
+}
+
+test_that("indicator columns named apart from $PK are reported, not silently flat", {
+  ## setupDfCovs() names the GENO indicators GENO_2, GENO_3, GENO_4; run7 reads
+  ## GENO1, GENO3, GENO4. Every GENO row then comes out as "no effect".
+  w <- expect_warning(
+    res <- forestRun7(run7Covs()),
+    class = "pmxCovariateMismatch"
+  )
+  expect_equal(w$unread, c("GENO_2", "GENO_3", "GENO_4"))
+  expect_equal(w$absent, c("GENO4", "GENO1", "GENO3"))
+  expect_match(conditionMessage(w), "GENO_2, GENO_3, GENO_4", fixed = TRUE)
+  expect_match(conditionMessage(w), "GENO4, GENO1, GENO3", fixed = TRUE)
+  expect_false(any(res$COVEFF[grepl("GENO", res$COVNAME)]))
+})
+
+test_that("matching covariate names give no warning", {
+  ## sep = "" and the reference genotype of run7 give exactly the columns $PK
+  ## reads; COVARIATEGROUPS is bookkeeping and is not reported.
+  dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
+  expect_true("COVARIATEGROUPS" %in% names(dfCovs))
+  expect_no_warning(res <- forestRun7(dfCovs))
+  expect_true(any(res$COVEFF[grepl("GENO1=1", res$COVNAME)]))
+})
+
+test_that("a column no function reads is reported on its own", {
+  dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
+  dfCovs$AGE <- -99
+  dfCovs$AGE[1] <- 40
+  w <- expect_warning(forestRun7(dfCovs), class = "pmxCovariateMismatch")
+  expect_equal(w$unread, "AGE")
+  expect_equal(w$absent, character(0))
+})
+
+test_that("a covariate dfCovs lacks is reported on its own", {
+  dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
+  dfCovs$SEX <- NULL
+  w <- expect_warning(forestRun7(dfCovs), class = "pmxCovariateMismatch")
+  expect_equal(w$unread, character(0))
+  expect_equal(w$absent, "SEX")
+})
+
+test_that("the comparison is made after the one-hot encoding of getForestDFSCM", {
+  dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
+  geno <- dfCovs$COVARIATEGROUPS == "GENO"
+  lev <- ifelse(dfCovs$GENO1 == 1, 1,
+    ifelse(dfCovs$GENO3 == 1, 3, ifelse(dfCovs$GENO4 == 1, 4, 2))
+  )
+  dfCovs$GENO <- ifelse(geno, lev, -99)
+  dfCovs[c("GENO1", "GENO3", "GENO4")] <- NULL
+
+  expect_no_warning(
+    forestRun7(dfCovs, oneHot = list(GENO = list(ref = 2)), oneHotSep = "")
+  )
+  w <- expect_warning(
+    forestRun7(dfCovs, oneHot = list(GENO = list(ref = 2)), oneHotSep = "_"),
+    class = "pmxCovariateMismatch"
+  )
+  expect_equal(w$unread, c("GENO_1", "GENO_3", "GENO_4"))
+  expect_equal(w$absent, c("GENO4", "GENO1", "GENO3"))
+})
+
+test_that("a hand-written parameter function is not checked", {
+  handWritten <- function(thetas, df, ...) list(CL = thetas[4])
+  expect_no_warning(
+    forestRun7(run7Covs(), functionList = list(handWritten), functionListName = "CL")
+  )
+})
+
+test_that("next to a hand-written function, only covariates dfCovs lacks are reported", {
+  ## The hand-written function may read any column, so no column can be called
+  ## unread; what the generated function reads and dfCovs lacks still can.
+  handWritten <- function(thetas, df, ...) list(KA = thetas[6])
+  w <- expect_warning(
+    forestRun7(run7Covs(),
+      functionList = list(run7Fun(), handWritten),
+      functionListName = c("CL", "FREL", "V", "KA")
+    ),
+    class = "pmxCovariateMismatch"
+  )
+  expect_equal(w$unread, character(0))
+  expect_equal(w$absent, c("GENO4", "GENO1", "GENO3"))
+})

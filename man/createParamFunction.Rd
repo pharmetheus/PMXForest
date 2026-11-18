@@ -75,6 +75,14 @@ A list of:
 \itemize{
 \item \code{code} - the generated R source, a character vector of lines with
 class \code{"pmxParamFunction"} so that printing it renders the source.
+The function in it is wrapped in \code{structure()} and carries the
+attribute \code{pmxCovariates}: the covariates \verb{$PK} reads, followed by any
+column a \code{secondary} entry reads as \code{df$NAME} or \code{df[["NAME"]]}.
+\code{\link[=getForestDFSCM]{getForestDFSCM()}} checks the columns of \code{dfCovs} against it. When
+\code{df} appears in a \code{secondary} entry in any other way, such as
+\code{nrow(df)}, the columns read are not known, and the function carries
+no attribute and is not checked. Edit the attribute too if you edit
+the source to read other columns.
 \item \code{functionListName} - a character vector matching the order of the
 returned parameters, for \code{getForestDFSCM()}. Includes the \code{secondary}
 names, appended after the \verb{$PK} parameters.

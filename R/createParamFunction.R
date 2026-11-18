@@ -117,6 +117,14 @@
 #'   \itemize{
 #'     \item `code` - the generated R source, a character vector of lines with
 #'       class `"pmxParamFunction"` so that printing it renders the source.
+#'       The function in it is wrapped in `structure()` and carries the
+#'       attribute `pmxCovariates`: the covariates `$PK` reads, followed by any
+#'       column a `secondary` entry reads as `df$NAME` or `df[["NAME"]]`.
+#'       [getForestDFSCM()] checks the columns of `dfCovs` against it. When
+#'       `df` appears in a `secondary` entry in any other way, such as
+#'       `nrow(df)`, the columns read are not known, and the function carries
+#'       no attribute and is not checked. Edit the attribute too if you edit
+#'       the source to read other columns.
 #'     \item `functionListName` - a character vector matching the order of the
 #'       returned parameters, for `getForestDFSCM()`. Includes the `secondary`
 #'       names, appended after the `$PK` parameters.
@@ -231,9 +239,12 @@ createParamFunction <- function(modFile, parameters = NULL, covRef = NULL,
   # so the emitted source stays diffable against the control stream.
   stmts <- nmSimplifyStmts(p$statements)
 
+  ## The function carries the columns it reads, so that getForestDFSCM() can
+  ## check the names in dfCovs against $PK. NULL when a secondary block uses
+  ## df in a way that hides which columns it reads.
   code <- nmEmit(stmts, p$covRef, p$covariates, p$parameters, functionName,
     modFile, missVal, p$noBaseThetas,
-    secondary = sec
+    secondary = sec, reads = nmFunctionReads(p$covariates, sec)
   )
   class(code) <- c("pmxParamFunction", "character")
 
