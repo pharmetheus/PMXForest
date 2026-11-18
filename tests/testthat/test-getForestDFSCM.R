@@ -478,7 +478,9 @@ test_that("an unread column and an absent covariate are reported together", {
   expect_equal(w$absent, "SEX")
 })
 
-test_that("the comparison is made after the one-hot encoding of getForestDFSCM", {
+## run7Covs() with one raw GENO column instead of the indicator columns, for
+## getForestDFSCM() to encode.
+run7RawGeno <- function() {
   dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
   geno <- dfCovs$COVARIATEGROUPS == "GENO"
   lev <- ifelse(dfCovs$GENO1 == 1, 1,
@@ -486,6 +488,11 @@ test_that("the comparison is made after the one-hot encoding of getForestDFSCM",
   )
   dfCovs$GENO <- ifelse(geno, lev, -99)
   dfCovs[c("GENO1", "GENO3", "GENO4")] <- NULL
+  dfCovs
+}
+
+test_that("the comparison is made after the one-hot encoding of getForestDFSCM", {
+  dfCovs <- run7RawGeno()
 
   expect_no_warning(
     forestRun7(dfCovs, oneHot = list(GENO = list(ref = 2)), oneHotSep = "")
@@ -515,4 +522,62 @@ test_that("next to a hand-written function, no check is made", {
       functionListName = c("CL", "FREL", "V", "KA")
     )
   )
+})
+
+# --- dfRefRow against dfCovs -------------------------------------------------
+
+test_that("a column of dfRefRow that dfCovs lacks is reported, and shifts every row", {
+  ## wt for WT: the reference subject weighs 75 kg, the reference of $PK, and
+  ## not 60 kg, so every row is divided by the wrong reference.
+  dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
+  expect_no_warning(ok <- forestRun7(dfCovs, dfRefRow = data.frame(WT = 60)))
+  w <- expect_warning(
+    typo <- forestRun7(dfCovs, dfRefRow = data.frame(wt = 60)),
+    class = "pmxCovariateMismatch"
+  )
+  expect_equal(w$refOnly, "wt")
+  expect_match(conditionMessage(w), "dfRefRow has columns that dfCovs lacks: wt.", fixed = TRUE)
+  expect_match(conditionMessage(w), "setupDfRefRow()", fixed = TRUE)
+  expect_equal(typo$REFFUNC, forestRun7(dfCovs)$REFFUNC)
+  expect_false(isTRUE(all.equal(typo$REFFUNC, ok$REFFUNC)))
+})
+
+test_that("dfRefRow is checked next to a hand-written parameter function too", {
+  handWritten <- function(thetas, df, ...) list(CL = thetas[4])
+  w <- expect_warning(
+    forestRun7(run7Covs(sep = "", catRef = list(GENO = 2)),
+      functionList = list(handWritten), functionListName = "CL",
+      dfRefRow = data.frame(wt = 60)
+    ),
+    class = "pmxCovariateMismatch"
+  )
+  expect_equal(w$refOnly, "wt")
+})
+
+test_that("a dfRefRow from setupDfRefRow() gives no warning", {
+  ## The reference row has the columns of dfCovs, COVARIATEGROUPS included,
+  ## which getForestDFSCM() takes out of dfCovs before the comparison.
+  dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
+  dfData <- read.csv(
+    system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")
+  )
+  dfRefRow <- setupDfRefRow(dfCovs, dfData,
+    covariates = c("WT", "SEX", "FOOD", "FORM", "GENO"), idVar = "ID"
+  )
+  expect_true("COVARIATEGROUPS" %in% names(dfRefRow))
+  expect_no_warning(forestRun7(dfCovs, dfRefRow = dfRefRow))
+})
+
+test_that("dfRefRow is compared with dfCovs after the one-hot encoding", {
+  ## A raw GENO column in dfRefRow becomes the indicator columns of dfCovs,
+  ## and indicator columns already in dfRefRow match those of the encoded
+  ## dfCovs, though not the raw GENO column dfCovs was given.
+  for (ref in list(data.frame(GENO = 1, WT = 60), data.frame(GENO1 = 1, GENO3 = 0, GENO4 = 0, WT = 60))) {
+    expect_no_warning(
+      forestRun7(run7RawGeno(),
+        dfRefRow = ref,
+        oneHot = list(GENO = list(ref = 2)), oneHotSep = ""
+      )
+    )
+  }
 })

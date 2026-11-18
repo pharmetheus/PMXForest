@@ -34,6 +34,15 @@
 #'   `pmxCovariateMismatch`, so an intended pair can be silenced alone:
 #'   `withCallingHandlers(getForestDFSCM(...), pmxCovariateMismatch = function(w) invokeRestart("muffleWarning"))`.
 #'
+#'   **The columns of `dfRefRow` are checked against `dfCovs`.** A column of
+#'   `dfRefRow` that `dfCovs` lacks, after the encoding set by `oneHot`, gives
+#'   a warning of the same class, with the names in the field `refOnly`. With
+#'   a name spelled differently, such as `wt` in `dfRefRow` for `WT` in
+#'   `dfCovs`, the reference subject is held at the reference of the parameter
+#'   function for that covariate, and every row is shifted. This check is made
+#'   for hand-written functions too. A reference row from [setupDfRefRow()]
+#'   has the columns of `dfCovs` and is never reported.
+#'
 #' @import doParallel
 #' @import foreach
 #' @import dplyr
@@ -205,6 +214,7 @@ getForestDFSCM <- function(dfCovs,
   ## After the one-hot encoding, so the dummy columns are compared and not the
   ## raw covariate, and with COVARIATEGROUPS gone.
   checkCovariateNames(functionList, names(dfCovs))
+  if (!is.null(dfRefRow) && is.data.frame(dfRefRow)) checkRefRowNames(names(dfRefRow), names(dfCovs))
 
   ## Define the grouping
   getGroups <- function(df) {
@@ -463,6 +473,55 @@ checkCovariateNames <- function(functionList, covNames) {
       message = paste(msg, collapse = "\n"), call = NULL,
       unread = unread, absent = absent
     )
+  ))
+  invisible(NULL)
+}
+
+#' Warn when dfRefRow has a column that dfCovs lacks
+#'
+#' A column of `dfRefRow` that `dfCovs` lacks is either a name spelled
+#' differently from `dfCovs`, which leaves the reference subject at the
+#' reference of the parameter function for that covariate, or a covariate set
+#' in the reference subject and in no row. Either way every row of the Forest
+#' plot is shifted, unless the value is the reference of the function. The
+#' check needs no list of the columns a function reads, so it is made for
+#' hand-written functions too. A column of `dfCovs` that `dfRefRow` lacks is
+#' left at the reference of the function in both, and is not reported.
+#'
+#' @param refNames The column names of `dfRefRow` after one-hot encoding.
+#' @param covNames The column names of `dfCovs` after one-hot encoding and
+#'   without `COVARIATEGROUPS`.
+#' @return `NULL`, invisibly. Warns with class `pmxCovariateMismatch`, whose
+#'   field `refOnly` holds the names.
+#' @noRd
+checkRefRowNames <- function(refNames, covNames) {
+  ## setupDfRefRow() copies COVARIATEGROUPS from dfCovs, where it has already
+  ## been taken out.
+  refOnly <- setdiff(refNames, c(covNames, "COVARIATEGROUPS"))
+  if (length(refOnly) == 0) {
+    return(invisible(NULL))
+  }
+
+  msg <- c(
+    paste0("dfRefRow has columns that dfCovs lacks: ", paste(refOnly, collapse = ", "), "."),
+    paste0(
+      "With a name spelled differently from dfCovs, such as wt for WT, the reference ",
+      "subject is held at the reference of the parameter function for that covariate, ",
+      "and every row of the Forest plot is shifted."
+    ),
+    paste0(
+      "A covariate set in dfRefRow and in no row of dfCovs has a different value in ",
+      "the reference subject than in every row, unless the value is the reference of ",
+      "the parameter function."
+    ),
+    paste0(
+      "setupDfRefRow() builds dfRefRow with the columns of dfCovs. If the columns are ",
+      "intended, the warning can be ignored."
+    )
+  )
+  warning(structure(
+    class = c("pmxCovariateMismatch", "warning", "condition"),
+    list(message = paste(msg, collapse = "\n"), call = NULL, refOnly = refOnly)
   ))
   invisible(NULL)
 }

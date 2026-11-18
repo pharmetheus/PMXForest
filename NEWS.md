@@ -1,6 +1,6 @@
 # PMXForest (development version)
 
-## Checking covariate names against the parameter function
+## Checking covariate names
 
 `getForestDFSCM()` warns when `dfCovs` has a column that a parameter function
 from `createParamFunction()` does not read and also lacks a covariate that the
@@ -14,6 +14,13 @@ purpose, no warning is given. The warning has the class
 The function from `createParamFunction()` carries the names of the columns it
 reads, set with `structure()` in the generated source. A function written by
 hand carries no names and is not checked.
+
+`getForestDFSCM()` also warns when `dfRefRow` has a column that `dfCovs`
+lacks. Until now, with `wt` in `dfRefRow` for `WT` in `dfCovs`, the reference
+subject was held at the reference weight of the model, every row of the Forest
+plot was shifted, and no message was given. This check is made for
+hand-written parameter functions too. A reference row from `setupDfRefRow()`
+has the columns of `dfCovs` and never gives the warning.
 
 ## Bug fixes
 
