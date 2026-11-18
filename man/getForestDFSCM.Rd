@@ -129,6 +129,15 @@ warning. A hand-written function carries no names, so no check is made
 when \code{functionList} holds one. The warning has the class
 \code{pmxCovariateMismatch}, so an intended pair can be silenced alone:
 \code{withCallingHandlers(getForestDFSCM(...), pmxCovariateMismatch = function(w) invokeRestart("muffleWarning"))}.
+
+\strong{The columns of \code{dfRefRow} are checked against \code{dfCovs}.} A column of
+\code{dfRefRow} that \code{dfCovs} lacks, after the encoding set by \code{oneHot}, gives
+a warning of the same class, with the names in the field \code{refOnly}. With
+a name spelled differently, such as \code{wt} in \code{dfRefRow} for \code{WT} in
+\code{dfCovs}, the reference subject is held at the reference of the parameter
+function for that covariate, and every row is shifted. This check is made
+for hand-written functions too. A reference row from \code{\link[=setupDfRefRow]{setupDfRefRow()}}
+has the columns of \code{dfCovs} and is never reported.
 }
 \examples{
 dfData <- read.csv(
