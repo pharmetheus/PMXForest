@@ -325,11 +325,16 @@ test_that("the generated function drives getForestDFSCM()", {
     n = 10
   )
 
-  res <- getForestDFSCM(
-    dfCovs,
-    functionList = list(fun),
-    functionListName = out$functionListName,
-    noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
+  ## GENO is left out of the plot, so the GENO indicators the function reads
+  ## are reported as absent from dfCovs.
+  expect_warning(
+    res <- getForestDFSCM(
+      dfCovs,
+      functionList = list(fun),
+      functionListName = out$functionListName,
+      noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
+    ),
+    class = "pmxCovariateMismatch"
   )
   expect_s3_class(res, "data.frame")
   expect_setequal(as.character(unique(res$PARAMETER)), c("CL", "V"))
@@ -409,7 +414,7 @@ test_that("file = writes the source and print() renders it", {
   )
   expect_true(file.exists(f))
   expect_equal(readLines(f), as.character(out$code))
-  expect_output(print(out$code), "paramFunction <- function")
+  expect_output(print(out$code), "paramFunction <- structure(function", fixed = TRUE)
 })
 
 test_that("functionName controls the name of the generated function", {
@@ -419,7 +424,7 @@ test_that("functionName controls the name of the generated function", {
       quiet = TRUE
     )
   )
-  expect_true(any(grepl("^myPF <- function", out$code)))
+  expect_true(any(startsWith(out$code, "myPF <- structure(function(thetas, df, ...) {")))
 })
 
 test_that("quiet = FALSE reports the covariates and their references", {
@@ -623,10 +628,13 @@ test_that("the generated function with secondaries drives getForestDFSCM()", {
     system.file("extdata", "SimVal/run7.ext", package = "PMXForest"),
     n = 10
   )
-  res <- getForestDFSCM(
-    dfCovs,
-    functionList = list(fun), functionListName = out$functionListName,
-    noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
+  expect_warning(
+    res <- getForestDFSCM(
+      dfCovs,
+      functionList = list(fun), functionListName = out$functionListName,
+      noBaseThetas = out$noBaseThetas, dfParameters = dfSamples
+    ),
+    class = "pmxCovariateMismatch"
   )
   expect_setequal(as.character(unique(res$PARAMETER)), c("CL", "V", "AUC"))
   expect_true(all(is.finite(res$POINT)))
@@ -1286,4 +1294,79 @@ test_that("an eta reaching the exponent through a symbol is not separable", {
     createParamFunction(tempMod(ok), parameters = "CL", quiet = TRUE)
   )
   expect_equal(unname(o2$etaMap[["CL"]]), 1L)
+})
+
+# --- the generated function carries the covariates it reads ----------------
+
+test_that("the generated function carries the covariates $PK reads", {
+  out <- createParamFunction(modFile,
+    parameters = c("CL", "FREL", "V"),
+    covRef = list(GENO1 = 0, GENO3 = 0), quiet = TRUE
+  )
+  fun <- eval(parse(text = paste(out$code, collapse = "\n")))
+  expect_equal(
+    attr(fun, "pmxCovariates"),
+    c("SEX", "GENO4", "FORM", "FOOD", "WT", "GENO1", "GENO3")
+  )
+  expect_equal(attr(fun, "pmxCovariates"), names(out$covRef))
+})
+
+test_that("the covariate list survives source() of a written file", {
+  f <- withr::local_tempfile(fileext = ".R")
+  out <- createParamFunction(modFile,
+    parameters = c("CL", "V"), covRef = list(GENO1 = 0, GENO3 = 0, GENO4 = 0),
+    file = f, quiet = TRUE
+  )
+  env <- new.env()
+  source(f, local = env)
+  expect_setequal(
+    attr(env$paramFunction, "pmxCovariates"),
+    c("FOOD", "WT", "GENO1", "GENO3", "GENO4")
+  )
+  expect_equal(attr(env$paramFunction, "pmxCovariates"), names(out$covRef))
+})
+
+test_that("a narrowed `parameters` narrows the covariate list", {
+  out <- createParamFunction(modFile, parameters = "V", quiet = TRUE)
+  fun <- eval(parse(text = paste(out$code, collapse = "\n")))
+  expect_equal(attr(fun, "pmxCovariates"), "WT")
+})
+
+test_that("a function that reads no covariate carries an empty list, not none", {
+  out <- createParamFunction(modFile, parameters = "MAT", quiet = TRUE)
+  fun <- eval(parse(text = paste(out$code, collapse = "\n")))
+  expect_identical(attr(fun, "pmxCovariates"), character(0))
+})
+
+test_that("columns a secondary parameter reads by name join the covariate list", {
+  out <- createParamFunction(modFile,
+    parameters = "V", quiet = TRUE,
+    secondary = list(
+      VKG = "V / df$AGE",
+      VCR = list(source = "V * df[[\"CRCL\"]] / ref", ref = 100),
+      VWT = "V / df$WT",
+      ## an empty index on something other than df reads no column
+      VM = "matrix(V)[1, ]"
+    )
+  )
+  fun <- eval(parse(text = paste(out$code, collapse = "\n")))
+  expect_equal(attr(fun, "pmxCovariates"), c("WT", "AGE", "CRCL"))
+  v <- fun(run7Thetas(), data.frame(WT = 70, AGE = 40, CRCL = 90))
+  expect_equal(v$VM, v$V)
+})
+
+test_that("a secondary parameter that uses df in another way leaves no list", {
+  for (snippet in c(
+    "V * nrow(df)", "V * df[, \"AGE\"]", "local({ df <- data.frame(AGE = 1); V / df$AGE })",
+    "sapply(1, function(df) df$AGE)", "nm <- \"AGE\"; V / df[[nm]]"
+  )) {
+    out <- createParamFunction(modFile,
+      parameters = "V", quiet = TRUE,
+      secondary = list(X = snippet)
+    )
+    fun <- eval(parse(text = paste(out$code, collapse = "\n")))
+    expect_null(attr(fun, "pmxCovariates"), label = snippet)
+    ## and the function still works
+    expect_type(fun, "closure")
+  }
 })

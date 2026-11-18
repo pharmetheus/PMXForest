@@ -1,5 +1,19 @@
 # PMXForest (development version)
 
+## Checking covariate names against the parameter function
+
+`getForestDFSCM()` warns when the covariate columns of `dfCovs` do not match
+the covariates that a parameter function from `createParamFunction()` reads.
+Until now, with an indicator column named `GENO_1` in `dfCovs` for `GENO1` in
+`$PK`, every GENO row of the Forest plot had no effect, and no message was
+given. A covariate left out of `dfCovs` on purpose is listed in the warning
+too; the warning has the class `pmxCovariateMismatch`, so that it can be
+silenced on its own.
+
+The function from `createParamFunction()` carries the names of the columns it
+reads, set with `structure()` in the generated source. A function written by
+hand carries no names and is not checked.
+
 # PMXForest 1.4.1
 
 ## Checking parameters with additive between-subject variability

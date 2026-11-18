@@ -16,6 +16,23 @@
 #'   evaluates the subjects in the data who match each row, with all their own
 #'   covariate values.
 #'
+#'   **Covariate names are checked against a generated parameter function.** A
+#'   function made by [createParamFunction()] carries the names of the data
+#'   columns it reads, as the attribute `pmxCovariates`. `getForestDFSCM()`
+#'   compares them with the columns of `dfCovs`, after the encoding set by
+#'   `oneHot` and without `COVARIATEGROUPS`, and warns about two cases. For a
+#'   column that no function in `functionList` reads, the rows on which only
+#'   that column is set have no effect. A covariate that a function reads and
+#'   `dfCovs` lacks is held at the reference of the function on every row.
+#'   Either case can be deliberate, which is why this is a warning and not an
+#'   error. Both cases occur together when an indicator column is named
+#'   differently from `$PK`, such as `GENO_1` in `dfCovs` for `GENO1` in the
+#'   model. A hand-written function carries no names and is not checked; when
+#'   `functionList` holds one, no column is reported as unread. The warning
+#'   has the class `pmxCovariateMismatch`, so a deliberate difference can be
+#'   silenced alone:
+#'   `withCallingHandlers(getForestDFSCM(...), pmxCovariateMismatch = function(w) invokeRestart("muffleWarning"))`.
+#'
 #' @import doParallel
 #' @import foreach
 #' @import dplyr
@@ -183,6 +200,10 @@ getForestDFSCM <- function(dfCovs,
     groupnames <- dfCovs[, "COVARIATEGROUPS"]
     dfCovs[, "COVARIATEGROUPS"] <- NULL
   }
+
+  ## After the one-hot encoding, so the dummy columns are compared and not the
+  ## raw covariate, and with COVARIATEGROUPS gone.
+  checkCovariateNames(functionList, names(dfCovs))
 
   ## Define the grouping
   getGroups <- function(df) {
@@ -378,4 +399,65 @@ getForestDFSCM <- function(dfCovs,
   dfret$PARAMETER <- factor(dfret$PARAMETER, levels = unique(dfret$PARAMETER))
 
   return(dfret)
+}
+
+#' Check the covariate columns of dfCovs against generated parameter functions
+#'
+#' A function made by [createParamFunction()] carries the columns it reads as
+#' the attribute `pmxCovariates`. A column of `dfCovs` that no function reads
+#' gives rows with no effect, and a covariate a function reads that `dfCovs`
+#' lacks stays at the reference of the function on every row. Either can be
+#' deliberate, so this warns rather than stops. A name spelled differently
+#' from `$PK`, such as `GENO_1` for `GENO1`, gives both.
+#'
+#' @param functionList The parameter functions.
+#' @param covNames The column names of `dfCovs` after one-hot encoding.
+#' @return `NULL`, invisibly. Warns with class `pmxCovariateMismatch`, whose
+#'   fields `unread` and `absent` hold the names.
+#' @noRd
+checkCovariateNames <- function(functionList, covNames) {
+  reads <- lapply(functionList, attr, which = "pmxCovariates", exact = TRUE)
+  known <- !vapply(reads, is.null, logical(1))
+  if (!any(known)) {
+    return(invisible(NULL))
+  }
+  readAll <- unique(unlist(reads[known]))
+  absent <- setdiff(readAll, covNames)
+  ## A function without the list may read any column, so a column is called
+  ## unread only when every function carries a list.
+  unread <- if (all(known)) setdiff(covNames, readAll) else character(0)
+  if (length(absent) == 0 && length(unread) == 0) {
+    return(invisible(NULL))
+  }
+
+  msg <- c(
+    "The covariate columns of dfCovs differ from the covariates the parameter function reads.",
+    if (length(unread) > 0) {
+      paste0(
+        "No parameter function reads these columns of dfCovs: ",
+        paste(unread, collapse = ", "),
+        ". Rows on which only these columns are set have no effect."
+      )
+    },
+    if (length(absent) > 0) {
+      paste0(
+        "dfCovs has no column for these covariates the parameter function reads: ",
+        paste(absent, collapse = ", "),
+        ". These covariates stay at the reference value of the function on every row."
+      )
+    },
+    paste0(
+      "Either can be deliberate. Both occur when a name is spelled differently ",
+      "from $PK, for example GENO_1 against GENO1 when the separator of indicator ",
+      "columns differs (sep in setupDfCovs(), oneHotSep in getForestDFSCM())."
+    )
+  )
+  warning(structure(
+    class = c("pmxCovariateMismatch", "warning", "condition"),
+    list(
+      message = paste(msg, collapse = "\n"), call = NULL,
+      unread = unread, absent = absent
+    )
+  ))
+  invisible(NULL)
 }
