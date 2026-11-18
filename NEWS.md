@@ -15,6 +15,14 @@ The function from `createParamFunction()` carries the names of the columns it
 reads, set with `structure()` in the generated source. A function written by
 hand carries no names and is not checked.
 
+## Bug fixes
+
+* **Parallel runs on Windows use the packages of the session.** When the
+  library of PMXFrem also held a PMXForest older than the one loaded in the
+  session, a run with `ncores > 1` stopped with an error that the older
+  PMXForest was being loaded. The workers now load each package the run needs,
+  and the packages it imports, from the folder the session loaded it from.
+
 # PMXForest 1.4.1
 
 ## Checking parameters with additive between-subject variability

@@ -39,7 +39,11 @@ and one it has silently computes with the old code.
 Fresh workers therefore get the folders this session loaded its packages
 from first on their library path, load \code{pkgs} before any task reaches them,
 and are checked against the session: any package whose version differs
-stops the run, naming both versions and where they came from.
+stops the run, naming both versions and where they came from. The packages
+in \code{pkgs}, and the packages they import, are loaded from the folder this
+session loaded each one from. An older copy of a dependency in the library
+of a package in \code{pkgs}, such as an old PMXForest next to PMXFrem, is
+therefore not loaded.
 
 Exported for packages that build on PMXForest (PMXFrem), so they start their
 workers the same way rather than keep a copy of this function. Not meant to
