@@ -116,17 +116,18 @@ covariate values.
 function made by \code{\link[=createParamFunction]{createParamFunction()}} carries the names of the data
 columns it reads, as the attribute \code{pmxCovariates}. \code{getForestDFSCM()}
 compares them with the columns of \code{dfCovs}, after the encoding set by
-\code{oneHot} and without \code{COVARIATEGROUPS}, and warns about two cases. For a
-column that no function in \code{functionList} reads, the rows on which only
-that column is set have no effect. A covariate that a function reads and
-\code{dfCovs} lacks is held at the reference of the function on every row.
-Either case can be deliberate, which is why this is a warning and not an
-error. Both cases occur together when an indicator column is named
-differently from \verb{$PK}, such as \code{GENO_1} in \code{dfCovs} for \code{GENO1} in the
-model. A hand-written function carries no names and is not checked; when
-\code{functionList} holds one, no column is reported as unread. The warning
-has the class \code{pmxCovariateMismatch}, so a deliberate difference can be
-silenced alone:
+\code{oneHot} and without \code{COVARIATEGROUPS}. It warns when two differences
+occur together: a column that no function in \code{functionList} reads, so
+that the rows on which only that column is set have no effect, and a
+covariate that a function reads and \code{dfCovs} lacks, so that it is held at
+the reference of the function on every row. A name spelled differently
+from \verb{$PK} always gives that pair, for example \code{GENO_1} in \code{dfCovs} for
+\code{GENO1} in the model (the separator, \code{sep} in \code{\link[=setupDfCovs]{setupDfCovs()}}), or a
+\code{GENO2} column for \code{GENO1} (the reference level, \code{catRef}). Either
+difference alone is often a deliberate choice of rows and gives no
+warning. A hand-written function carries no names, so no check is made
+when \code{functionList} holds one. The warning has the class
+\code{pmxCovariateMismatch}, so an intended pair can be silenced alone:
 \code{withCallingHandlers(getForestDFSCM(...), pmxCovariateMismatch = function(w) invokeRestart("muffleWarning"))}.
 }
 \examples{

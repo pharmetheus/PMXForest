@@ -20,17 +20,18 @@
 #'   function made by [createParamFunction()] carries the names of the data
 #'   columns it reads, as the attribute `pmxCovariates`. `getForestDFSCM()`
 #'   compares them with the columns of `dfCovs`, after the encoding set by
-#'   `oneHot` and without `COVARIATEGROUPS`, and warns about two cases. For a
-#'   column that no function in `functionList` reads, the rows on which only
-#'   that column is set have no effect. A covariate that a function reads and
-#'   `dfCovs` lacks is held at the reference of the function on every row.
-#'   Either case can be deliberate, which is why this is a warning and not an
-#'   error. Both cases occur together when an indicator column is named
-#'   differently from `$PK`, such as `GENO_1` in `dfCovs` for `GENO1` in the
-#'   model. A hand-written function carries no names and is not checked; when
-#'   `functionList` holds one, no column is reported as unread. The warning
-#'   has the class `pmxCovariateMismatch`, so a deliberate difference can be
-#'   silenced alone:
+#'   `oneHot` and without `COVARIATEGROUPS`. It warns when two differences
+#'   occur together: a column that no function in `functionList` reads, so
+#'   that the rows on which only that column is set have no effect, and a
+#'   covariate that a function reads and `dfCovs` lacks, so that it is held at
+#'   the reference of the function on every row. A name spelled differently
+#'   from `$PK` always gives that pair, for example `GENO_1` in `dfCovs` for
+#'   `GENO1` in the model (the separator, `sep` in [setupDfCovs()]), or a
+#'   `GENO2` column for `GENO1` (the reference level, `catRef`). Either
+#'   difference alone is often a deliberate choice of rows and gives no
+#'   warning. A hand-written function carries no names, so no check is made
+#'   when `functionList` holds one. The warning has the class
+#'   `pmxCovariateMismatch`, so an intended pair can be silenced alone:
 #'   `withCallingHandlers(getForestDFSCM(...), pmxCovariateMismatch = function(w) invokeRestart("muffleWarning"))`.
 #'
 #' @import doParallel
@@ -404,11 +405,13 @@ getForestDFSCM <- function(dfCovs,
 #' Check the covariate columns of dfCovs against generated parameter functions
 #'
 #' A function made by [createParamFunction()] carries the columns it reads as
-#' the attribute `pmxCovariates`. A column of `dfCovs` that no function reads
-#' gives rows with no effect, and a covariate a function reads that `dfCovs`
-#' lacks stays at the reference of the function on every row. Either can be
-#' deliberate, so this warns rather than stops. A name spelled differently
-#' from `$PK`, such as `GENO_1` for `GENO1`, gives both.
+#' the attribute `pmxCovariates`. A name in `dfCovs` spelled differently from
+#' `$PK`, such as `GENO_1` for `GENO1`, gives two differences at once: a column
+#' that no function reads, so its rows have no effect, and a covariate that a
+#' function reads and `dfCovs` lacks, so it stays at the reference of the
+#' function on every row. Only that pair is reported, because either difference
+#' alone is often a deliberate choice of rows. The check is made only when
+#' every function carries the list.
 #'
 #' @param functionList The parameter functions.
 #' @param covNames The column names of `dfCovs` after one-hot encoding.
@@ -417,39 +420,41 @@ getForestDFSCM <- function(dfCovs,
 #' @noRd
 checkCovariateNames <- function(functionList, covNames) {
   reads <- lapply(functionList, attr, which = "pmxCovariates", exact = TRUE)
-  known <- !vapply(reads, is.null, logical(1))
-  if (!any(known)) {
+  ## A function without the list may read any column, so no column can be
+  ## called unread, and the pair cannot be found.
+  if (any(vapply(reads, is.null, logical(1)))) {
     return(invisible(NULL))
   }
-  readAll <- unique(unlist(reads[known]))
+  readAll <- unique(unlist(reads))
+  unread <- setdiff(covNames, readAll)
   absent <- setdiff(readAll, covNames)
-  ## A function without the list may read any column, so a column is called
-  ## unread only when every function carries a list.
-  unread <- if (all(known)) setdiff(covNames, readAll) else character(0)
-  if (length(absent) == 0 && length(unread) == 0) {
+  ## Either alone is an extra row or a deliberate subset; a misspelled name
+  ## always gives both.
+  if (length(unread) == 0 || length(absent) == 0) {
     return(invisible(NULL))
   }
 
   msg <- c(
-    "The covariate columns of dfCovs differ from the covariates the parameter function reads.",
-    if (length(unread) > 0) {
-      paste0(
-        "No parameter function reads these columns of dfCovs: ",
-        paste(unread, collapse = ", "),
-        ". Rows on which only these columns are set have no effect."
-      )
-    },
-    if (length(absent) > 0) {
-      paste0(
-        "dfCovs has no column for these covariates the parameter function reads: ",
-        paste(absent, collapse = ", "),
-        ". These covariates stay at the reference value of the function on every row."
-      )
-    },
     paste0(
-      "Either can be deliberate. Both occur when a name is spelled differently ",
-      "from $PK, for example GENO_1 against GENO1 when the separator of indicator ",
-      "columns differs (sep in setupDfCovs(), oneHotSep in getForestDFSCM())."
+      "The covariate columns of dfCovs and the covariates the parameter function ",
+      "reads differ in both directions, as they do when a name in dfCovs is ",
+      "spelled differently from $PK."
+    ),
+    paste0(
+      "No parameter function reads these columns of dfCovs: ",
+      paste(unread, collapse = ", "),
+      ". Rows on which only these columns are set have no effect."
+    ),
+    paste0(
+      "dfCovs has no column for these covariates the parameter function reads: ",
+      paste(absent, collapse = ", "),
+      ". These covariates stay at the reference value of the function on every row."
+    ),
+    paste0(
+      "Check the separator of indicator columns (sep in setupDfCovs(), oneHotSep ",
+      "in getForestDFSCM()), which gives GENO_1 against GENO1, and the reference ",
+      "level (catRef in setupDfCovs()), which gives GENO2 against GENO1. If both ",
+      "lists are intended, the warning can be ignored."
     )
   )
   warning(structure(

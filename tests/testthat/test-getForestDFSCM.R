@@ -440,20 +440,41 @@ test_that("matching covariate names give no warning", {
   expect_true(any(res$COVEFF[grepl("GENO1=1", res$COVNAME)]))
 })
 
-test_that("a column no function reads is reported on its own", {
+test_that("a wrong reference genotype is reported", {
+  ## Without catRef, setupDfCovs() leaves out GENO1 instead of GENO2: the GENO2
+  ## column is unread and GENO1 is absent, so the UM row comes out flat.
+  w <- expect_warning(
+    res <- forestRun7(run7Covs(sep = "")),
+    class = "pmxCovariateMismatch"
+  )
+  expect_equal(w$unread, "GENO2")
+  expect_equal(w$absent, "GENO1")
+  expect_match(conditionMessage(w), "catRef in setupDfCovs()", fixed = TRUE)
+  expect_false(any(res$COVEFF[grepl("GENO2=1", res$COVNAME)]))
+})
+
+test_that("a column no function reads gives no warning on its own", {
   dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
   dfCovs$AGE <- -99
   dfCovs$AGE[1] <- 40
-  w <- expect_warning(forestRun7(dfCovs), class = "pmxCovariateMismatch")
-  expect_equal(w$unread, "AGE")
-  expect_equal(w$absent, character(0))
+  expect_no_warning(forestRun7(dfCovs))
 })
 
-test_that("a covariate dfCovs lacks is reported on its own", {
+test_that("a covariate dfCovs lacks gives no warning on its own", {
   dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
   dfCovs$SEX <- NULL
+  expect_no_warning(forestRun7(dfCovs))
+})
+
+test_that("an unread column and an absent covariate are reported together", {
+  ## Both may be intended, as in the quick start; the pair is reported anyway,
+  ## because a misspelled name gives the same pair.
+  dfCovs <- run7Covs(sep = "", catRef = list(GENO = 2))
+  dfCovs$AGE <- -99
+  dfCovs$AGE[1] <- 40
+  dfCovs$SEX <- NULL
   w <- expect_warning(forestRun7(dfCovs), class = "pmxCovariateMismatch")
-  expect_equal(w$unread, character(0))
+  expect_equal(w$unread, "AGE")
   expect_equal(w$absent, "SEX")
 })
 
@@ -484,17 +505,14 @@ test_that("a hand-written parameter function is not checked", {
   )
 })
 
-test_that("next to a hand-written function, only covariates dfCovs lacks are reported", {
+test_that("next to a hand-written function, no check is made", {
   ## The hand-written function may read any column, so no column can be called
-  ## unread; what the generated function reads and dfCovs lacks still can.
+  ## unread, and an absent covariate alone is not reported.
   handWritten <- function(thetas, df, ...) list(KA = thetas[6])
-  w <- expect_warning(
+  expect_no_warning(
     forestRun7(run7Covs(),
       functionList = list(run7Fun(), handWritten),
       functionListName = c("CL", "FREL", "V", "KA")
-    ),
-    class = "pmxCovariateMismatch"
+    )
   )
-  expect_equal(w$unread, character(0))
-  expect_equal(w$absent, c("GENO4", "GENO1", "GENO3"))
 })
