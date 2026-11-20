@@ -3,6 +3,25 @@
 Items parked for future consideration. Not a substitute for GitHub issues; move an
 item there when it becomes active work.
 
+## Release plan: 1.4.2
+
+Planned for the week of 2026-11-23. Development on `epic/1.5.0` (named before
+the version was set to 1.4.2 on 2026-11-18), released through #77. In scope,
+all merged:
+
+1. `createParamFunction()` functions carry the covariates they read, and
+   `getForestDFSCM()` warns when `dfCovs` and those names differ. #76, #78.
+2. Fresh workers load `pkgs` and their imports from the folders the session
+   loaded them from, so an older PMXForest next to PMXFrem is not loaded.
+   #79, test fix #81. Development build 1.4.1.9000 (2026-11-18) is out for
+   testing by the user who reported the problem.
+3. `getForestDFSCM()` warns when `dfRefRow` has a column that `dfCovs`
+   lacks. #80.
+
+Open: possible additions from colleagues, and the result of the test of
+item 2. PMXFrem 2.5.0 follows the release and can then pin `v1.4.2` in its
+CI.
+
 ## Release plan: 1.4.1
 
 Agreed 2026-11-09. Development on `epic/1.4.1`, released through #71. In
