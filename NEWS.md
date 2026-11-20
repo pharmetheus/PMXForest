@@ -2,33 +2,37 @@
 
 ## Checking covariate names
 
-`getForestDFSCM()` warns when `dfCovs` has a column that a parameter function
-from `createParamFunction()` does not read and also lacks a covariate that the
-function reads. That pair always occurs when a name is misspelled. Until now,
-with an indicator column named `GENO_1` in `dfCovs` for `GENO1` in `$PK`, every
-GENO row of the Forest plot had no effect, and no message was given. When only
-one of the two differences occurs, such as a covariate left out of `dfCovs` on
-purpose, no warning is given. The warning has the class
-`pmxCovariateMismatch`, so that it can be silenced on its own.
+`getForestDFSCM()` warns when a column name in `dfCovs` looks misspelled. With
+a misspelled name, `dfCovs` has a column that the parameter function does not
+read, and lacks a covariate that the function reads. The warning is given only
+when both differences occur, so a covariate left out of `dfCovs` on purpose
+gives no warning. In 1.4.1 and earlier, with an indicator column named
+`GENO_1` in `dfCovs` for `GENO1` in `$PK`, every GENO row of the Forest plot
+showed no effect, and no message was given.
 
-The function from `createParamFunction()` carries the names of the columns it
-reads, set with `structure()` in the generated source. A function written by
-hand carries no names and is not checked.
+Only parameter functions from `createParamFunction()` are checked, because
+they hold the names of the covariates they read. A function written by hand is
+not checked.
+
+The warning has the class `pmxCovariateMismatch`, so it can be silenced alone
+with `suppressWarnings(..., classes = "pmxCovariateMismatch")`.
 
 `getForestDFSCM()` also warns when `dfRefRow` has a column that `dfCovs`
-lacks. Until now, with `wt` in `dfRefRow` for `WT` in `dfCovs`, the reference
-subject was held at the reference weight of the model, every row of the Forest
-plot was shifted, and no message was given. This check is made for
-hand-written parameter functions too. A reference row from `setupDfRefRow()`
-has the columns of `dfCovs` and never gives the warning.
+lacks. In 1.4.1 and earlier, with `wt` in `dfRefRow` for `WT` in `dfCovs`, the
+`wt` column was not read. The reference subject then had the reference weight
+of the model, every row of a parameter that depends on weight was off by the
+same factor, and no message was given. The check of `dfRefRow` is made for
+every parameter function, including one written by hand. No warning is given
+for a reference row from `setupDfRefRow()`, which has the columns of `dfCovs`.
 
 ## Bug fixes
 
-* **Parallel runs on Windows use the packages of the session.** When the
-  library of PMXFrem also held a PMXForest older than the one loaded in the
-  session, a run with `ncores > 1` stopped with an error that the older
-  PMXForest was being loaded. The workers now load each package the run needs,
-  and the packages it imports, from the folder the session loaded it from.
+* **Parallel runs on Windows load the PMXForest of the session.** On Windows,
+  a run with `ncores > 1` starts a new R session for each core. When the
+  library of PMXFrem held an older PMXForest than the one loaded in the main
+  session, the new sessions loaded the older copy, and the run stopped with a
+  version error. The new sessions now load the packages of the run, and the
+  packages those import, from the folders the main session loaded them from.
 
 # PMXForest 1.4.1
 
