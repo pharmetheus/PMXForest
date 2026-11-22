@@ -23,6 +23,12 @@ alone.
   session, the new sessions loaded the older copy, and the run stopped with a
   version error. The new sessions now load the packages of the run, and the
   packages those import, from the folders the main session loaded them from.
+* **Covariate labels work with a single `catRef` value.** `generateCovNames()`
+  stopped with "subscript out of bounds" when `setupDfCovs()` was given one
+  `catRef` for all covariates, such as `"mode"` or `2`, and a covariate had
+  more than two levels. With levels that are not consecutive, such as 1, 3
+  and 5, the reference row could also get the wrong label. The reference row
+  is now labelled with the level that `setupDfCovs()` left out.
 
 # PMXForest 1.4.1
 
