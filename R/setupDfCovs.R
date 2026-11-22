@@ -166,10 +166,31 @@ setupDfCovs <- function(data, covariates, conditionalCovs = NULL, useMissVal = T
   ## two places and keep them in step by hand. An ordinary subset of the result
   ## drops the attribute, which is why setupDfRefRow() treats it as a default
   ## rather than a requirement and still accepts both arguments directly.
+  ## oneHotRef is the level each one-hot covariate was encoded against, which
+  ## has no column of its own. generateCovNames() labels the all-zero row with
+  ## it; a level guessed from the position of the row is wrong when the levels
+  ## are not consecutive integers.
   attr(df_covs, "pmxCovSetup") <- list(
     catRef = catRef, sep = sep, missVal = missVal,
-    covariates = covariates, conditionalCovs = conditionalCovs
+    covariates = covariates, conditionalCovs = conditionalCovs,
+    oneHotRef = oneHotDroppedLevels(data, stats_list, idVar, missVal, sep)
   )
 
   return(df_covs)
+}
+
+## The level of each one-hot covariate in stats_list that got no column: the
+## level getCovStats() resolved from catRef ("mode", "lowest", "model" or a
+## level) and dropped. Read from the columns made, not resolved again.
+oneHotDroppedLevels <- function(data, stats_list, idVar, missVal, sep) {
+  dedup <- data[!duplicated(data[[idVar]]), , drop = FALSE]
+  out <- list()
+  for (cov in names(stats_list)) {
+    if (!is.list(stats_list[[cov]])) next
+    levs <- sort(unique(refValues(dedup, cov, missVal)))
+    withCol <- substring(names(stats_list[[cov]]), nchar(paste0(cov, sep)) + 1)
+    ref <- levs[!as.character(levs) %in% withCol]
+    if (length(ref) == 1) out[[cov]] <- ref
+  }
+  return(out)
 }

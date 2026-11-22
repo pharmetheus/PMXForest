@@ -433,3 +433,47 @@ test_that("generateCovNames finds the level of a one-hot group's reference row",
   }
   for (ref in 1:4) expect_equal(pos(ref), c("GENO=1", "GENO=2", "GENO=3", "GENO=4"))
 })
+
+## The bundled data with GENO levels 1, 3, 5 and 7, so that a reference level
+## guessed from the position of its row is wrong.
+genoOddData <- function() {
+  d <- read.csv(system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest"))
+  d$GENO <- c(1, 3, 5, 7)[d$GENO]
+  return(d)
+}
+
+test_that("generateCovNames labels the reference row for every form of catRef", {
+  dfOdd <- genoOddData()
+  genoLabels <- function(catRef, model = NULL) {
+    dfCovs <- setupDfCovs(dfOdd, covariates = c("WT", "GENO"), catRef = catRef, model = model, idVar = "ID")
+    return(generateCovNames(dfCovs)[dfCovs$COVARIATEGROUPS == "GENO"])
+  }
+  odd <- paste0("GENO=", c(1, 3, 5, 7))
+  expect_equal(genoLabels(NULL), odd)
+  expect_equal(genoLabels("mode"), odd)
+  expect_equal(genoLabels("lowest"), odd)
+  expect_equal(genoLabels(5), odd)
+  expect_equal(genoLabels(list(default = 5)), odd)
+  expect_equal(genoLabels(list(GENO = "mode")), odd)
+  modelRef <- list(covRef = list(GENO = list(value = 5, source = "model", confident = TRUE)))
+  expect_equal(genoLabels("model", modelRef), odd)
+
+  # The reported case: a bare catRef on the bundled data
+  dfCovs <- setupDfCovs(read.csv(system.file("extdata", "SimVal/DAT-1-MI-PMX-2.csv", package = "PMXForest")),
+    covariates = c("WT", "GENO"), catRef = "mode", idVar = "ID"
+  )
+  expect_equal(generateCovNames(dfCovs)[dfCovs$COVARIATEGROUPS == "GENO"], paste0("GENO=", 1:4))
+})
+
+test_that("generateCovNames reads catRef from a setup recorded without the dropped levels", {
+  # A dfCovs from PMXForest 1.4.1 or earlier records catRef but not the levels
+  dfCovs <- setupDfCovs(genoOddData(), covariates = "GENO", catRef = 5, idVar = "ID")
+  setup <- attr(dfCovs, "pmxCovSetup")
+  setup$oneHotRef <- NULL
+  odd <- paste0("GENO=", c(1, 3, 5, 7))
+  for (ref in list(5, list(default = 5), list(GENO = 5))) {
+    setup$catRef <- ref
+    attr(dfCovs, "pmxCovSetup") <- setup
+    expect_equal(generateCovNames(dfCovs), odd)
+  }
+})
