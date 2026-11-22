@@ -2,28 +2,18 @@
 
 ## Checking covariate names
 
-`getForestDFSCM()` warns when a column name in `dfCovs` looks misspelled. With
-a misspelled name, `dfCovs` has a column that the parameter function does not
-read, and lacks a covariate that the function reads. The warning is given only
-when both differences occur, so a covariate left out of `dfCovs` on purpose
-gives no warning. In 1.4.1 and earlier, with an indicator column named
-`GENO_1` in `dfCovs` for `GENO1` in `$PK`, every GENO row of the Forest plot
-showed no effect, and no message was given.
-
-Only parameter functions from `createParamFunction()` are checked, because
-they hold the names of the covariates they read. A function written by hand is
-not checked.
-
-The warning has the class `pmxCovariateMismatch`, so it can be silenced alone
-with `suppressWarnings(..., classes = "pmxCovariateMismatch")`.
+`getForestDFSCM()` warns when a column name in `dfCovs` looks misspelled: when
+`dfCovs` has a column that the parameter function does not read and lacks a
+covariate that the function reads. Before 1.4.2, with `GENO_1` for `GENO1`,
+the GENO rows of the Forest plot showed no effect and no message was given.
+Only parameter functions from `createParamFunction()` are checked.
 
 `getForestDFSCM()` also warns when `dfRefRow` has a column that `dfCovs`
-lacks. In 1.4.1 and earlier, with `wt` in `dfRefRow` for `WT` in `dfCovs`, the
-`wt` column was not read. The reference subject then had the reference weight
-of the model, every row of a parameter that depends on weight was off by the
-same factor, and no message was given. The check of `dfRefRow` is made for
-every parameter function, including one written by hand. No warning is given
-for a reference row from `setupDfRefRow()`, which has the columns of `dfCovs`.
+lacks. Before 1.4.2, a column such as `wt` for `WT` was not read, and the rows
+of the Forest plot were shifted without a message.
+
+Both warnings have the class `pmxCovariateMismatch`, so they can be silenced
+alone.
 
 ## Bug fixes
 
