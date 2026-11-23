@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -212,7 +212,7 @@
 <span><span class="co">#&gt; ## Typical values: every ETA() in $PK has been set to 0.</span></span>
 <span><span class="co">#&gt; ## Review this against the control stream before use.</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; paramFunction &lt;- function(thetas, df, ...) {</span></span>
+<span><span class="co">#&gt; paramFunction &lt;- structure(function(thetas, df, ...) {</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   ## ---- Covariate references, taken from run7.mod --------------------------------------</span></span>
 <span><span class="co">#&gt;   ## SEX    reference level of the ";  Most common" branch  [run7.mod:18]</span></span>
@@ -271,7 +271,11 @@
 <span><span class="co">#&gt;     V = V,</span></span>
 <span><span class="co">#&gt;     AUC = AUC</span></span>
 <span><span class="co">#&gt;   )</span></span>
-<span><span class="co">#&gt; }</span></span>
+<span><span class="co">#&gt; },</span></span>
+<span><span class="co">#&gt; ## The columns of df read above. getForestDFSCM() checks the columns of</span></span>
+<span><span class="co">#&gt; ## dfCovs against this list; edit it too if you edit what is read.</span></span>
+<span><span class="co">#&gt; pmxCovariates = c("SEX", "GENO4", "FORM", "FOOD", "WT", "GENO1", "GENO3")</span></span>
+<span><span class="co">#&gt; )</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ## functionListName &lt;- c("CL", "FREL", "V", "AUC")</span></span>
 <span><span class="co">#&gt; ## noBaseThetas     &lt;- 14</span></span></code></pre></div>
@@ -306,7 +310,12 @@
 <span>  functionListName <span class="op">=</span> <span class="va">gen</span><span class="op">$</span><span class="va">functionListName</span>,</span>
 <span>  noBaseThetas     <span class="op">=</span> <span class="va">gen</span><span class="op">$</span><span class="va">noBaseThetas</span>,</span>
 <span>  dfParameters     <span class="op">=</span> <span class="va">dfSamples</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: The covariate columns of dfCovs and the covariates the parameter function reads differ in both directions, as they do when a name in dfCovs is spelled differently from $PK.</span></span>
+<span><span class="co">#&gt; No parameter function reads these columns of dfCovs: AGE, CRCL, NCIL, RACEL2. Rows on which only these columns are set have no effect.</span></span>
+<span><span class="co">#&gt; dfCovs has no column for these covariates the parameter function reads: GENO4, GENO1, GENO3. These covariates stay at the reference value of the function on every row.</span></span>
+<span><span class="co">#&gt; Check the separator of indicator columns (sep in setupDfCovs(), oneHotSep in getForestDFSCM()), which gives GENO_1 against GENO1, and the reference level (catRef in setupDfCovs()), which gives GENO2 against GENO1. If both lists are intended, the warning can be ignored.</span></span></code></pre></div>
+<p><code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> warns here, and the warning is worth reading. The parameter function carries the names of the covariates it reads, and <code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> compares them with the columns of <code>dfCovs</code>. The two differ in both directions. AGE, CRCL, NCIL and RACEL2 have columns but are not in the model, so the rows for them have no effect. GENO1, GENO3 and GENO4 are read by the function but have no column, so the genotype stays at the reference on every row. Both differences are intended in this quick start, because multi-level covariates such as the genotype are covered in the <a href="Part2-walkthrough.html">Walkthrough</a>. The same pair of differences occurs when a name in <code>dfCovs</code> is spelled differently from <code>$PK</code>, for example <code>GENO_1</code> for <code>GENO1</code>. The genotype rows of the plot would then be at no effect, with no other sign of the error.</p>
 </div>
 <div class="section level2">
 <h2 id="draw-the-plot">5. Draw the plot<a class="anchor" aria-label="anchor" href="#draw-the-plot"></a>

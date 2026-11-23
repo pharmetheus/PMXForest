@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,6 +61,16 @@
 
 <div id="pmxforest-design-backlog" class="section level1">
 <p>Items parked for future consideration. Not a substitute for GitHub issues; move an item there when it becomes active work.</p>
+<div class="section level2">
+<h2 id="release-plan-1-4-2">Release plan: 1.4.2<a class="anchor" aria-label="anchor" href="#release-plan-1-4-2"></a></h2>
+<p>Planned for the week of 2026-11-23. Development on <code>epic/1.5.0</code> (named before the version was set to 1.4.2 on 2026-11-18), released through #77. In scope, all merged:</p>
+<ol style="list-style-type: decimal"><li>
+<code><a href="reference/createParamFunction.html">createParamFunction()</a></code> functions carry the covariates they read, and <code><a href="reference/getForestDFSCM.html">getForestDFSCM()</a></code> warns when <code>dfCovs</code> and those names differ. #76, #78.</li>
+<li>Fresh workers load <code>pkgs</code> and their imports from the folders the session loaded them from, so an older PMXForest next to PMXFrem is not loaded. #79, test fix #81. Development build 1.4.1.9000 (2026-11-18) is out for testing by the user who reported the problem.</li>
+<li>
+<code><a href="reference/getForestDFSCM.html">getForestDFSCM()</a></code> warns when <code>dfRefRow</code> has a column that <code>dfCovs</code> lacks. #80.</li>
+</ol><p>Open: possible additions from colleagues, and the result of the test of item 2. PMXFrem 2.5.0 follows the release and can then pin <code>v1.4.2</code> in its CI.</p>
+</div>
 <div class="section level2">
 <h2 id="release-plan-1-4-1">Release plan: 1.4.1<a class="anchor" aria-label="anchor" href="#release-plan-1-4-1"></a></h2>
 <p>Agreed 2026-11-09. Development on <code>epic/1.4.1</code>, released through #71. In scope:</p>

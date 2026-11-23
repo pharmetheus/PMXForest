@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,6 +59,22 @@
       
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.4.2" id="pmxforest-1-4-2">PMXForest 1.4.2<a class="anchor" aria-label="anchor" href="#pmxforest-1-4-2"></a></h2>
+<div class="section level3">
+<h3 id="checking-covariate-names-1-4-2">Checking covariate names<a class="anchor" aria-label="anchor" href="#checking-covariate-names-1-4-2"></a></h3>
+<p><code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> warns when a column name in <code>dfCovs</code> looks misspelled: when <code>dfCovs</code> has a column that the parameter function does not read and lacks a covariate that the function reads. Before 1.4.2, with <code>GENO_1</code> for <code>GENO1</code>, the GENO rows of the Forest plot showed no effect and no message was given. Only parameter functions from <code><a href="../reference/createParamFunction.html">createParamFunction()</a></code> are checked.</p>
+<p><code><a href="../reference/getForestDFSCM.html">getForestDFSCM()</a></code> also warns when <code>dfRefRow</code> has a column that <code>dfCovs</code> lacks. Before 1.4.2, a column such as <code>wt</code> for <code>WT</code> was not read, and the rows of the Forest plot were shifted without a message.</p>
+<p>Both warnings have the class <code>pmxCovariateMismatch</code>, so they can be silenced alone.</p>
+</div>
+<div class="section level3">
+<h3 id="bug-fixes-1-4-2">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-4-2"></a></h3>
+<ul><li>
+<strong>Parallel runs on Windows load the PMXForest of the session.</strong> On Windows, a run with <code>ncores &gt; 1</code> starts a new R session for each core. When the library of PMXFrem held an older PMXForest than the one loaded in the main session, the new sessions loaded the older copy, and the run stopped with a version error. The new sessions now load the packages of the run, and the packages those import, from the folders the main session loaded them from.</li>
+<li>
+<strong>Covariate labels work with a single <code>catRef</code> value.</strong> <code><a href="../reference/generateCovNames.html">generateCovNames()</a></code> stopped with “subscript out of bounds” when <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> was given one <code>catRef</code> for all covariates, such as <code>"mode"</code> or <code>2</code>, and a covariate had more than two levels. With levels that are not consecutive, such as 1, 3 and 5, the reference row could also get the wrong label. The reference row is now labelled with the level that <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> left out.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.4.1" id="pmxforest-1-4-1">PMXForest 1.4.1<a class="anchor" aria-label="anchor" href="#pmxforest-1-4-1"></a></h2>
 <div class="section level3">

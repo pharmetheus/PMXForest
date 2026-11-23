@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -189,28 +189,28 @@
 <span><span class="va">out</span><span class="op">$</span><span class="va">secondaryNames</span></span>
 <span><span class="co">#&gt; [1] "AUC"   "KEL"   "THALF"</span></span></code></pre></div>
 <p>The tail of the generated source – the constant binding, then each entry inside its own <code><a href="https://rdrr.io/r/base/eval.html" class="external-link">local()</a></code> block, then the extended return list:</p>
-<pre><code> [1] "  FREL &lt;- TVFREL  # ETA() -&gt; 0 (typical value)"                                  
- [2] "  CL &lt;- TVCL  # ETA() -&gt; 0 (typical value)"                                      
- [3] "  V &lt;- TVV  # ETA() -&gt; 0 (typical value)"                                        
- [4] ""                                                                                
- [5] "  ## ---- Secondary parameters -------------------------------------------------"
- [6] "  ## AUC  (inline snippet)"                                                      
- [7] "  AUC &lt;- local({"                                                                
- [8] "    dose &lt;- 100"                                                                 
- [9] "dose * FREL / CL"                                                                
-[10] "  })"                                                                            
-[11] "  ## KEL  (inline snippet)"                                                      
-[12] "  KEL &lt;- local({ CL / V })"                                                      
-[13] "  ## THALF  (inline snippet)"                                                    
-[14] "  THALF &lt;- local({ log(2) / KEL })"                                              
-[15] ""                                                                                
-[16] "  list("                                                                         
-[17] "    CL = CL,\n    V = V,\n    AUC = AUC,\n    KEL = KEL,\n    THALF = THALF"     
-[18] "  )"                                                                             
-[19] "}"                                                                               
-[20] ""                                                                                
-[21] "## functionListName &lt;- c(\"CL\", \"V\", \"AUC\", \"KEL\", \"THALF\")"            
-[22] "## noBaseThetas     &lt;- 14"                                                       </code></pre>
+<pre><code> [1] "  ## ---- Secondary parameters -------------------------------------------------"       
+ [2] "  ## AUC  (inline snippet)"                                                             
+ [3] "  AUC &lt;- local({"                                                                       
+ [4] "    dose &lt;- 100"                                                                        
+ [5] "dose * FREL / CL"                                                                       
+ [6] "  })"                                                                                   
+ [7] "  ## KEL  (inline snippet)"                                                             
+ [8] "  KEL &lt;- local({ CL / V })"                                                             
+ [9] "  ## THALF  (inline snippet)"                                                           
+[10] "  THALF &lt;- local({ log(2) / KEL })"                                                     
+[11] ""                                                                                       
+[12] "  list("                                                                                
+[13] "    CL = CL,\n    V = V,\n    AUC = AUC,\n    KEL = KEL,\n    THALF = THALF"            
+[14] "  )"                                                                                    
+[15] "},"                                                                                     
+[16] "## The columns of df read above. getForestDFSCM() checks the columns of"                
+[17] "## dfCovs against this list; edit it too if you edit what is read."                     
+[18] "pmxCovariates = c(\"SEX\", \"GENO4\", \"FORM\", \"FOOD\", \"WT\", \"GENO1\", \"GENO3\")"
+[19] ")"                                                                                      
+[20] ""                                                                                       
+[21] "## functionListName &lt;- c(\"CL\", \"V\", \"AUC\", \"KEL\", \"THALF\")"                   
+[22] "## noBaseThetas     &lt;- 14"                                                              </code></pre>
 </div>
 <div class="section level3">
 <h3 id="evaluate-at-the-final-estimates">1.3 Evaluate at the final estimates<a class="anchor" aria-label="anchor" href="#evaluate-at-the-final-estimates"></a>

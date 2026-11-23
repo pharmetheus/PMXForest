@@ -24,7 +24,7 @@ and one it has silently computes with the old code."><!-- mathjax --><script src
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -124,7 +124,11 @@ package can pass its own option's value.</p></dd>
     <p>Fresh workers therefore get the folders this session loaded its packages
 from first on their library path, load <code>pkgs</code> before any task reaches them,
 and are checked against the session: any package whose version differs
-stops the run, naming both versions and where they came from.</p>
+stops the run, naming both versions and where they came from. The packages
+in <code>pkgs</code>, and the packages they import, are loaded from the folder this
+session loaded each one from. An older copy of a dependency in the library
+of a package in <code>pkgs</code>, such as an old PMXForest next to PMXFrem, is
+therefore not loaded.</p>
 <p>Exported for packages that build on PMXForest (PMXFrem), so they start their
 workers the same way rather than keep a copy of this function. Not meant to
 be called from an analysis script.</p>

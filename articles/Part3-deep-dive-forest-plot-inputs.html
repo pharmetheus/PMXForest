@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -564,7 +564,7 @@
 <span><span class="co">#&gt; ## Typical values: every ETA() in $PK has been set to 0.</span></span>
 <span><span class="co">#&gt; ## Review this against the control stream before use.</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; paramFunction &lt;- function(thetas, df, ...) {</span></span>
+<span><span class="co">#&gt; paramFunction &lt;- structure(function(thetas, df, ...) {</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   ## ---- Covariate references, taken from run7.mod --------------------------------------</span></span>
 <span><span class="co">#&gt;   ## SEX    reference level of the ";  Most common" branch  [run7.mod:18]</span></span>
@@ -818,12 +818,14 @@
 <p><strong><code>catRef</code> and <code>sep</code> do not have to be repeated.</strong> They decide what the one-hot columns are called, and <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> has to agree with <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> or the reference for those covariates is matched by a name that does not exist. Asking for the same two arguments twice and trusting they stay in step is a standing invitation to a silent mismatch, so <code><a href="../reference/setupDfCovs.html">setupDfCovs()</a></code> records what it used on the object it returns and <code><a href="../reference/setupDfRefRow.html">setupDfRefRow()</a></code> reads it back:</p>
 <div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">dfCovs</span>, <span class="st">"pmxCovSetup"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 5</span></span>
+<span><span class="co">#&gt; List of 6</span></span>
 <span><span class="co">#&gt;  $ catRef         : NULL</span></span>
 <span><span class="co">#&gt;  $ sep            : chr "_"</span></span>
 <span><span class="co">#&gt;  $ missVal        : num -99</span></span>
 <span><span class="co">#&gt;  $ covariates     : chr [1:6] "WT" "AGE" "CRCL" "SEX" ...</span></span>
-<span><span class="co">#&gt;  $ conditionalCovs: NULL</span></span></code></pre></div>
+<span><span class="co">#&gt;  $ conditionalCovs: NULL</span></span>
+<span><span class="co">#&gt;  $ oneHotRef      :List of 1</span></span>
+<span><span class="co">#&gt;   ..$ GENO: int 1</span></span></code></pre></div>
 <p>Passing either argument explicitly still wins, which is what you want when <code>dfCovs</code> was built some other way. The record is an ordinary attribute, so subsetting <code>dfCovs</code> drops it — pass them by hand in that case, exactly as before.</p>
 </div>
 <p><strong><code>covariates</code> need not cover every column of <code>dfCovs</code>.</strong> It is the set of covariates you want a reference <em>computed from the data</em> for, not a description of <code>dfCovs</code>. Leave one out and its columns are set to <code>missVal</code> rather than to a data-derived value:</p>

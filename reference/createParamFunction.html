@@ -24,7 +24,7 @@ a silent error."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -179,7 +179,15 @@ caller's, after reading the block.</p></dd>
     
 
 <p>A list of:</p><ul><li><p><code>code</code> - the generated R source, a character vector of lines with
-class <code>"pmxParamFunction"</code> so that printing it renders the source.</p></li>
+class <code>"pmxParamFunction"</code> so that printing it renders the source.
+The function in it is wrapped in <code><a href="https://rdrr.io/r/base/structure.html" class="external-link">structure()</a></code> and carries the
+attribute <code>pmxCovariates</code>: the covariates <code>$PK</code> reads, followed by any
+column a <code>secondary</code> entry reads as <code>df$NAME</code> or <code>df[["NAME"]]</code>.
+<code><a href="getForestDFSCM.html">getForestDFSCM()</a></code> checks the columns of <code>dfCovs</code> against it. When
+<code>df</code> appears in a <code>secondary</code> entry in any other way, such as
+<code>nrow(df)</code>, the columns read are not known, and the function carries
+no attribute and is not checked. Edit the attribute too if you edit
+the source to read other columns.</p></li>
 <li><p><code>functionListName</code> - a character vector matching the order of the
 returned parameters, for <code><a href="getForestDFSCM.html">getForestDFSCM()</a></code>. Includes the <code>secondary</code>
 names, appended after the <code>$PK</code> parameters.</p></li>
@@ -299,7 +307,7 @@ NONMEM <code>$TABLE</code>; <code><a href="getForestDFSCM.html">getForestDFSCM()
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## Typical values: every ETA() in $PK has been set to 0.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## Review this against the control stream before use.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> paramFunction &lt;- function(thetas, df, ...) {</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> paramFunction &lt;- structure(function(thetas, df, ...) {</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ## ---- Covariate references, taken from run7.mod --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ## SEX    reference level of the ";  Most common" branch  [run7.mod:18]</span>
@@ -358,7 +366,11 @@ NONMEM <code>$TABLE</code>; <code><a href="getForestDFSCM.html">getForestDFSCM()
 <span class="r-out co"><span class="r-pr">#&gt;</span>     FREL = FREL,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     V = V</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   )</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> },</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ## The columns of df read above. getForestDFSCM() checks the columns of</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ## dfCovs against this list; edit it too if you edit what is read.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> pmxCovariates = c("SEX", "GENO4", "FORM", "FOOD", "WT", "GENO1", "GENO3")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## functionListName &lt;- c("CL", "FREL", "V")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## noBaseThetas     &lt;- 14</span>
@@ -417,7 +429,7 @@ NONMEM <code>$TABLE</code>; <code><a href="getForestDFSCM.html">getForestDFSCM()
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## Typical values: every ETA() in $PK has been set to 0.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## Review this against the control stream before use.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> paramFunction &lt;- function(thetas, df, ...) {</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> paramFunction &lt;- structure(function(thetas, df, ...) {</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ## ---- Covariate references, taken from run7.mod --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ## GENO4  level not tested by any IF() on GENO4 (proposed, please confirm)  [run7.mod:60]</span>
@@ -467,7 +479,11 @@ NONMEM <code>$TABLE</code>; <code><a href="getForestDFSCM.html">getForestDFSCM()
 <span class="r-out co"><span class="r-pr">#&gt;</span>     AUC24 = AUC24,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     KEL = KEL</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   )</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> },</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ## The columns of df read above. getForestDFSCM() checks the columns of</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ## dfCovs against this list; edit it too if you edit what is read.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> pmxCovariates = c("GENO4", "FOOD", "WT", "GENO1", "GENO3")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## functionListName &lt;- c("CL", "V", "AUC24", "KEL")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ## noBaseThetas     &lt;- 14</span>

@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">PMXForest</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -554,7 +554,7 @@
 <span><span class="co">#&gt; ## Typical values: every ETA() in $PK has been set to 0.</span></span>
 <span><span class="co">#&gt; ## Review this against the control stream before use.</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; paramFunction &lt;- function(thetas, df, ...) {</span></span>
+<span><span class="co">#&gt; paramFunction &lt;- structure(function(thetas, df, ...) {</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   ## ---- Covariate references, taken from run7.mod --------------------------------------</span></span>
 <span><span class="co">#&gt;   ## SEX    reference level of the ";  Most common" branch  [run7.mod:18]</span></span>
@@ -613,7 +613,11 @@
 <span><span class="co">#&gt;     V = V,</span></span>
 <span><span class="co">#&gt;     AUC = AUC</span></span>
 <span><span class="co">#&gt;   )</span></span>
-<span><span class="co">#&gt; }</span></span>
+<span><span class="co">#&gt; },</span></span>
+<span><span class="co">#&gt; ## The columns of df read above. getForestDFSCM() checks the columns of</span></span>
+<span><span class="co">#&gt; ## dfCovs against this list; edit it too if you edit what is read.</span></span>
+<span><span class="co">#&gt; pmxCovariates = c("SEX", "GENO4", "FORM", "FOOD", "WT", "GENO1", "GENO3")</span></span>
+<span><span class="co">#&gt; )</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ## functionListName &lt;- c("CL", "FREL", "V", "AUC")</span></span>
 <span><span class="co">#&gt; ## noBaseThetas     &lt;- 14</span></span></code></pre></div>
