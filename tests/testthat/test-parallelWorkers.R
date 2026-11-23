@@ -6,27 +6,71 @@
 ## "qualified" library the workers see, and a newer one in a "versioned"
 ## folder only the session loads from.
 
-## Install forestToyPkg `version` into library folder `lib`.
-installToyPkg <- function(lib, version) {
-  src <- file.path(withr::local_tempdir(), "forestToyPkg")
+## Install a toy package `name` at `version` into library folder `lib`, with
+## the extra DESCRIPTION lines `fields`, the NAMESPACE lines `namespace` and
+## the R code `code`.
+installToySource <- function(lib, name, version, fields, namespace, code) {
+  src <- file.path(withr::local_tempdir(), name)
   dir.create(file.path(src, "R"), recursive = TRUE)
   writeLines(c(
-    "Package: forestToyPkg", paste0("Version: ", version),
+    paste0("Package: ", name), paste0("Version: ", version),
     "Title: Toy Package", "Description: A toy package for tests.",
     "Author: PMXForest tests", "Maintainer: PMXForest tests <noreply@example.com>",
-    "License: GPL-3"
+    "License: GPL-3", fields
   ), file.path(src, "DESCRIPTION"))
-  writeLines("export(toyVersion)", file.path(src, "NAMESPACE"))
-  writeLines(sprintf('toyVersion <- function() "%s"', version), file.path(src, "R", "toy.R"))
+  writeLines(namespace, file.path(src, "NAMESPACE"))
+  writeLines(code, file.path(src, "R", "toy.R"))
   dir.create(lib, recursive = TRUE, showWarnings = FALSE)
   out <- system2(file.path(R.home("bin"), "R"),
     c("CMD", "INSTALL", "--no-docs", "--no-test-load", paste0("--library=", shQuote(lib)), shQuote(src)),
     stdout = TRUE, stderr = TRUE
   )
-  if (!file.exists(file.path(lib, "forestToyPkg", "DESCRIPTION"))) {
-    stop("could not install forestToyPkg ", version, ":\n", paste(out, collapse = "\n"))
+  if (!file.exists(file.path(lib, name, "DESCRIPTION"))) {
+    stop("could not install ", name, " ", version, ":\n", paste(out, collapse = "\n"))
   }
   invisible(lib)
+}
+
+## Install forestToyPkg `version` into library folder `lib`.
+installToyPkg <- function(lib, version) {
+  installToySource(
+    lib, "forestToyPkg", version, NULL,
+    "export(toyVersion)", sprintf('toyVersion <- function() "%s"', version)
+  )
+}
+
+## Install forestToyTop into library folder `lib`. forestToyTop imports
+## forestToyPkg, at version `needs` or later unless `needs` is NULL, as PMXFrem
+## imports PMXForest, and its depVersion() returns the version of forestToyPkg
+## it runs with. R CMD INSTALL loads forestToyPkg from library folder `depLib`.
+installToyTop <- function(lib, needs, depLib) {
+  imports <- if (is.null(needs)) "forestToyPkg" else paste0("forestToyPkg (>= ", needs, ")")
+  withr::with_envvar(
+    c(R_LIBS = depLib),
+    installToySource(
+      lib, "forestToyTop", "1.0.0", paste0("Imports: ", imports),
+      c("import(forestToyPkg)", "export(depVersion)"), "depVersion <- function() toyVersion()"
+    )
+  )
+}
+
+## The layout of an old PMXForest next to PMXFrem, with a newer PMXForest in
+## another library: the library `top` holds forestToyTop and forestToyPkg
+## 1.0.0, and the session loads forestToyPkg 2.0.0 from the library `newer`.
+## forestToyTop requires forestToyPkg `needs`, or any version if NULL.
+dependencySetup <- function(needs, env = parent.frame()) {
+  root <- withr::local_tempdir(.local_envir = env)
+  newer <- installToyPkg(file.path(root, "newer"), "2.0.0")
+  top <- installToyTop(file.path(root, "top"), needs = needs, depLib = newer)
+  installToyPkg(top, "1.0.0")
+  unloadToys <- function() {
+    for (p in c("forestToyTop", "forestToyPkg")) if (isNamespaceLoaded(p)) unloadNamespace(p)
+  }
+  unloadToys()
+  withr::defer(unloadToys(), envir = env)
+  loadNamespace("forestToyPkg", lib.loc = newer)
+  loadNamespace("forestToyTop", lib.loc = top)
+  list(top = top, newer = newer)
 }
 
 ## The qualified/versioned setup: workers see `qualified` (1.0.0) through
@@ -59,6 +103,52 @@ test_that("fresh workers load a package from the folder the session loaded it fr
   stopWorkers <- startParallelWorkers(2, pkgs = "forestToyPkg", fresh = TRUE)
   withr::defer(stopWorkers())
   got <- foreach::foreach(i = 1:2, .packages = "forestToyPkg") %dopar% forestToyPkg::toyVersion()
+  expect_equal(unlist(got), c("2.0.0", "2.0.0"))
+})
+
+test_that("an older copy of a dependency next to a package in pkgs is not loaded on the workers", {
+  skip_on_cran()
+  paths <- dependencySetup(needs = "2.0.0")
+  expect_equal(forestToyTop::depVersion(), "2.0.0")
+
+  ## The premise: a fresh session that searches the library of forestToyTop
+  ## first finds forestToyPkg 1.0.0 there and cannot load forestToyTop.
+  tryLoad <- function(dirs) {
+    .libPaths(c(dirs, .libPaths()))
+    tryCatch(
+      {
+        loadNamespace("forestToyTop")
+        "loaded"
+      },
+      error = function(e) conditionMessage(e)
+    )
+  }
+  environment(tryLoad) <- baseenv()
+  cl <- parallel::makePSOCKcluster(1)
+  plain <- parallel::clusterCall(cl, tryLoad, c(paths$top, paths$newer))[[1]]
+  parallel::stopCluster(cl)
+  ## R quotes the name with ' or with curly quotes, depending on the locale.
+  expect_match(plain, "forestToyPkg\\S* 1\\.0\\.0 is being loaded, but >= 2\\.0\\.0 is required")
+
+  ## With startParallelWorkers() the workers load forestToyPkg 2.0.0, which
+  ## this session uses, and then forestToyTop.
+  stopWorkers <- startParallelWorkers(2, pkgs = "forestToyTop", fresh = TRUE)
+  withr::defer(stopWorkers())
+  got <- parallel::clusterEvalQ(attr(stopWorkers, "cluster"), forestToyTop::depVersion())
+  expect_equal(unlist(got), c("2.0.0", "2.0.0"))
+})
+
+test_that("a dependency is loaded before the package that imports it, so the session's copy is used", {
+  skip_on_cran()
+  ## Without a version requirement, loading forestToyTop first would load the
+  ## forestToyPkg 1.0.0 beside it without an error, and the workers would run
+  ## an older forestToyPkg than the session.
+  paths <- dependencySetup(needs = NULL)
+  expect_equal(forestToyTop::depVersion(), "2.0.0")
+
+  stopWorkers <- startParallelWorkers(2, pkgs = "forestToyTop", fresh = TRUE)
+  withr::defer(stopWorkers())
+  got <- parallel::clusterEvalQ(attr(stopWorkers, "cluster"), forestToyTop::depVersion())
   expect_equal(unlist(got), c("2.0.0", "2.0.0"))
 })
 

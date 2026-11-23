@@ -12,7 +12,11 @@
 #' Fresh workers therefore get the folders this session loaded its packages
 #' from first on their library path, load `pkgs` before any task reaches them,
 #' and are checked against the session: any package whose version differs
-#' stops the run, naming both versions and where they came from.
+#' stops the run, naming both versions and where they came from. The packages
+#' in `pkgs`, and the packages they import, are loaded from the folder this
+#' session loaded each one from. An older copy of a dependency in the library
+#' of a package in `pkgs`, such as an old PMXForest next to PMXFrem, is
+#' therefore not loaded.
 #'
 #' Exported for packages that build on PMXForest (PMXFrem), so they start their
 #' workers the same way rather than keep a copy of this function. Not meant to
@@ -50,6 +54,17 @@ startParallelWorkers <- function(ncores, pkgs = "PMXForest",
   first <- c(nsPath[intersect(pkgs, ns)], nsPath)
   dirs <- setdiff(unique(dirname(first)), c(.Library, .Library.site))
 
+  ## A search of `dirs` finds a package in the first folder that holds a copy,
+  ## which can be an older copy of a dependency next to a package in `pkgs`
+  ## (an old PMXForest in the library of PMXFrem). So `pkgs` and the packages
+  ## they import are loaded first from the folder this session loaded each one
+  ## from, each after the packages it imports. A package loaded with
+  ## pkgload::load_all() has no installed copy and is left to the search.
+  own <- importOrder(pkgs, ns)
+  own <- own[file.exists(file.path(nsPath[own], "Meta", "package.rds"))]
+  ownDir <- dirname(nsPath[own])
+  names(ownDir) <- own
+
   cl <- parallel::makePSOCKcluster(ncores)
   ready <- FALSE
   on.exit(if (!ready) parallel::stopCluster(cl), add = TRUE)
@@ -58,8 +73,12 @@ startParallelWorkers <- function(ncores, pkgs = "PMXForest",
   ## namespace: serialising the function would carry a reference to it, and
   ## the worker would load PMXForest - from its own library path - before the
   ## body could put this session's folders first.
-  setup <- function(dirs, pkgs) {
+  setup <- function(dirs, ownDir, pkgs) {
     .libPaths(c(dirs, .libPaths()))
+    ## A copy that cannot be loaded from its folder, such as one removed since
+    ## this session loaded it, is left to the search below and the version
+    ## check after it.
+    for (p in names(ownDir)) try(loadNamespace(p, lib.loc = ownDir[[p]]), silent = TRUE)
     failed <- character(0)
     for (p in pkgs) {
       msg <- tryCatch(
@@ -79,7 +98,7 @@ startParallelWorkers <- function(ncores, pkgs = "PMXForest",
     )
   }
   environment(setup) <- baseenv()
-  workers <- parallel::clusterCall(cl, setup, dirs, pkgs)
+  workers <- parallel::clusterCall(cl, setup, dirs, ownDir, pkgs)
 
   failed <- unlist(lapply(workers, `[[`, "failed"))
   if (length(failed) > 0) {
@@ -118,4 +137,23 @@ startParallelWorkers <- function(ncores, pkgs = "PMXForest",
     parallel::stopCluster(cl)
     foreach::registerDoSEQ()
   }, cluster = cl)
+}
+
+## The packages in `pkgs` and those they import, directly or through another
+## package, limited to `ns`, the packages this session has loaded. Each comes
+## after the packages it imports, so loading them in this order finds every
+## import already loaded.
+importOrder <- function(pkgs, ns) {
+  seen <- character(0)
+  out <- character(0)
+  visit <- function(p) {
+    if (p %in% seen || !p %in% ns) {
+      return(invisible(NULL))
+    }
+    seen <<- c(seen, p)
+    for (q in unique(names(getNamespaceImports(p)))) visit(q)
+    out <<- c(out, p)
+  }
+  for (p in pkgs) visit(p)
+  out
 }

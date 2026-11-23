@@ -1,3 +1,35 @@
+# PMXForest 1.4.2
+
+## Checking covariate names
+
+`getForestDFSCM()` warns when a column name in `dfCovs` looks misspelled: when
+`dfCovs` has a column that the parameter function does not read and lacks a
+covariate that the function reads. Before 1.4.2, with `GENO_1` for `GENO1`,
+the GENO rows of the Forest plot showed no effect and no message was given.
+Only parameter functions from `createParamFunction()` are checked.
+
+`getForestDFSCM()` also warns when `dfRefRow` has a column that `dfCovs`
+lacks. Before 1.4.2, a column such as `wt` for `WT` was not read, and the rows
+of the Forest plot were shifted without a message.
+
+Both warnings have the class `pmxCovariateMismatch`, so they can be silenced
+alone.
+
+## Bug fixes
+
+* **Parallel runs on Windows load the PMXForest of the session.** On Windows,
+  a run with `ncores > 1` starts a new R session for each core. When the
+  library of PMXFrem held an older PMXForest than the one loaded in the main
+  session, the new sessions loaded the older copy, and the run stopped with a
+  version error. The new sessions now load the packages of the run, and the
+  packages those import, from the folders the main session loaded them from.
+* **Covariate labels work with a single `catRef` value.** `generateCovNames()`
+  stopped with "subscript out of bounds" when `setupDfCovs()` was given one
+  `catRef` for all covariates, such as `"mode"` or `2`, and a covariate had
+  more than two levels. With levels that are not consecutive, such as 1, 3
+  and 5, the reference row could also get the wrong label. The reference row
+  is now labelled with the level that `setupDfCovs()` left out.
+
 # PMXForest 1.4.1
 
 ## Checking parameters with additive between-subject variability

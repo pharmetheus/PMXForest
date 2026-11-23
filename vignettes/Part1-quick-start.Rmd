@@ -175,7 +175,7 @@ them with publication-quality row labels and covariate group names, from a
 display name per covariate and a label per categorical level; the
 [Walkthrough](Part2-walkthrough.html) shows how.
 
-```{r}
+```{r, warning = TRUE}
 dfres <- getForestDFSCM(
   dfCovs           = dfCovs,
   functionList     = list(paramFunction),
@@ -184,6 +184,18 @@ dfres <- getForestDFSCM(
   dfParameters     = dfSamples
 )
 ```
+
+`getForestDFSCM()` warns here, and the warning is worth reading. The parameter
+function carries the names of the covariates it reads, and `getForestDFSCM()`
+compares them with the columns of `dfCovs`. The two differ in both directions.
+AGE, CRCL, NCIL and RACEL2 have columns but are not in the model, so the rows
+for them have no effect. GENO1, GENO3 and GENO4 are read by the function but
+have no column, so the genotype stays at the reference on every row. Both
+differences are intended in this quick start, because multi-level covariates
+such as the genotype are covered in the [Walkthrough](Part2-walkthrough.html).
+The same pair of differences occurs when a name in `dfCovs` is spelled
+differently from `$PK`, for example `GENO_1` for `GENO1`. The genotype rows of
+the plot would then be at no effect, with no other sign of the error.
 
 # 5. Draw the plot
 

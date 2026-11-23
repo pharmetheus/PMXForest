@@ -111,6 +111,33 @@ To condition every row on another value, set that covariate on every row of
 \code{dfCovs} and give \code{dfRefRow} the same value. \code{\link[=getForestDFemp]{getForestDFemp()}} instead
 evaluates the subjects in the data who match each row, with all their own
 covariate values.
+
+\strong{Covariate names are checked against a generated parameter function.} A
+function made by \code{\link[=createParamFunction]{createParamFunction()}} carries the names of the data
+columns it reads, as the attribute \code{pmxCovariates}. \code{getForestDFSCM()}
+compares them with the columns of \code{dfCovs}, after the encoding set by
+\code{oneHot} and without \code{COVARIATEGROUPS}. It warns when two differences
+occur together: a column that no function in \code{functionList} reads, so
+that the rows on which only that column is set have no effect, and a
+covariate that a function reads and \code{dfCovs} lacks, so that it is held at
+the reference of the function on every row. A name spelled differently
+from \verb{$PK} always gives that pair, for example \code{GENO_1} in \code{dfCovs} for
+\code{GENO1} in the model (the separator, \code{sep} in \code{\link[=setupDfCovs]{setupDfCovs()}}), or a
+\code{GENO2} column for \code{GENO1} (the reference level, \code{catRef}). Either
+difference alone is often a deliberate choice of rows and gives no
+warning. A hand-written function carries no names, so no check is made
+when \code{functionList} holds one. The warning has the class
+\code{pmxCovariateMismatch}, so an intended pair can be silenced alone:
+\code{withCallingHandlers(getForestDFSCM(...), pmxCovariateMismatch = function(w) invokeRestart("muffleWarning"))}.
+
+\strong{The columns of \code{dfRefRow} are checked against \code{dfCovs}.} A column of
+\code{dfRefRow} that \code{dfCovs} lacks, after the encoding set by \code{oneHot}, gives
+a warning of the same class, with the names in the field \code{refOnly}. With
+a name spelled differently, such as \code{wt} in \code{dfRefRow} for \code{WT} in
+\code{dfCovs}, the reference subject is held at the reference of the parameter
+function for that covariate, and every row is shifted. This check is made
+for hand-written functions too. A reference row from \code{\link[=setupDfRefRow]{setupDfRefRow()}}
+has the columns of \code{dfCovs} and is never reported.
 }
 \examples{
 dfData <- read.csv(

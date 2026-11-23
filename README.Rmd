@@ -78,7 +78,7 @@ one-hot columns the way the control stream does.
 ```{r}
 dfCovs <- setupDfCovs(
   data = dfData,
-  covariates = c("FOOD", "GENO", "WT", "SEX"),
+  covariates = c("FOOD", "FORM", "GENO", "WT", "SEX"),
   catRef = list(GENO = 2),
   sep = "",
   idVar = "ID"
@@ -91,10 +91,14 @@ unit for the continuous covariates and a label for each categorical level.
 percentiles the data give.
 
 ```{r}
-name_map <- c(FOOD = "Food status", GENO = "2D6 Genotype", WT = "Weight", SEX = "Sex")
+name_map <- c(
+  FOOD = "Food status", FORM = "Formulation", GENO = "2D6 Genotype",
+  WT = "Weight", SEX = "Sex"
+)
 unit_map <- c(WT = "kg")
 level_map <- list(
   FOOD = c("0" = "Fasted", "1" = "Fed"),
+  FORM = c("0" = "Oral tablet", "1" = "FDC"),
   GENO = c("1" = "2D6 UM", "2" = "2D6 EM", "3" = "2D6 IM", "4" = "2D6 PM"),
   SEX  = c("1" = "Male", "2" = "Female")
 )
@@ -156,7 +160,7 @@ dfres <- generateCovNames(dfCovs, dfres,
 
 With the above information is an easy task to generate the Forest plot.
 
-```{r forest-plot, fig.width=12}
+```{r forest-plot, fig.width=12, fig.height=9}
 forestPlot(dfres, size = 10)
 ```
 
