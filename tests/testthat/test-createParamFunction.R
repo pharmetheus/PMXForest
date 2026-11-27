@@ -1563,4 +1563,7 @@ test_that("reading an indexed NONMEM variable back is still refused", {
     "unsupported function 'A_0()'",
     fixed = TRUE
   )
+  ## THETA and ETA are not variables a model sets, so they are not skipped.
+  f <- tempMod(irmModel("THETA(1) = 2"))
+  expect_error(nmParsePK(f), "only assignment to a plain variable")
 })

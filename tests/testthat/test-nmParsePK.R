@@ -345,7 +345,13 @@ test_that("trailing tokens and malformed statements are refused", {
   expect_error(stmts_of("X = 1 2"), "trailing tokens after the assignment")
   expect_error(stmts_of("IF (A.EQ.1) X = 1 2"), "trailing tokens after the assignment")
   expect_error(stmts_of("IF (A.EQ.1)"), "without THEN")
-  expect_error(stmts_of("X(1) = 2"), "assignment to a plain variable")
+  # an assignment to an indexed variable is skipped, and reading it is refused
+  expect_length(stmts_of("X(1) = 2"), 0)
+  expect_error(stmts_of(c("X(1) = 2", "Y = X(1)")), "unsupported function 'X()'",
+    fixed = TRUE
+  )
+  expect_error(stmts_of("X(Y) = 2"), "assignment to a plain variable")
+  expect_error(stmts_of("X(1, 2) = 2"), "assignment to a plain variable")
   # an unsupported construct is refused wherever it appears, including in a block
   expect_error(
     stmts_of(c("IF (A.EQ.1) THEN", "  DO I=1,2", "END IF")),
