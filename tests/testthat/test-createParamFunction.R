@@ -1368,3 +1368,199 @@ test_that("a secondary parameter that uses df in another way leaves no list", {
     expect_type(fun, "closure")
   }
 })
+
+## A made-up one-compartment model. `abbr` holds the $ABBR records and `pk` the
+## lines of $PK that compute CL and V.
+namedModel <- function(abbr, pk) {
+  c(
+    "$PROBLEM made-up model with named ETAs and THETAs",
+    "$INPUT ID TIME AMT DV EVID WT",
+    "$DATA data.csv IGNORE=@",
+    abbr,
+    "$SUBROUTINE ADVAN1 TRANS2",
+    "$PK",
+    pk,
+    "S1 = V",
+    "$ERROR",
+    "Y = F*(1+EPS(1))",
+    "$THETA (0,10) (0,100)",
+    "$OMEGA 0.1 0.1",
+    "$SIGMA 0.04"
+  )
+}
+
+numberedPK <- c(
+  "TVCL = THETA(1)*(WT/70)**0.75",
+  "TVV = THETA(2)",
+  "CL = TVCL*EXP(ETA(1))",
+  "V = TVV*EXP(ETA(2))"
+)
+
+test_that("ETAs and THETAs named in $ABBR REPLACE read as their numbers", {
+  ref <- nmParsePK(tempMod(namedModel(character(0), numberedPK)),
+    parameters = c("CL", "V")
+  )
+  refFun <- eval(parse(text = createParamFunction(
+    tempMod(namedModel(character(0), numberedPK)),
+    parameters = c("CL", "V"), quiet = TRUE
+  )$code))
+  refVal <- refFun(c(10, 100), data.frame(WT = 80))
+
+  variants <- list(
+    "labels in parentheses" = namedModel(
+      c(
+        "$ABBR DERIV2=NO",
+        "$ABBR REPLACE ETA(CL)=ETA(1)",
+        "$ABBR REPLACE ETA(V)=ETA(2)",
+        "$ABBR REPLACE THETA(CL)=THETA(1)"
+      ),
+      c(
+        "TVCL = THETA(CL)*(WT/70)**0.75", "TVV = THETA(2)",
+        "CL = TVCL*EXP(ETA(CL))", "V = TVV*EXP(eta( V ))"
+      )
+    ),
+    "bare names" = namedModel(
+      c("$ABBR REPLACE ETACL=ETA(1)", "$ABBR REPLACE ETAV=ETA(2)"),
+      c(
+        "TVCL = THETA(1)*(WT/70)**0.75", "TVV = THETA(2)",
+        "CL = TVCL*EXP(ETACL)", "V = TVV*EXP(ETAV)"
+      )
+    ),
+    "lists, spaces, quotes and the long record name" = namedModel(
+      c(
+        "$ABBREVIATED REPLACE ETA(CL,V)=ETA(1,2) REPLACE THETA(CL) = THETA(1)",
+        "$ABBR REPLACE 'THETA(V)'='THETA(2)'"
+      ),
+      c(
+        "TVCL = THETA(CL)*(WT/70)**0.75", "TVV = THETA(V)",
+        "CL = TVCL*EXP(ETA(CL))", "V = TVV*EXP(ETA(V))"
+      )
+    )
+  )
+  for (v in names(variants)) {
+    f <- tempMod(variants[[v]])
+    p <- nmParsePK(f, parameters = c("CL", "V"))
+    expect_equal(p$etaMap, ref$etaMap, label = v)
+    expect_equal(p$covariates, ref$covariates, label = v)
+    expect_equal(p$noBaseThetas, ref$noBaseThetas, label = v)
+    fun <- eval(parse(text = createParamFunction(f,
+      parameters = c("CL", "V"), quiet = TRUE
+    )$code))
+    expect_equal(fun(c(10, 100), data.frame(WT = 80)), refVal, label = v)
+  }
+})
+
+test_that("an ETA named without an $ABBR REPLACE record is refused with a hint", {
+  f <- tempMod(namedModel(
+    "$ABBR REPLACE ETA(V)=ETA(2)",
+    c(
+      "TVCL = THETA(1)*(WT/70)**0.75", "TVV = THETA(2)",
+      "CL = TVCL*EXP(ETA(CL))", "V = TVV*EXP(ETA(V))"
+    )
+  ))
+  expect_error(
+    nmParsePK(f, parameters = c("CL", "V")),
+    "ETA(CL) is not declared in an $ABBR REPLACE record",
+    fixed = TRUE
+  )
+})
+
+test_that("covRef for a name from $ABBR REPLACE is refused with the reason", {
+  f <- tempMod(namedModel(
+    c("$ABBR REPLACE ETACL=ETA(1)", "$ABBR REPLACE ETAV=ETA(2)"),
+    c(
+      "TVCL = THETA(1)*(WT/70)**0.75", "TVV = THETA(2)",
+      "CL = TVCL*EXP(ETACL)", "V = TVV*EXP(ETAV)"
+    )
+  ))
+  expect_error(
+    nmParsePK(f, parameters = c("CL", "V"), covRef = list(ETACL = 0, ETAV = 0)),
+    "ETACL, ETAV are declared in $ABBR REPLACE records",
+    fixed = TRUE
+  )
+})
+
+test_that("a longer name that contains a name from $ABBR REPLACE is left alone", {
+  f <- tempMod(namedModel(
+    "$ABBR REPLACE ETACL=ETA(1)",
+    c(
+      "TVCL = THETA(1)*(WT/70)**0.75", "TVV = THETA(2)",
+      "ETACLX = 2", "MYETACL = 3",
+      "CL = TVCL*EXP(ETACL)*ETACLX*MYETACL", "V = TVV*EXP(ETA(2))"
+    )
+  ))
+  p <- nmParsePK(f, parameters = c("CL", "V"))
+  expect_true(all(c("ETACLX", "MYETACL") %in% nmAssignedNames(p$statements)))
+  fun <- eval(parse(text = createParamFunction(f,
+    parameters = c("CL", "V"), quiet = TRUE
+  )$code))
+  expect_equal(fun(c(10, 100), data.frame(WT = 70))$CL, 60)
+})
+
+## A made-up indirect response model: the parameters of interest, CL and V,
+## never depend on the statements that set NONMEM's indexed variables.
+irmPK <- c(
+  "TVCL = THETA(1)*(WT/70)**0.75",
+  "TVV = THETA(2)",
+  "CL = TVCL*EXP(ETA(1))",
+  "V = TVV*EXP(ETA(2))",
+  "KOUT = THETA(3)",
+  "BASE = THETA(4)",
+  "KIN = BASE*KOUT"
+)
+irmModel <- function(extra) {
+  c(
+    "$PROBLEM made-up indirect response model",
+    "$INPUT ID TIME AMT DV EVID WT",
+    "$DATA data.csv IGNORE=@",
+    "$SUBROUTINE ADVAN13 TOL=6",
+    "$MODEL COMP=(CENTRAL) COMP=(RESPONSE)",
+    "$PK",
+    irmPK,
+    extra,
+    "$DES",
+    "DADT(1) = -CL/V*A(1)",
+    "DADT(2) = KIN - KOUT*A(2)",
+    "$ERROR",
+    "Y = A(2)*(1+EPS(1))",
+    "$THETA (0,10) (0,100) (0,1) (0,5)",
+    "$OMEGA 0.1 0.1",
+    "$SIGMA 0.04"
+  )
+}
+
+test_that("an assignment to an indexed NONMEM variable is skipped", {
+  ref <- nmParsePK(tempMod(irmModel(character(0))))
+  extras <- list(
+    "A_0(2) = BASE",
+    "MTIME(1) = 24",
+    "COM(1) = CL",
+    "IF (A_0FLG.EQ.1) A_0(2) = BASE",
+    c("IF (A_0FLG.EQ.1) THEN", "  A_0(2) = BASE", "END IF"),
+    c("IF (EVID.EQ.0) THEN", "  COM(1) = CL", "ELSE", "  COM(2) = V", "END IF")
+  )
+  for (extra in extras) {
+    label <- paste(extra, collapse = " / ")
+    f <- tempMod(irmModel(extra))
+    p <- nmParsePK(f, parameters = c("CL", "V"))
+    expect_equal(p$parameters, c("CL", "V"), label = label)
+    expect_equal(p$etaMap, c(CL = 1L, V = 2L), label = label)
+    all <- nmParsePK(f)
+    expect_equal(all$parameters, ref$parameters, label = label)
+    expect_equal(all$covariates, ref$covariates, label = label)
+    out <- createParamFunction(f, parameters = c("CL", "V"), quiet = TRUE)
+    fun <- eval(parse(text = out$code))
+    expect_equal(fun(c(10, 100, 1, 5), data.frame(WT = 70))$CL, 10, label = label)
+  }
+})
+
+test_that("reading an indexed NONMEM variable back is still refused", {
+  f <- tempMod(irmModel(c("COM(1) = CL", "CLX = COM(1)")))
+  expect_error(nmParsePK(f), "unsupported function 'COM()'", fixed = TRUE)
+  f <- tempMod(irmModel(c("A_0(2) = BASE", "B0 = A_0(2)")))
+  expect_error(
+    nmParsePK(f, parameters = c("CL", "V")),
+    "unsupported function 'A_0()'",
+    fixed = TRUE
+  )
+})

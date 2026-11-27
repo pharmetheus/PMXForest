@@ -69,6 +69,18 @@
 #'   are accepted in `$PRED`, where they belong, and refused in `$PK`, where
 #'   NM-TRAN does not allow them either.
 #'
+#'   **Named ETAs and THETAs.** A name declared in an `$ABBR REPLACE` record,
+#'   such as `$ABBR REPLACE ETA(CL)=ETA(1)`, `$ABBR REPLACE ETACL=ETA(1)` or
+#'   the list form `$ABBR REPLACE THETA(CL,V)=THETA(1,2)`, is replaced by what
+#'   it stands for before the block is read, as NONMEM does. The block is then
+#'   read as if the numbers were written in it.
+#'
+#'   **Indexed NONMEM variables.** An assignment to an indexed NONMEM variable,
+#'   such as the initial condition `A_0(2) = BASE`, `MTIME(1) = 24` or
+#'   `COM(1) = CL`, is skipped. Such a statement sets a value for NONMEM, and no
+#'   parameter can depend on it: the block could read the value back only in
+#'   the indexed form, which is refused.
+#'
 #' @param modFile Path to the NONMEM control stream (`.mod` or `.ctl`).
 #' @param parameters A character vector of variables the function should
 #'   return. Defaults to `NULL`, meaning every variable assigned in the block;
@@ -500,11 +512,28 @@ nmParsePK <- function(modFile, parameters = NULL, covRef = NULL,
     ## when called.
     stray <- setdiff(names(covRef), covariatesAll)
     if (length(stray) > 0) {
+      ## Before $ABBR REPLACE was read, an ETA named in it could only be
+      ## pinned to 0 through covRef; such a call now lands here.
+      abbr <- nmAbbrReplace(mod)
+      replaced <- intersect(stray, names(abbr))
       stop("covRef names a covariate that ", basename(modFile),
         " does not use: ", paste(stray, collapse = ", "),
         ".\nCovariates in this ", block, ": ",
         if (length(covariates) == 0) "none" else paste(covariates, collapse = ", "),
         ".",
+        if (length(replaced) > 0) {
+          paste0(
+            "\n", paste(replaced, collapse = ", "),
+            if (length(replaced) > 1) " are" else " is",
+            " declared in $ABBR REPLACE records as ",
+            paste(abbr[replaced], collapse = ", "),
+            " and replaced before ", block, " is read, so no reference value",
+            " is needed. Leave ", paste(replaced, collapse = ", "),
+            " out of covRef."
+          )
+        } else {
+          ""
+        },
         call. = FALSE
       )
     }

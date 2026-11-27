@@ -184,6 +184,82 @@ nmCountThetaRecord <- function(txt) {
   as.integer(n)
 }
 
+#' Replacements declared by the $ABBR REPLACE records
+#'
+#' NONMEM lets a model name an ETA or a THETA in `$ABBR REPLACE` records, such
+#' as `$ABBR REPLACE ETA(CL)=ETA(1)` or `$ABBR REPLACE ETACL=ETA(1)`, and
+#' replaces the names in the abbreviated code before it is compiled. A record
+#' may hold several `REPLACE` options, either side may be quoted, and the list
+#' form `ETA(CL,V)=ETA(1,2)` declares one pair per element.
+#'
+#' Returns a named character vector, the replacement named by the string it
+#' replaces, in the order of declaration; `character(0)` without such records.
+#' Other `$ABBR` options, such as `DERIV2=NO`, are ignored.
+#'
+#' @noRd
+nmAbbrReplace <- function(mod) {
+  starts <- grep("^\\s*\\$ABB", mod$code, ignore.case = TRUE)
+  allStarts <- grep("^\\s*\\$", mod$code)
+  item <- "('[^']*'|\"[^\"]*\"|[^[:space:]=]+)"
+  pat <- paste0("(?i)\\bREP(L(A(C(E)?)?)?)?\\s+", item, "\\s*=?\\s*", item)
+  unquote <- function(x) sub("^(['\"])(.*)\\1$", "\\2", x)
+  out <- character(0)
+  for (s in starts) {
+    nxt <- allStarts[allStarts > s]
+    stop_ <- if (length(nxt) == 0) nrow(mod) else nxt[1] - 1
+    txt <- sub("^\\s*\\$ABB[A-Z]*", "",
+      paste(mod$code[s:stop_], collapse = " "),
+      ignore.case = TRUE
+    )
+    for (m in regmatches(txt, gregexpr(pat, txt, perl = TRUE))[[1]]) {
+      g <- regmatches(m, regexec(pat, m, perl = TRUE))[[1]]
+      out <- c(out, nmAbbrPairs(unquote(g[6]), unquote(g[7])))
+    }
+  }
+  out
+}
+
+## One REPLACE option as pairs: `ETA(CL,V)=ETA(1,2)` gives `ETA(CL)=ETA(1)`
+## and `ETA(V)=ETA(2)`. Anything else is one pair, as written.
+## @noRd
+nmAbbrPairs <- function(left, right) {
+  listForm <- "^([A-Za-z_][A-Za-z0-9_]*)\\(([^()]*)\\)$"
+  if (grepl(listForm, left) && grepl(listForm, right)) {
+    split <- function(x) trimws(strsplit(sub(listForm, "\\2", x), ",")[[1]])
+    l <- split(left)
+    r <- split(right)
+    if (length(l) > 1 && length(l) == length(r)) {
+      return(stats::setNames(
+        paste0(sub(listForm, "\\1", right), "(", r, ")"),
+        paste0(sub(listForm, "\\1", left), "(", l, ")")
+      ))
+    }
+  }
+  stats::setNames(right, left)
+}
+
+## Apply $ABBR REPLACE pairs to lines of code. A string is replaced only where
+## it is not part of a longer name, so ETACL=ETA(1) leaves ETACLX alone. Case
+## and the spaces inside parentheses are not significant, as in NONMEM code.
+## @noRd
+nmApplyAbbr <- function(code, pairs) {
+  for (left in names(pairs)) {
+    rx <- gsub("([][{}()^$.|*+?\\\\])", "\\\\\\1", left)
+    rx <- gsub("\\\\\\(", "\\\\s*\\\\(\\\\s*", rx)
+    rx <- gsub("\\\\\\)", "\\\\s*\\\\)", rx)
+    rx <- gsub(",", "\\\\s*,\\\\s*", rx)
+    rx <- paste0(
+      "(?i)(?<![A-Za-z0-9_])", rx,
+      if (grepl("[A-Za-z0-9_]$", left)) "(?![A-Za-z0-9_])" else ""
+    )
+    code <- gsub(rx, gsub("\\", "\\\\", pairs[[left]], fixed = TRUE),
+      code,
+      perl = TRUE
+    )
+  }
+  code
+}
+
 ## ---------------------------------------------------------------------------
 ## Lexer
 ## ---------------------------------------------------------------------------
@@ -351,6 +427,22 @@ nmFail <- function(p, msg) {
   )
 }
 
+## THETA() or ETA() without a number. A name in the parentheses is a label
+## that no $ABBR REPLACE record declares, since declared labels are replaced
+## before the block is parsed.
+## @noRd
+nmIndexFail <- function(p, nm, args) {
+  hint <- ""
+  if (length(args) == 1 && identical(args[[1]]$type, "sym")) {
+    lab <- paste0(nm, "(", args[[1]]$name, ")")
+    hint <- paste0(
+      ". ", lab, " is not declared in an $ABBR REPLACE record such as ",
+      "$ABBR REPLACE ", lab, "=", nm, "(1)"
+    )
+  }
+  nmFail(p, paste0(nm, "() index must be a literal integer", hint))
+}
+
 #' Parse an expression with precedence climbing
 #' @noRd
 nmParseExpr <- function(p, minPrec = 0) {
@@ -422,13 +514,13 @@ nmParseAtom <- function(p) {
 
       if (nm == "THETA") {
         if (length(args) != 1 || args[[1]]$type != "num") {
-          nmFail(p, "THETA() index must be a literal integer")
+          nmIndexFail(p, nm, args)
         }
         return(list(type = "theta", index = as.integer(args[[1]]$value)))
       }
       if (nm == "ETA") {
         if (length(args) != 1 || args[[1]]$type != "num") {
-          nmFail(p, "ETA() index must be a literal integer")
+          nmIndexFail(p, nm, args)
         }
         return(list(type = "eta", index = as.integer(args[[1]]$value)))
       }
@@ -525,6 +617,9 @@ nmParamBlock <- function(mod, modFile) {
   for (b in c("$PK", "$PRED")) {
     rec <- nmRecord(mod, paste0("\\", b, "\\b"))
     if (nrow(rec) > 0) {
+      ## Names from $ABBR REPLACE are replaced first, so the block is read as
+      ## if the numbers were written in it.
+      rec$code <- nmApplyAbbr(rec$code, nmAbbrReplace(mod))
       return(list(rec = rec, block = b))
     }
   }
@@ -631,6 +726,11 @@ nmParseBlock <- function(rec, state, modFile, terminators, block = "$PK") {
         )
       }
 
+      ## An IF whose branches hold no statement sets nothing, for example when
+      ## its only statement set an indexed NONMEM variable and was skipped. The
+      ## condition is dropped with it, so it adds no covariate.
+      branches <- c(list(thenStmts), lapply(elifs, `[[`, "stmts"), list(elseStmts))
+      if (all(lengths(branches) == 0)) next
       stmts[[length(stmts) + 1L]] <- list(
         type = "if", cond = cond, then = thenStmts, elifs = elifs,
         else_ = elseStmts, lineno = lineno
@@ -653,11 +753,12 @@ nmParseBlock <- function(rec, state, modFile, terminators, block = "$PK") {
         body, lineno, rec$comment[state$i], modFile,
         block
       )
+      state$i <- state$i + 1L
+      if (is.null(inner)) next
       stmts[[length(stmts) + 1L]] <- list(
         type = "if", cond = cond, then = list(inner), elifs = list(),
         else_ = NULL, lineno = lineno, oneline = TRUE
       )
-      state$i <- state$i + 1L
       next
     }
 
@@ -668,8 +769,8 @@ nmParseBlock <- function(rec, state, modFile, terminators, block = "$PK") {
       )
     }
 
-    stmts[[length(stmts) + 1L]] <-
-      nmParseAssign(line, lineno, rec$comment[state$i], modFile, block)
+    st <- nmParseAssign(line, lineno, rec$comment[state$i], modFile, block)
+    if (!is.null(st)) stmts[[length(stmts) + 1L]] <- st
     state$i <- state$i + 1L
   }
   stmts
@@ -716,6 +817,14 @@ nmParseAssign <- function(line, lineno, comment, modFile, block = "$PK") {
     )
   }
   eq <- eq[1]
+  ## An indexed variable on the left, such as the initial condition A_0(2),
+  ## MTIME(1) or COM(1), is a value the block sets for NONMEM. The statement is
+  ## skipped (NULL): no parameter can depend on it, because the block could
+  ## read the value back only as A_0(2), and that read is refused as an
+  ## unsupported function.
+  if (nmIndexedTarget(toks, eq)) {
+    return(NULL)
+  }
   if (eq != 2L || toks[[1]]$type != "sym") {
     stop("Unsupported NONMEM construct in ", block, " at ", basename(modFile), ":",
       lineno, " - only assignment to a plain variable is supported, got '",
@@ -731,6 +840,20 @@ nmParseAssign <- function(line, lineno, comment, modFile, block = "$PK") {
     type = "assign", lhs = toks[[1]]$value, rhs = rhs,
     lineno = lineno, comment = comment
   )
+}
+
+## TRUE for a left side of the form NAME(n): a name, one integer index, then the
+## `=`. The names of NONMEM's parameters and random effects are not targets a
+## model can assign, so they keep the refusal.
+## @noRd
+nmIndexedTarget <- function(toks, eq) {
+  if (eq != 5L) {
+    return(FALSE)
+  }
+  types <- vapply(toks[1:4], function(t) t$type, character(1))
+  identical(types, c("sym", "lparen", "num", "rparen")) &&
+    toks[[3]]$value == round(toks[[3]]$value) &&
+    !toupper(toks[[1]]$value) %in% c("THETA", "ETA", "EPS", "ERR", "OMEGA", "SIGMA")
 }
 
 ## ---------------------------------------------------------------------------

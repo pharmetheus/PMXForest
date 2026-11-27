@@ -191,6 +191,18 @@ Anything else - \verb{$DES}, compartment amounts \code{A(n)}, verbatim FORTRAN, 
 loops, \code{CALL} - raises an error naming the file and line. \code{EPS(n)}/\code{ERR(n)}
 are accepted in \verb{$PRED}, where they belong, and refused in \verb{$PK}, where
 NM-TRAN does not allow them either.
+
+\strong{Named ETAs and THETAs.} A name declared in an \verb{$ABBR REPLACE} record,
+such as \verb{$ABBR REPLACE ETA(CL)=ETA(1)}, \verb{$ABBR REPLACE ETACL=ETA(1)} or
+the list form \verb{$ABBR REPLACE THETA(CL,V)=THETA(1,2)}, is replaced by what
+it stands for before the block is read, as NONMEM does. The block is then
+read as if the numbers were written in it.
+
+\strong{Indexed NONMEM variables.} An assignment to an indexed NONMEM variable,
+such as the initial condition \code{A_0(2) = BASE}, \code{MTIME(1) = 24} or
+\code{COM(1) = CL}, is skipped. Such a statement sets a value for NONMEM, and no
+parameter can depend on it: the block could read the value back only in
+the indexed form, which is refused.
 }
 \examples{
 modFile <- system.file("extdata", "SimVal/run7.mod", package = "PMXForest")

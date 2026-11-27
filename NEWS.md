@@ -1,5 +1,18 @@
 # PMXForest (development version)
 
+## Bug fixes
+
+* **Parameter functions for models that name their ETAs and THETAs.**
+  `createParamFunction()` and `nmParsePK()` stopped when `$PK` referred to an
+  ETA or a THETA by a name declared in an `$ABBR REPLACE` record, such as
+  `ETA(CL)` or `ETACL`. The names are now replaced by the numbers they stand
+  for before `$PK` is read.
+* **Parameter functions for models that set an initial condition.**
+  `createParamFunction()` and `nmParsePK()` stopped on an assignment to an
+  indexed NONMEM variable in `$PK`, such as `A_0(2) = BASE` in an indirect
+  response model, `MTIME(1)` or `COM(1)`. Such a statement is now skipped,
+  since no parameter can depend on it.
+
 # PMXForest 1.4.2
 
 ## Checking covariate names
